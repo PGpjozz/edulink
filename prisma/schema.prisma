@@ -1,0 +1,671 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Enums
+enum UserRole {
+  PROVIDER
+  PRINCIPAL
+  SCHOOL_ADMIN
+  TEACHER
+  LEARNER
+  PARENT
+}
+
+enum BillingTier {
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+enum BillingStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+}
+
+// Models
+
+model School {
+  id             String        @id @default(uuid())
+  name           String
+  subdomain      String?       @unique // Optional: for custom subdomains
+  tier           BillingTier   @default(SMALL)
+  isActive       Boolean       @default(true)
+  logoUrl        String?
+  primaryColor   String        @default("#1976d2")
+  contactEmail   String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Settings
+  gradesOffered  String[]      // e.g. ["8", "9", "10", "11", "12"]
+
+  // Relations
+  users          User[]
+  classes        Class[]
+  subjects       Subject[]
+  billings       Billing[]
+  auditLogs      AuditLog[]
+  feeInvoices    FeeInvoice[]
+  ptmSessions    PTMSession[]
+  applications   Application[]
+  assets         Asset[]
+  monthlyFee     Float         @default(1000)
+
+  @@map("schools")
+}
+
+model User {
+  id             String        @id @default(uuid())
+  schoolId       String?
+  school         School?       @relation(fields: [schoolId], references: [id])
+  
+  role           UserRole
+  email          String?       // Unique per school? Or global? Typically global unique if possible, or scoped. 
+                               // For simplicity, let's make email unique globally to allow multi-school access if needed, 
+                               // but specs say "Each school is isolated". 
+                               // However, Parents might have kids in different schools.
+                               // Let's keep it unique globally for now to avoid confusion.
+  password       String?       // Hashed
+  
+  firstName      String
+  lastName       String
+  idNumber       String?       // For learners login
+  phoneNumber    String?
+  
+  isActive       Boolean       @default(true)
+  deletedAt      DateTime?     // Soft delete
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  // Profile Specifics
+  learnerProfile LearnerProfile?
+  teacherProfile TeacherProfile?
+  parentProfile  ParentProfile? // Links to learners
+
+  // Relations for Auth/etc
+  sentMessages     Message[]     @relation("SentMessages")
+  receivedMessages Message[]     @relation("ReceivedMessages")
+  notifications    Notification[]
+  auditLogs        AuditLog[]
+  behaviorGiven    BehaviorRecord[]
+  ptmSessions      PTMSession[]
+  ptmBookings      PTMBooking[]
+  assets           Asset[]
+  assetBookings    AssetBooking[]
+
+  @@unique([email])
+  // Learner login by ID + School? Or just ID globally? 
+  // Specs: "Learners without emails login with ID number".
+  // ID numbers are usually unique nationally (SA context implies ID number).
+  // We can enforce unique ID number if provided.
+  @@unique([idNumber]) 
+
+  @@map("users")
+}
+
+model LearnerProfile {
+  id             String        @id @default(uuid())
+  userId         String        @unique
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  grade          String        // Current grade
+  classId        String?
+  class          Class?        @relation(fields: [classId], references: [id])
+  
+  enrollmentDate DateTime      @default(now())
+  
+  // Relations
+  parentIds      String[]      // IDs of parent Users (simplified logic)
+  grades         Grade[]
+  attendance     Attendance[]
+  submissions    AssignmentSubmission[]
+  feeInvoices    FeeInvoice[]
+  behaviorRecords BehaviorRecord[]
+  ptmBookings     PTMBooking[]
+  aiInsights      AIInsight[]
+  quizAttempts    QuizAttempt[]
+
+  @@map("learner_profiles")
+}
+
+model TeacherProfile {
+  id             String        @id @default(uuid())
+  userId         String        @unique
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  qualifications String?
+  
+  // Relations
+  managedClasses Class[]       @relation("ClassTeacher")
+  assignedSubjects Subject[]   // Subjects they teach generally or specific instances?
+                               // Typically a teacher is assigned to specific Subject instances (e.g. Gr8 Math).
+  
+  @@map("teacher_profiles")
+}
+
+model ParentProfile {
+  id             String        @id @default(uuid())
+  userId         String        @unique
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  learnerIds     String[]      // IDs of learners they manage
+  
+  @@map("parent_profiles")
+}
+
+model Class {
+  id             String        @id @default(uuid())
+  schoolId       String
+  school         School        @relation(fields: [schoolId], references: [id])
+  
+  name           String        // e.g. "8A"
+  grade          String        // e.g. "8"
+  
+  teacherProfileId String?
+  teacher        TeacherProfile? @relation("ClassTeacher", fields: [teacherProfileId], references: [id])
+
+  learners       LearnerProfile[]
+  
+  timetable      Json?         // Simple timetable storage
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("classes")
+}
+
+model Subject {
+  id             String        @id @default(uuid())
+  schoolId       String
+  school         School        @relation(fields: [schoolId], references: [id])
+  
+  name           String        // e.g. "Mathematics"
+  code           String?       // e.g. "MATH"
+  grade          String        // e.g. "10"
+  
+  // Teacher assigned to this specific subject for this grade
+  teacherId      String?
+  teacher        TeacherProfile? @relation(fields: [teacherId], references: [id])
+  
+  assessments    Assessment[]
+  resources      Resource[]
+  quizzes        Quiz[]
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("subjects")
+}
+
+model Assessment {
+  id             String        @id @default(uuid())
+  subjectId      String
+  subject        Subject       @relation(fields: [subjectId], references: [id])
+  
+  title          String        // e.g. "Term 1 Test"
+  type           String        // TEST, EXAM, ASSIGNMENT
+  date           DateTime
+  
+  totalMarks     Int
+  weight         Int           // Percentage 0-100
+  
+  grades         Grade[]
+  submissions    AssignmentSubmission[]
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("assessments")
+}
+
+model Grade {
+  id             String        @id @default(uuid())
+  assessmentId   String
+  assessment     Assessment    @relation(fields: [assessmentId], references: [id])
+  
+  learnerId      String
+  learner        LearnerProfile @relation(fields: [learnerId], references: [id])
+  
+  score          Float         // The actual mark obtained
+  comments       String?
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@unique([assessmentId, learnerId])
+  @@map("grades")
+}
+
+model Attendance {
+  id             String        @id @default(uuid())
+  learnerId      String
+  learner        LearnerProfile @relation(fields: [learnerId], references: [id])
+  
+  date           DateTime
+  status         String        // PRESENT, ABSENT, LATE
+  reason         String?
+  
+  createdAt      DateTime      @default(now())
+
+  @@map("attendance")
+}
+
+model Billing {
+  id             String        @id @default(uuid())
+  schoolId       String
+  school         School        @relation(fields: [schoolId], references: [id])
+  
+  periodStart    DateTime
+  periodEnd      DateTime
+  
+  baseAmount     Float
+  extraLearners  Int
+  extraAmount    Float
+  totalAmount    Float
+  
+  status         BillingStatus @default(ACTIVE)
+  invoiceUrl     String?
+
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("billing")
+}
+
+model AuditLog {
+  id             String        @id @default(uuid())
+  schoolId       String?
+  school         School?       @relation(fields: [schoolId], references: [id])
+  
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id])
+  
+  action         String
+  entity         String
+  entityId       String
+  details        Json?
+  
+  createdAt      DateTime      @default(now())
+
+  @@map("audit_logs")
+}
+
+model Message {
+  id             String        @id @default(uuid())
+  schoolId       String
+  
+  senderId       String
+  sender         User          @relation("SentMessages", fields: [senderId], references: [id])
+  
+  recipientId    String
+  recipient      User          @relation("ReceivedMessages", fields: [recipientId], references: [id])
+  
+  subject        String
+  content        String
+  
+  readAt         DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([recipientId])
+  @@index([senderId])
+  @@map("messages")
+}
+
+model Resource {
+  id             String        @id @default(uuid())
+  subjectId      String
+  subject        Subject       @relation(fields: [subjectId], references: [id])
+  
+  title          String
+  fileUrl        String        // Link to file (S3/Cloudinary/etc)
+  fileType       String        // PDF, DOCX, etc
+  fileSize       Int?          // Bytes
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("resources")
+}
+
+model AssignmentSubmission {
+  id             String        @id @default(uuid())
+  assessmentId   String
+  assessment     Assessment    @relation(fields: [assessmentId], references: [id])
+  
+  learnerId      String
+  learner        LearnerProfile @relation(fields: [learnerId], references: [id])
+  
+  fileUrl        String        // Link to submitted work
+  submittedAt    DateTime      @default(now())
+  
+  grade          Float?        // Optional automated or manual grade placeholder
+  feedback       String?
+
+  @@unique([assessmentId, learnerId])
+  @@map("assignment_submissions")
+}
+
+model FeeInvoice {
+  id             String        @id @default(uuid())
+  schoolId       String
+  school         School        @relation(fields: [schoolId], references: [id])
+  
+  learnerId      String
+  learner        LearnerProfile @relation(fields: [learnerId], references: [id])
+  
+  title          String        // e.g. "Monthly Tuition - January 2026"
+  amount         Float
+  dueDate        DateTime
+  status         InvoiceStatus @default(PENDING)
+  
+  payments       Payment[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("fee_invoices")
+}
+
+model Payment {
+  id             String        @id @default(uuid())
+  invoiceId      String
+  invoice        FeeInvoice    @relation(fields: [invoiceId], references: [id])
+  
+  amount         Float
+  method         String        // CARD, TRANSFER, CASH
+  reference      String?
+  status         PaymentStatus @default(COMPLETED)
+  
+  createdAt      DateTime      @default(now())
+
+  @@map("payments")
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  VOID
+  OVERDUE
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+model BehaviorRecord {
+  id             String        @id @default(uuid())
+  learnerId      String
+  learner        LearnerProfile @relation(fields: [learnerId], references: [id])
+  
+  teacherId      String
+  teacher        User          @relation(fields: [teacherId], references: [id])
+  
+  type           BehaviorType
+  category       String        // e.g. "ACADEMIC", "SPORT", "CONDUCT"
+  points         Int
+  reason         String
+  
+  createdAt      DateTime      @default(now())
+
+  @@map("behavior_records")
+}
+
+model PTMSession {
+  id             String        @id @default(uuid())
+  schoolId       String
+  school         School        @relation(fields: [schoolId], references: [id])
+  
+  teacherId      String
+  teacher        User          @relation(fields: [teacherId], references: [id])
+  
+  date           DateTime
+  startTime      DateTime
+  endTime        DateTime
+  slotDuration   Int           // in minutes, e.g. 10
+  
+  bookings       PTMBooking[]
+  
+  createdAt      DateTime      @default(now())
+
+  @@map("ptm_sessions")
+}
+
+model PTMBooking {
+  id             String        @id @default(uuid())
+  sessionId      String
+  session        PTMSession    @relation(fields: [sessionId], references: [id])
+  
+  learnerId      String
+  learner        LearnerProfile @relation(fields: [learnerId], references: [id])
+  
+  parentId       String
+  parent         User          @relation(fields: [parentId], references: [id])
+  
+  startTime      DateTime
+  endTime        DateTime
+  status         PTMStatus     @default(BOOKED)
+  
+  createdAt      DateTime      @default(now())
+
+  @@unique([sessionId, startTime])
+  @@map("ptm_bookings")
+}
+
+enum BehaviorType {
+  MERIT
+  DEMERIT
+}
+
+enum PTMStatus {
+  BOOKED
+  CANCELLED
+  COMPLETED
+  NOSHOW
+}
+
+model Application {
+  id             String        @id @default(uuid())
+  schoolId       String
+  school         School        @relation(fields: [schoolId], references: [id])
+  
+  firstName      String
+  lastName       String
+  email          String
+  grade          String        // Grade they are applying for
+  status         ApplicationStatus @default(PENDING)
+  
+  notes          String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("applications")
+}
+
+model Asset {
+  id             String        @id @default(uuid())
+  schoolId       String
+  school         School        @relation(fields: [schoolId], references: [id])
+  
+  name           String        // e.g. "Biology Textbook Vol 1"
+  category       String        // e.g. "BOOKS", "ELECTRONICS"
+  identifier     String?       // e.g. Barcode/ISBN
+  status         AssetStatus   @default(AVAILABLE)
+  isBookable     Boolean       @default(true)
+  bookings       AssetBooking[]
+  
+  assignedToId   String?       // Optional link to User if checked out
+  assignedTo     User?         @relation(fields: [assignedToId], references: [id])
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("assets")
+}
+
+model AIInsight {
+  id             String        @id @default(uuid())
+  learnerId      String
+  learner        LearnerProfile @relation(fields: [learnerId], references: [id])
+  
+  term           String        // e.g. "Term 1 2026"
+  content        Json          // Stored analysis (strengths, weaknesses, suggestions)
+  
+  createdAt      DateTime      @default(now())
+
+  @@map("ai_insights")
+}
+
+enum ApplicationStatus {
+  PENDING
+  REVIEWING
+  APPROVED
+  REJECTED
+}
+
+enum AssetStatus {
+  AVAILABLE
+  CHECKED_OUT
+  MAINTENANCE
+  LOST
+}
+
+model Notification {
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title          String
+  message        String
+  type           NotificationType
+  isRead         Boolean       @default(false)
+  
+  link           String?       // Optional link to relevant page
+  
+  createdAt      DateTime      @default(now())
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+enum NotificationType {
+  ATTENDANCE
+  BEHAVIOR
+  BILLING
+  ACADEMIC
+  SYSTEM
+}
+
+model Quiz {
+  id             String        @id @default(uuid())
+  subjectId      String
+  subject        Subject       @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  
+  title          String
+  description    String?
+  timeLimit      Int?          // minutes
+  isPublished    Boolean       @default(false)
+  
+  questions      QuizQuestion[]
+  attempts       QuizAttempt[]
+  
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id             String        @id @default(uuid())
+  quizId         String
+  quiz           Quiz          @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  
+  text           String
+  points         Int           @default(1)
+  
+  options        QuizOption[]
+  answers        QuizAnswer[]
+  
+  @@map("quiz_questions")
+}
+
+model QuizOption {
+  id             String        @id @default(uuid())
+  questionId     String
+  question       QuizQuestion  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  
+  text           String
+  isCorrect      Boolean       @default(false)
+  
+  answers        QuizAnswer[]
+
+  @@map("quiz_options")
+}
+
+model QuizAttempt {
+  id             String        @id @default(uuid())
+  quizId         String
+  quiz           Quiz          @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  
+  learnerId      String
+  learner        LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  
+  score          Float?
+  answers        QuizAnswer[]
+  
+  startedAt      DateTime      @default(now())
+  completedAt    DateTime?
+
+  @@map("quiz_attempts")
+}
+
+model QuizAnswer {
+  id             String        @id @default(uuid())
+  attemptId      String
+  attempt        QuizAttempt   @relation(fields: [attemptId], references: [id], onDelete: Cascade)
+  
+  questionId     String
+  question       QuizQuestion  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  
+  selectedOptionId String
+  selectedOption   QuizOption  @relation(fields: [selectedOptionId], references: [id], onDelete: Cascade)
+
+  @@map("quiz_answers")
+}
+
+model AssetBooking {
+  id             String        @id @default(uuid())
+  assetId        String
+  asset          Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  
+  userId         String
+  user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  startDate      DateTime
+  endDate        DateTime
+  status         BookingStatus @default(PENDING)
+  
+  createdAt      DateTime      @default(now())
+
+  @@map("asset_bookings")
+}
+
+enum BookingStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  RETURNED
+}
+
+
+
+
+
