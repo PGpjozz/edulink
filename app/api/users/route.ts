@@ -75,7 +75,7 @@ export async function POST(req: Request) {
                 email,
                 idNumber, // Optional for some roles, required for learner
                 password: hashedPassword,
-                role,
+                role: role as any,
                 schoolId: auth.schoolId as string,
                 isActive: true,
                 // Create profile based on role

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -15,7 +15,7 @@ import {
 } from '@mui/material';
 import { motion } from 'framer-motion';
 
-export default function ProviderSignIn() {
+function ProviderSignInInner() {
     const router = useRouter();
     const searchParams = useSearchParams();
 
@@ -101,5 +101,13 @@ export default function ProviderSignIn() {
                 </Box>
             </Paper>
         </Container>
+    );
+}
+
+export default function ProviderSignIn() {
+    return (
+        <Suspense fallback={null}>
+            <ProviderSignInInner />
+        </Suspense>
     );
 }

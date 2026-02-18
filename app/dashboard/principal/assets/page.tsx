@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
     Box,
@@ -70,7 +70,7 @@ interface Booking {
     createdAt: string;
 }
 
-export default function AssetManager() {
+function AssetManagerInner() {
     const searchParams = useSearchParams();
     const [assets, setAssets] = useState<Asset[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
@@ -431,5 +431,13 @@ export default function AssetManager() {
                 </DialogActions>
             </Dialog>
         </Box>
+    );
+}
+
+export default function AssetManager() {
+    return (
+        <Suspense fallback={null}>
+            <AssetManagerInner />
+        </Suspense>
     );
 }

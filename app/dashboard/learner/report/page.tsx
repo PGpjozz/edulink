@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Container, Button, CircularProgress, Alert, Box, Typography } from '@mui/material';
 import { useSearchParams } from 'next/navigation';
 import ReportCard from '@/app/components/ReportCard';
 import { ArrowBack } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 
-export default function LearnerReportPage() {
+function LearnerReportPageInner() {
     const [data, setData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -49,5 +49,13 @@ export default function LearnerReportPage() {
 
             {data && <ReportCard data={data} />}
         </Container>
+    );
+}
+
+export default function LearnerReportPage() {
+    return (
+        <Suspense fallback={null}>
+            <LearnerReportPageInner />
+        </Suspense>
     );
 }

@@ -131,7 +131,7 @@ export default function PrincipalBehaviorPage() {
             )}
 
             <Grid container spacing={2} mb={2}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card variant="outlined">
                         <CardContent>
                             <Typography variant="overline" color="text.secondary">Total records</Typography>
@@ -139,7 +139,7 @@ export default function PrincipalBehaviorPage() {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card variant="outlined">
                         <CardContent>
                             <Typography variant="overline" color="text.secondary">Merits</Typography>
@@ -147,7 +147,7 @@ export default function PrincipalBehaviorPage() {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card variant="outlined">
                         <CardContent>
                             <Typography variant="overline" color="text.secondary">Demerits</Typography>
@@ -155,7 +155,7 @@ export default function PrincipalBehaviorPage() {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                     <Card variant="outlined">
                         <CardContent>
                             <Typography variant="overline" color="text.secondary">Total points</Typography>

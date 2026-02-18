@@ -119,7 +119,7 @@ export async function PATCH(req: Request) {
 
         const booking = await prisma.assetBooking.update({
             where: { id },
-            data: { status },
+            data: { status: status as any },
             include: { asset: true }
         });
 

@@ -108,13 +108,13 @@ export async function POST(req: Request) {
         });
 
         // Send notification to parents
-        const learner = record.learner;
-        if (learner.parentIds && learner.parentIds.length > 0) {
+        const learnerRecord = record.learner;
+        if (learnerRecord.parentIds && learnerRecord.parentIds.length > 0) {
             await prisma.notification.createMany({
-                data: learner.parentIds.map((parentId: string) => ({
+                data: learnerRecord.parentIds.map((parentId: string) => ({
                     userId: parentId,
-                    title: `Behavioral Update: ${learner.user.firstName}`,
-                    message: `${learner.user.firstName} received a ${type === 'MERIT' ? 'merit' : 'demerit'} for ${category}: ${reason}`,
+                    title: `Behavioral Update: ${learnerRecord.user.firstName}`,
+                    message: `${learnerRecord.user.firstName} received a ${type === 'MERIT' ? 'merit' : 'demerit'} for ${category}: ${reason}`,
                     type: 'BEHAVIOR',
                     link: '/dashboard/parent/notifications'
                 }))

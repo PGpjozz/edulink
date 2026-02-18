@@ -40,7 +40,7 @@ export async function POST(req: Request) {
             data: {
                 name,
                 contactEmail,
-                tier,
+                tier: tier as any,
             }
         });
 

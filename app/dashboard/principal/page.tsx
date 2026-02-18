@@ -489,7 +489,7 @@ export default function PrincipalDashboard() {
                                     </Paper>
 
                                     <Grid container spacing={2} sx={{ mb: 2 }}>
-                                        <Grid item xs={12} sm={6} md={3}>
+                                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                             <Card
                                                 variant="outlined"
                                                 onClick={() => setTabIndex(2)}
@@ -501,7 +501,7 @@ export default function PrincipalDashboard() {
                                                 </CardContent>
                                             </Card>
                                         </Grid>
-                                        <Grid item xs={12} sm={6} md={3}>
+                                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                             <Card
                                                 variant="outlined"
                                                 onClick={() => setTabIndex(2)}
@@ -516,7 +516,7 @@ export default function PrincipalDashboard() {
                                                 </CardContent>
                                             </Card>
                                         </Grid>
-                                        <Grid item xs={12} sm={6} md={3}>
+                                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                             <Card
                                                 variant="outlined"
                                                 onClick={() => setTabIndex(1)}
@@ -531,7 +531,7 @@ export default function PrincipalDashboard() {
                                                 </CardContent>
                                             </Card>
                                         </Grid>
-                                        <Grid item xs={12} sm={6} md={3}>
+                                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                             <Card
                                                 variant="outlined"
                                                 onClick={() => setTabIndex(3)}
@@ -547,7 +547,7 @@ export default function PrincipalDashboard() {
                                             </Card>
                                         </Grid>
 
-                                        <Grid item xs={12} sm={6} md={3}>
+                                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                             <Card
                                                 variant="outlined"
                                                 onClick={() => router.push('/dashboard/principal/assets')}
@@ -562,7 +562,7 @@ export default function PrincipalDashboard() {
                                                 </CardContent>
                                             </Card>
                                         </Grid>
-                                        <Grid item xs={12} sm={6} md={3}>
+                                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                             <Card
                                                 variant="outlined"
                                                 onClick={() => router.push('/dashboard/principal/assets?tab=bookings')}
@@ -574,7 +574,7 @@ export default function PrincipalDashboard() {
                                                 </CardContent>
                                             </Card>
                                         </Grid>
-                                        <Grid item xs={12} sm={6} md={3}>
+                                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                             <Card
                                                 variant="outlined"
                                                 onClick={() => router.push('/dashboard/principal/finance')}
@@ -589,7 +589,7 @@ export default function PrincipalDashboard() {
                                                 </CardContent>
                                             </Card>
                                         </Grid>
-                                        <Grid item xs={12} sm={6} md={3}>
+                                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
                                             <Card
                                                 variant="outlined"
                                                 onClick={() => router.push('/dashboard/principal/finance')}
@@ -607,7 +607,7 @@ export default function PrincipalDashboard() {
                                     </Grid>
 
                                     <Grid container spacing={2} sx={{ mb: 2 }}>
-                                        <Grid item xs={12} md={6}>
+                                        <Grid size={{ xs: 12, md: 6 }}>
                                             <Card variant="outlined" sx={{ height: 360 }}>
                                                 <CardContent sx={{ height: '100%' }}>
                                                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
@@ -629,7 +629,7 @@ export default function PrincipalDashboard() {
                                                 </CardContent>
                                             </Card>
                                         </Grid>
-                                        <Grid item xs={12} md={6}>
+                                        <Grid size={{ xs: 12, md: 6 }}>
                                             <Card variant="outlined" sx={{ height: 360 }}>
                                                 <CardContent sx={{ height: '100%' }}>
                                                     <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
@@ -653,7 +653,7 @@ export default function PrincipalDashboard() {
                                     </Grid>
 
                                     <Grid container spacing={2}>
-                                        <Grid item xs={12} md={4}>
+                                        <Grid size={{ xs: 12, md: 4 }}>
                                             <Card variant="outlined">
                                                 <CardContent>
                                                     <Typography variant="subtitle1" fontWeight="bold">Recent invoices</Typography>
@@ -682,7 +682,7 @@ export default function PrincipalDashboard() {
                                             </Card>
                                         </Grid>
 
-                                        <Grid item xs={12} md={4}>
+                                        <Grid size={{ xs: 12, md: 4 }}>
                                             <Card variant="outlined">
                                                 <CardContent>
                                                     <Typography variant="subtitle1" fontWeight="bold">Recent asset bookings</Typography>
@@ -711,7 +711,7 @@ export default function PrincipalDashboard() {
                                             </Card>
                                         </Grid>
 
-                                        <Grid item xs={12} md={4}>
+                                        <Grid size={{ xs: 12, md: 4 }}>
                                             <Card variant="outlined">
                                                 <CardContent>
                                                     <Typography variant="subtitle1" fontWeight="bold">Recent behavior</Typography>

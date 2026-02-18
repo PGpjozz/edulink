@@ -92,7 +92,7 @@ export async function PATCH(req: Request) {
 
         const updated = await prisma.application.update({
             where: { id },
-            data: { status }
+            data: { status: status as any }
         });
 
         return NextResponse.json(updated);
