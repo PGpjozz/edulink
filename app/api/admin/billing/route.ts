@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
+import type { BillingTier } from '@prisma/client';
 
-const TIER_PRICES = {
+const TIER_PRICES: Record<BillingTier, number> = {
     SMALL: 500,
     MEDIUM: 1500,
     LARGE: 5000
 };
 
-const TIER_LIMITS = {
+const TIER_LIMITS: Record<BillingTier, number> = {
     SMALL: 100,
     MEDIUM: 500,
     LARGE: Infinity
@@ -50,8 +51,8 @@ export async function POST(req: Request) {
         if (!school) return new NextResponse('School not found', { status: 404 });
 
         const learnerCount = school._count.users;
-        const basePrice = TIER_PRICES[school.tier];
-        const limit = TIER_LIMITS[school.tier];
+        const basePrice = TIER_PRICES[school.tier as BillingTier];
+        const limit = TIER_LIMITS[school.tier as BillingTier];
         const extraLearners = Math.max(0, learnerCount - limit);
         const extraAmount = extraLearners * 10;
         const totalAmount = basePrice + extraAmount;
