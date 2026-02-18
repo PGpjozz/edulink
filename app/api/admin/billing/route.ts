@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
-import type { BillingTier } from '@prisma/client';
+type BillingTier = 'SMALL' | 'MEDIUM' | 'LARGE';
 
 const TIER_PRICES: Record<BillingTier, number> = {
     SMALL: 500,
