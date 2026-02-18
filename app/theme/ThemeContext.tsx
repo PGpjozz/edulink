@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
 import { ThemeProvider } from '@mui/material/styles';
 import { useSession } from 'next-auth/react';
 import { getTheme } from './theme';
@@ -27,19 +27,16 @@ export const useThemeContext = () => {
 };
 
 export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [mode, setMode] = useState<ThemeMode>('light');
-    const [primaryColor, setPrimaryColor] = useState('#4338ca');
+    const [mode, setMode] = useState<ThemeMode>(() => {
+        const saved = typeof window !== 'undefined' ? (localStorage.getItem('themeMode') as ThemeMode | null) : null;
+        return saved ?? 'light';
+    });
+    const [primaryColor, setPrimaryColor] = useState(() => {
+        const saved = typeof window !== 'undefined' ? localStorage.getItem('primaryColor') : null;
+        return saved ?? '#4338ca';
+    });
     const [logoUrl, setLogoUrl] = useState('');
     const { data: session } = useSession();
-
-    // Load preferences from localStorage on mount
-    useEffect(() => {
-        const savedMode = localStorage.getItem('themeMode') as ThemeMode;
-        if (savedMode) setMode(savedMode);
-
-        const savedColor = localStorage.getItem('primaryColor');
-        if (savedColor) setPrimaryColor(savedColor);
-    }, []);
 
     // Fetch school-specific branding when session is available
     useEffect(() => {
@@ -49,7 +46,11 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
                 .then(data => {
                     if (data.primaryColor) {
                         setPrimaryColor(data.primaryColor);
-                        localStorage.setItem('primaryColor', data.primaryColor);
+                        if (typeof window !== 'undefined') {
+                            try {
+                                localStorage.setItem('primaryColor', data.primaryColor);
+                            } catch {}
+                        }
                     }
                     if (data.logoUrl) {
                         setLogoUrl(data.logoUrl);
@@ -59,16 +60,24 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
         }
     }, [session?.user?.schoolId]);
 
-    const toggleTheme = () => {
+    const toggleTheme = useCallback(() => {
         const newMode = mode === 'light' ? 'dark' : 'light';
         setMode(newMode);
-        localStorage.setItem('themeMode', newMode);
-    };
+        if (typeof window !== 'undefined') {
+            try {
+                localStorage.setItem('themeMode', newMode);
+            } catch {}
+        }
+    }, [mode]);
 
-    const handleSetPrimaryColor = (color: string) => {
+    const handleSetPrimaryColor = useCallback((color: string) => {
         setPrimaryColor(color);
-        localStorage.setItem('primaryColor', color);
-    };
+        if (typeof window !== 'undefined') {
+            try {
+                localStorage.setItem('primaryColor', color);
+            } catch {}
+        }
+    }, []);
 
     const theme = useMemo(() => getTheme(mode, primaryColor), [mode, primaryColor]);
 
@@ -79,7 +88,7 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
         setPrimaryColor: handleSetPrimaryColor,
         logoUrl,
         setLogoUrl
-    }), [mode, primaryColor, logoUrl]);
+    }), [mode, toggleTheme, primaryColor, handleSetPrimaryColor, logoUrl, setLogoUrl]);
 
     return (
         <ThemeContext.Provider value={value}>

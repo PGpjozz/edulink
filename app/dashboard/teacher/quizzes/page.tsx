@@ -14,44 +14,71 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    List,
     Paper,
-    ListItem,
-    ListItemText,
     IconButton,
-    Divider,
     FormControl,
     InputLabel,
     Select,
     MenuItem,
     Checkbox,
-    FormControlLabel,
     Stack,
     Chip,
     CircularProgress
 } from '@mui/material';
 import {
     Add,
-    Delete,
     QuestionAnswer,
     Timer,
     Publish,
     ListAlt,
     Close,
-    CheckCircle
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
+type QuizSummary = {
+    id: string;
+    title: string;
+    description?: string;
+    isPublished?: boolean;
+    _count: { questions: number };
+    timeLimit: number;
+    subject?: { name?: string };
+};
+
+type SubjectSummary = {
+    id: string;
+    name: string;
+    grade: string;
+};
+
+type QuizOption = {
+    text: string;
+    isCorrect: boolean;
+};
+
+type QuizQuestion = {
+    text: string;
+    points: number;
+    options: QuizOption[];
+};
+
+type NewQuiz = {
+    subjectId: string;
+    title: string;
+    description: string;
+    timeLimit: number;
+    questions: QuizQuestion[];
+};
+
 export default function QuizManager() {
     const router = useRouter();
-    const [quizzes, setQuizzes] = useState<any[]>([]);
-    const [subjects, setSubjects] = useState<any[]>([]);
+    const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
+    const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [openAdd, setOpenAdd] = useState(false);
 
-    // Form state
-    const [newQuiz, setNewQuiz] = useState({
+    const [newQuiz, setNewQuiz] = useState<NewQuiz>({
         subjectId: '',
         title: '',
         description: '',
@@ -66,8 +93,10 @@ export default function QuizManager() {
                 fetch('/api/school/quizzes'),
                 fetch('/api/subjects')
             ]);
-            setQuizzes(await quizRes.json());
-            setSubjects(await subRes.json());
+            const quizzesJson: QuizSummary[] = await quizRes.json();
+            const subjectsJson: SubjectSummary[] = await subRes.json();
+            setQuizzes(quizzesJson);
+            setSubjects(subjectsJson);
         } catch (err) {
             console.error(err);
         } finally {
@@ -135,7 +164,7 @@ export default function QuizManager() {
             </Box>
 
             <Grid container spacing={3}>
-                {quizzes.map((quiz: any) => (
+                {quizzes.map((quiz) => (
                     <Grid size={{ xs: 12, md: 4 }} key={quiz.id} component={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                         <Card sx={{ borderRadius: 3, boxShadow: 3, border: '1px solid', borderColor: 'divider' }}>
                             <CardContent>
@@ -167,7 +196,24 @@ export default function QuizManager() {
                                 >
                                     Results
                                 </Button>
-                                <Button variant="text" fullWidth size="small" startIcon={<Publish />}>Publish</Button>
+                                <Button
+                                    variant="text"
+                                    fullWidth
+                                    size="small"
+                                    startIcon={<Publish />}
+                                    onClick={async () => {
+                                        const res = await fetch('/api/school/quizzes', {
+                                            method: 'PATCH',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({ quizId: quiz.id, isPublished: !quiz.isPublished })
+                                        });
+                                        if (res.ok) {
+                                            fetchData();
+                                        }
+                                    }}
+                                >
+                                    {quiz.isPublished ? 'Unpublish' : 'Publish'}
+                                </Button>
                             </Box>
                         </Card>
                     </Grid>
@@ -196,7 +242,7 @@ export default function QuizManager() {
                                     label="Assign to Subject"
                                     onChange={(e) => setNewQuiz({ ...newQuiz, subjectId: e.target.value })}
                                 >
-                                    {subjects.map((s: any) => (
+                                            {subjects.map((s) => (
                                         <MenuItem key={s.id} value={s.id}>{s.name} (Grade {s.grade})</MenuItem>
                                     ))}
                                 </Select>
@@ -271,7 +317,7 @@ export default function QuizManager() {
                                                     <Checkbox
                                                         checked={o.isCorrect}
                                                         color="success"
-                                                        onChange={(e) => {
+                                                        onChange={() => {
                                                             const updated = [...newQuiz.questions];
                                                             updated[qIdx].options = updated[qIdx].options.map((opt, idx) => ({
                                                                 ...opt,

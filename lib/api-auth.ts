@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
+import { Session } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 
 type RequireAuthOptions = {
     roles?: string[];
@@ -9,7 +11,7 @@ type RequireAuthOptions = {
 };
 
 export type AuthContext = {
-    session: any;
+    session: Session;
     userId: string;
     role: string;
     schoolId: string | null;
@@ -41,7 +43,7 @@ export async function requireAuth(options: RequireAuthOptions = {}): Promise<Aut
     };
 }
 
-export async function readJson<T = any>(req: Request): Promise<T | NextResponse> {
+export async function readJson<T = unknown>(req: Request): Promise<T | NextResponse> {
     try {
         return (await req.json()) as T;
     } catch {
@@ -55,7 +57,7 @@ export async function writeAuditLog(params: {
     action: string;
     entity: string;
     entityId: string;
-    details?: any;
+    details?: Prisma.InputJsonValue | Prisma.NullableJsonNullValueInput;
 }): Promise<void> {
     try {
         await prisma.auditLog.create({
@@ -65,7 +67,7 @@ export async function writeAuditLog(params: {
                 action: params.action,
                 entity: params.entity,
                 entityId: params.entityId,
-                details: params.details,
+                details: params.details === null ? Prisma.DbNull : params.details,
             },
         });
     } catch (error) {

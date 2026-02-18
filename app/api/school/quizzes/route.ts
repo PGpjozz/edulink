@@ -75,3 +75,35 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
+
+export async function PATCH(req: Request) {
+    const session = await getServerSession(authOptions);
+    if (!session || session.user.role !== 'TEACHER') {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    try {
+        const { quizId, isPublished } = await req.json();
+        if (!quizId || typeof isPublished !== 'boolean') {
+            return NextResponse.json({ error: 'Invalid payload' }, { status: 400 });
+        }
+        const quiz = await prisma.quiz.findFirst({
+            where: { id: quizId, subject: { schoolId: session.user.schoolId as string } },
+            include: { _count: { select: { questions: true, attempts: true } } }
+        });
+        if (!quiz) {
+            return NextResponse.json({ error: 'Not found' }, { status: 404 });
+        }
+        const updated = await prisma.quiz.update({
+            where: { id: quizId },
+            data: { isPublished }
+        });
+        const result = await prisma.quiz.findUnique({
+            where: { id: updated.id },
+            include: { _count: { select: { questions: true, attempts: true } } }
+        });
+        return NextResponse.json(result);
+    } catch (error) {
+        console.error('Quiz PATCH Error:', error);
+        return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+}

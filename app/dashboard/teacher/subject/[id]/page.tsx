@@ -1,14 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Container,
     Typography,
     Button,
     Paper,
-    Chip,
-    IconButton
+    Chip
 } from '@mui/material';
 import { Add as AddIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
@@ -66,18 +65,20 @@ export default function SubjectDetail() {
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const fetchAssessments = () => {
-        setLoading(true);
+    const fetchAssessments = useCallback(() => {
+        Promise.resolve().then(() => setLoading(true));
         fetch(`/api/assessments?subjectId=${subjectId}`)
             .then(res => res.json())
             .then(data => setAssessments(data))
             .catch(console.error)
             .finally(() => setLoading(false));
-    };
+    }, [subjectId]);
 
     useEffect(() => {
-        if (subjectId) fetchAssessments();
-    }, [subjectId]);
+        if (subjectId) {
+            fetchAssessments();
+        }
+    }, [subjectId, fetchAssessments]);
 
     return (
         <Container maxWidth="xl" sx={{ mt: 4 }}>

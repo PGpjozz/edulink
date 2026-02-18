@@ -12,7 +12,6 @@ import {
     Select,
     MenuItem,
     Button,
-    TextField,
     CircularProgress,
     Stack,
     Chip,
@@ -21,17 +20,18 @@ import {
 } from '@mui/material';
 import {
     AutoAwesome,
-    Person,
-    School,
-    MenuBook,
     ContentCopy,
     Refresh
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AIAssistant() {
-    const [learners, setLearners] = useState([]);
-    const [subjects, setSubjects] = useState([]);
+    type Learner = { id: string; user: { firstName: string; lastName: string } };
+    type SubjectSummary = { id: string; name: string; grade: string };
+    type ReportResult = { comment: string; dataPoints: { avgScore: number; attendanceRate: number; assessmentsCount: number } };
+
+    const [learners, setLearners] = useState<Learner[]>([]);
+    const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
 
@@ -39,7 +39,7 @@ export default function AIAssistant() {
     const [selectedLearner, setSelectedLearner] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
     const [tone, setTone] = useState('professional');
-    const [result, setResult] = useState<any>(null);
+    const [result, setResult] = useState<ReportResult | null>(null);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -48,8 +48,10 @@ export default function AIAssistant() {
                     fetch('/api/school/learners'),
                     fetch('/api/subjects')
                 ]);
-                setLearners(await lRes.json());
-                setSubjects(await sRes.json());
+                const lJson: Learner[] = await lRes.json();
+                const sJson: SubjectSummary[] = await sRes.json();
+                setLearners(lJson);
+                setSubjects(sJson);
             } catch (err) {
                 console.error(err);
             } finally {
@@ -68,7 +70,7 @@ export default function AIAssistant() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ learnerId: selectedLearner, subjectId: selectedSubject, tone })
             });
-            const data = await res.json();
+            const data: ReportResult = await res.json();
             setResult(data);
         } catch (err) {
             console.error(err);
@@ -108,7 +110,7 @@ export default function AIAssistant() {
                                     label="Select Student"
                                     onChange={(e) => setSelectedLearner(e.target.value)}
                                 >
-                                    {learners.map((l: any) => (
+                                    {learners.map((l) => (
                                         <MenuItem key={l.id} value={l.id}>{l.user.firstName} {l.user.lastName}</MenuItem>
                                     ))}
                                 </Select>
@@ -121,7 +123,7 @@ export default function AIAssistant() {
                                     label="Subject"
                                     onChange={(e) => setSelectedSubject(e.target.value)}
                                 >
-                                    {subjects.map((s: any) => (
+                                    {subjects.map((s) => (
                                         <MenuItem key={s.id} value={s.id}>{s.name} (Gr {s.grade})</MenuItem>
                                     ))}
                                 </Select>
@@ -172,7 +174,7 @@ export default function AIAssistant() {
                                     <Typography variant="subtitle2" color="primary" fontWeight="bold" gutterBottom>PROPOSED FEEDBACK</Typography>
                                     <Box sx={{ mt: 4, minHeight: 150 }}>
                                         <Typography variant="h6" sx={{ fontStyle: 'italic', lineHeight: 1.6, color: 'text.primary' }}>
-                                            "{result.comment}"
+                                            {result.comment}
                                         </Typography>
                                     </Box>
 

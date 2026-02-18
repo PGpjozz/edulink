@@ -27,14 +27,18 @@ export default function MasterGradebook() {
     const params = useParams();
     const subjectId = params.id as string;
 
-    const [data, setData] = useState<any>(null);
+    type Assessment = { id: string; title: string; type: string; weight: number; totalMarks: number };
+    type Learner = { id: string; user: { firstName: string; lastName: string } };
+    type Grade = { learnerId: string; assessmentId: string; score: number };
+    type GradebookData = { assessments: Assessment[]; learners: Learner[]; grades: Grade[] };
+    const [data, setData] = useState<GradebookData | null>(null);
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
         setLoading(true);
         try {
             const res = await fetch(`/api/subjects/${subjectId}/grades`);
-            const json = await res.json();
+            const json: GradebookData = await res.json();
             setData(json);
         } catch (err) {
             console.error('Error fetching master gradebook:', err);
@@ -48,7 +52,7 @@ export default function MasterGradebook() {
     }, [subjectId]);
 
     const getGrade = (learnerId: string, assessmentId: string) => {
-        const grade = data?.grades.find((g: any) => g.learnerId === learnerId && g.assessmentId === assessmentId);
+        const grade = data?.grades.find((g) => g.learnerId === learnerId && g.assessmentId === assessmentId);
         return grade ? grade.score : '-';
     };
 
@@ -56,11 +60,11 @@ export default function MasterGradebook() {
         if (!data) return;
 
         let csv = 'Learner,';
-        csv += data.assessments.map((a: any) => `"${a.title}"`).join(',') + '\n';
+        csv += data.assessments.map((a) => `"${a.title}"`).join(',') + '\n';
 
-        data.learners.forEach((l: any) => {
+        data.learners.forEach((l) => {
             csv += `"${l.user.firstName} ${l.user.lastName}",`;
-            csv += data.assessments.map((a: any) => getGrade(l.id, a.id)).join(',') + '\n';
+            csv += data.assessments.map((a) => getGrade(l.id, a.id)).join(',') + '\n';
         });
 
         const blob = new Blob([csv], { type: 'text/csv' });
@@ -93,7 +97,7 @@ export default function MasterGradebook() {
                     <TableHead sx={{ bgcolor: 'action.hover' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 'bold', minWidth: 200 }}>Learner Name</TableCell>
-                            {data.assessments.map((a: any) => (
+                            {data.assessments.map((a) => (
                                 <TableCell key={a.id} align="center" sx={{ fontWeight: 'bold', minWidth: 100 }}>
                                     <Tooltip title={`${a.type} (${a.weight}%)`}>
                                         <Box>
@@ -106,12 +110,12 @@ export default function MasterGradebook() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {data.learners.map((learner: any) => (
+                        {data.learners.map((learner) => (
                             <TableRow key={learner.id} hover>
                                 <TableCell sx={{ fontWeight: 'medium' }}>
                                     {learner.user.firstName} {learner.user.lastName}
                                 </TableCell>
-                                {data.assessments.map((a: any) => {
+                                {data.assessments.map((a) => {
                                     const score = getGrade(learner.id, a.id);
                                     return (
                                         <TableCell key={a.id} align="center">

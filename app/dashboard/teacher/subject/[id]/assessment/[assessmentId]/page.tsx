@@ -25,9 +25,12 @@ export default function AssessmentGrading() {
     const params = useParams();
     const { id: subjectId, assessmentId } = params as { id: string, assessmentId: string };
 
-    const [learners, setLearners] = useState<any[]>([]);
-    const [grades, setGrades] = useState<{ [key: string]: string }>({}); // learnerId -> score
-    const [comments, setComments] = useState<{ [key: string]: string }>({});
+    type Learner = { id: string; user: { firstName: string; lastName: string } };
+    type GradeItem = { learnerId: string; score: number; comments?: string };
+
+    const [learners, setLearners] = useState<Learner[]>([]);
+    const [grades, setGrades] = useState<Record<string, number>>({});
+    const [comments, setComments] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
@@ -48,12 +51,12 @@ export default function AssessmentGrading() {
             try {
                 // Get grades
                 const gradesRes = await fetch(`/api/grades?assessmentId=${assessmentId}`);
-                const gradesData = await gradesRes.json();
+                const gradesData: GradeItem[] = await gradesRes.json();
 
                 // Map existing grades
-                const gradeMap: any = {};
-                const commentMap: any = {};
-                gradesData.forEach((g: any) => {
+                const gradeMap: Record<string, number> = {};
+                const commentMap: Record<string, string> = {};
+                gradesData.forEach((g) => {
                     gradeMap[g.learnerId] = g.score;
                     commentMap[g.learnerId] = g.comments || '';
                 });
@@ -71,11 +74,11 @@ export default function AssessmentGrading() {
                 // Real implementation:
                 const learnersRes = await fetch(`/api/subjects/${subjectId}/learners`);
                 if (learnersRes.ok) {
-                    const learnersData = await learnersRes.json();
+                    const learnersData: Learner[] = await learnersRes.json();
                     setLearners(learnersData);
                 }
-            } catch (e) {
-                console.error(e);
+            } catch {
+                // swallow
             } finally {
                 setLoading(false);
             }
@@ -103,7 +106,7 @@ export default function AssessmentGrading() {
 
             if (!res.ok) throw new Error('Failed to save');
             setMessage({ type: 'success', text: 'Grades saved successfully' });
-        } catch (e) {
+        } catch {
             setMessage({ type: 'error', text: 'Error saving grades' });
         } finally {
             setSaving(false);
@@ -164,8 +167,8 @@ export default function AssessmentGrading() {
                                     <TextField
                                         size="small"
                                         type="number"
-                                        value={grades[learner.id] || ''}
-                                        onChange={(e) => setGrades({ ...grades, [learner.id]: e.target.value })}
+                                        value={grades[learner.id] ?? ''}
+                                        onChange={(e) => setGrades({ ...grades, [learner.id]: parseFloat(e.target.value) || 0 })}
                                         inputProps={{ min: 0, max: 100 }}
                                     />
                                 </TableCell>

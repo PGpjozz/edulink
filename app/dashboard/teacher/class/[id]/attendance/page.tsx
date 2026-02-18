@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
     Box,
     Container,
@@ -28,11 +28,38 @@ export default function AttendancePage() {
     const router = useRouter();
 
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
-    const [learners, setLearners] = useState<any[]>([]);
+    type ClassLearner = { id: string; firstName: string; lastName: string; idNumber?: string };
+    type AttendanceRecord = { learnerId: string; status: string };
+    const [learners, setLearners] = useState<ClassLearner[]>([]);
     const [attendance, setAttendance] = useState<Record<string, string>>({}); // learnerId -> status
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState('');
+
+    const fetchLearnersAndAttendance = useCallback(async () => {
+        setLoading(true);
+        try {
+            const learnersRes = await fetch(`/api/classes/${classId}/learners`);
+            if (!learnersRes.ok) throw new Error('Failed to fetch learners');
+            const classLearners: ClassLearner[] = await learnersRes.json();
+
+            const attRes = await fetch(`/api/attendance?classId=${classId}&date=${date}`);
+            const existingAtt: AttendanceRecord[] = attRes.ok ? await attRes.json() : [];
+
+            const attMap: Record<string, string> = {};
+            classLearners.forEach((l) => {
+                const found = existingAtt.find((a) => a.learnerId === l.id);
+                attMap[l.id] = found ? found.status : 'PRESENT';
+            });
+
+            setLearners(classLearners);
+            setAttendance(attMap);
+        } catch {
+            // swallow to avoid noisy logs
+        } finally {
+            setLoading(false);
+        }
+    }, [classId, date]);
 
     useEffect(() => {
         // Fetch class learners first
@@ -50,37 +77,7 @@ export default function AttendancePage() {
 
         // Wait, I can reuse `api/subjects/[id]/learners` logic but for class.
         fetchLearnersAndAttendance();
-    }, [classId, date]);
-
-    const fetchLearnersAndAttendance = async () => {
-        setLoading(true);
-        try {
-            // Fetch Learners (we need a new endpoint really, but let's try to piggyback or fetch all users)
-            // Implementation detail: I'll create `api/classes/[id]/learners` on the fly next step if needed.
-            // For now, let's assume it exists.
-            const learnersRes = await fetch(`/api/classes/${classId}/learners`);
-            if (!learnersRes.ok) throw new Error('Failed to fetch learners');
-            const classLearners = await learnersRes.json();
-
-            // Fetch existing attendance
-            const attRes = await fetch(`/api/attendance?classId=${classId}&date=${date}`);
-            const existingAtt = attRes.ok ? await attRes.json() : [];
-
-            // Merge
-            const attMap: Record<string, string> = {};
-            classLearners.forEach((l: any) => {
-                const found = existingAtt.find((a: any) => a.learnerId === l.id);
-                attMap[l.id] = found ? found.status : 'PRESENT'; // Default to Present
-            });
-
-            setLearners(classLearners);
-            setAttendance(attMap);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [fetchLearnersAndAttendance]);
 
     const handleSave = async () => {
         setSaving(true);
@@ -100,7 +97,7 @@ export default function AttendancePage() {
 
             setSuccess('Attendance saved successfully!');
             setTimeout(() => setSuccess(''), 3000);
-        } catch (e) {
+        } catch {
             alert('Failed to save');
         } finally {
             setSaving(false);

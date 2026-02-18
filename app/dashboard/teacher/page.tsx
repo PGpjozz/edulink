@@ -21,8 +21,11 @@ import {
 import { useRouter } from 'next/navigation';
 import TimetableView from '@/app/components/TimetableView';
 
-function ClassesSection({ onViewSchedule }: { onViewSchedule: (cls: any) => void }) {
-    const [classes, setClasses] = useState([]);
+type ClassInfo = { id: string; name: string; grade: string; _count?: { learners?: number }; timetable?: unknown };
+type SubjectSummary = { id: string; name: string; grade: string; code?: string; _count?: { assessments?: number } };
+
+function ClassesSection({ onViewSchedule }: { onViewSchedule: (cls: ClassInfo) => void }) {
+    const [classes, setClasses] = useState<ClassInfo[]>([]);
     const router = useRouter();
 
     useEffect(() => {
@@ -34,7 +37,7 @@ function ClassesSection({ onViewSchedule }: { onViewSchedule: (cls: any) => void
 
     return (
         <Grid container spacing={3}>
-            {classes.map((cls: any) => (
+            {classes.map((cls) => (
                 <Grid size={{ xs: 12, md: 4 }} key={cls.id}>
                     <Card>
                         <CardContent>
@@ -75,10 +78,10 @@ function ClassesSection({ onViewSchedule }: { onViewSchedule: (cls: any) => void
 }
 
 export default function TeacherDashboard() {
-    const [subjects, setSubjects] = useState([]);
+    const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [timetableOpen, setTimetableOpen] = useState(false);
-    const [selectedClass, setSelectedClass] = useState<any>(null);
+    const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
     const router = useRouter();
 
     useEffect(() => {
@@ -91,7 +94,7 @@ export default function TeacherDashboard() {
             .catch(err => setLoading(false));
     }, []);
 
-    const handleViewSchedule = (cls: any) => {
+    const handleViewSchedule = (cls: ClassInfo) => {
         setSelectedClass(cls);
         setTimetableOpen(true);
     };
@@ -109,7 +112,7 @@ export default function TeacherDashboard() {
             </Typography>
 
             <Grid container spacing={3} sx={{ mb: 6 }}>
-                {subjects.map((subject: any) => (
+                {subjects.map((subject) => (
                     <Grid size={{ xs: 12, md: 4 }} key={subject.id}>
                         <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                             <CardContent sx={{ flexGrow: 1 }}>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect } from 'react';
 import {
     Container,
     Typography,
@@ -16,7 +16,6 @@ import {
     Button,
     CircularProgress,
     Stack,
-    Divider
 } from '@mui/material';
 import {
     ArrowBack,
@@ -24,11 +23,24 @@ import {
     TrendingUp,
     People
 } from '@mui/icons-material';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 
-export default function QuizResults({ params }: { params: Promise<{ id: string }> }) {
-    const { id: quizId } = use(params);
-    const [stats, setStats] = useState<any>(null);
+type Attempt = {
+    id: string;
+    score: number;
+    completedAt: string;
+    learner?: { user?: { firstName?: string; lastName?: string } };
+};
+
+type Stats = {
+    title: string;
+    timeLimit: number;
+    attempts: Attempt[];
+};
+
+export default function QuizResults() {
+    const { id: quizId } = useParams() as { id: string };
+    const [stats, setStats] = useState<Stats | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
@@ -37,7 +49,7 @@ export default function QuizResults({ params }: { params: Promise<{ id: string }
             try {
                 // We'll reuse the quiz detail API which includes attempts
                 const res = await fetch(`/api/school/quizzes/${quizId}`);
-                const data = await res.json();
+                const data: Stats = await res.json();
                 setStats(data);
             } catch (err) {
                 console.error(err);
@@ -51,9 +63,9 @@ export default function QuizResults({ params }: { params: Promise<{ id: string }
     if (loading) return <Box display="flex" justifyContent="center" mt={10}><CircularProgress /></Box>;
     if (!stats) return <Typography align="center">Quiz not found.</Typography>;
 
-    const attempts = stats.attempts || [];
+    const attempts = stats.attempts ?? [];
     const avgScore = attempts.length > 0
-        ? attempts.reduce((acc: number, curr: any) => acc + (curr.score || 0), 0) / attempts.length
+        ? attempts.reduce((acc: number, curr: Attempt) => acc + (curr.score || 0), 0) / attempts.length
         : 0;
 
     return (
@@ -111,7 +123,7 @@ export default function QuizResults({ params }: { params: Promise<{ id: string }
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {attempts.map((attempt: any) => (
+                        {attempts.map((attempt) => (
                             <TableRow key={attempt.id} hover>
                                 <TableCell>{attempt.learner?.user?.firstName} {attempt.learner?.user?.lastName}</TableCell>
                                 <TableCell>{new Date(attempt.completedAt).toLocaleDateString()}</TableCell>

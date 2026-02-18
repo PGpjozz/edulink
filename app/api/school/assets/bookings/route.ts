@@ -10,7 +10,7 @@ export async function GET(req: Request) {
         const { searchParams } = new URL(req.url);
         const myBookings = searchParams.get('myBookings') === 'true';
 
-        let where: any = { asset: { schoolId: auth.schoolId as string } };
+        const where: any = { asset: { schoolId: auth.schoolId as string } };
 
         const staff = ['PRINCIPAL', 'SCHOOL_ADMIN', 'TEACHER'].includes(auth.role);
 

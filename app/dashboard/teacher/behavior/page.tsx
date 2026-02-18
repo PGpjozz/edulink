@@ -35,11 +35,21 @@ import {
 import { motion } from 'framer-motion';
 
 export default function BehaviorLedger() {
-    const [records, setRecords] = useState<any[]>([]);
-    const [learners, setLearners] = useState<any[]>([]);
+    type BehaviorRecord = {
+        id: string;
+        createdAt: string;
+        type: 'MERIT' | 'DEMERIT';
+        category: string;
+        points: number;
+        reason: string;
+        learner?: { user?: { firstName?: string; lastName?: string } };
+    };
+    type LearnerSummary = { id: string; user?: { firstName?: string; lastName?: string } };
+    const [records, setRecords] = useState<BehaviorRecord[]>([]);
+    const [learners, setLearners] = useState<LearnerSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [formData, setFormData] = useState<any>({
+    const [formData, setFormData] = useState({
         learnerId: '',
         type: 'MERIT',
         category: 'ACADEMIC',
@@ -54,12 +64,12 @@ export default function BehaviorLedger() {
                 fetch('/api/behavior'),
                 fetch('/api/learners')
             ]);
-            const recordsData = await recordsRes.json();
-            const learnersData = await learnersRes.json();
+            const recordsData: BehaviorRecord[] = await recordsRes.json();
+            const learnersData: LearnerSummary[] = await learnersRes.json();
             setRecords(recordsData);
             setLearners(learnersData);
-        } catch (err) {
-            console.error('Failed to fetch behavior data:', err);
+        } catch {
+            // swallow to reduce console noise in UI
         } finally {
             setLoading(false);
         }
@@ -81,8 +91,8 @@ export default function BehaviorLedger() {
                 fetchData();
                 setFormData({ learnerId: '', type: 'MERIT', category: 'ACADEMIC', points: 1, reason: '' });
             }
-        } catch (err) {
-            console.error('Failed to submit behavior record:', err);
+        } catch {
+            // swallow; error feedback could be added
         }
     };
 

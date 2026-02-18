@@ -61,7 +61,7 @@ export default function AddAssessmentModal({ open, onClose, onSuccess, subjectId
             setTotalMarks('');
             setWeight('');
             setDate('');
-        } catch (err) {
+        } catch {
             setError('Error creating assessment.');
         } finally {
             setLoading(false);

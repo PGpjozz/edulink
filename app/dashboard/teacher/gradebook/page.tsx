@@ -27,7 +27,8 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
 export default function TeacherGradebook() {
-    const [subjects, setSubjects] = useState<any[]>([]);
+    type SubjectSummary = { id: string; name: string; grade: string; code?: string; _count?: { assessments?: number; quizzes?: number } };
+    const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
@@ -35,7 +36,7 @@ export default function TeacherGradebook() {
         setLoading(true);
         try {
             const res = await fetch('/api/subjects');
-            const data = await res.json();
+            const data: SubjectSummary[] = await res.json();
             setSubjects(data);
         } catch (err) {
             console.error('Failed to fetch gradebook subjects:', err);
@@ -48,7 +49,7 @@ export default function TeacherGradebook() {
         fetchGradebookData();
     }, []);
 
-    const exportToCSV = (subject: any) => {
+    const exportToCSV = (subject: SubjectSummary) => {
         // Logic to export subject grades to CSV (Placeholder for now)
         console.log(`Exporting CSV for ${subject.name}`);
         alert(`Exporting grades for ${subject.name} to CSV...`);
