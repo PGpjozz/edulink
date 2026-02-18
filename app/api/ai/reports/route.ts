@@ -36,11 +36,11 @@ export async function POST(req: Request) {
 
         // 2. Synthesize performance data
         const avgScore = attempts.length > 0
-            ? attempts.reduce((acc, curr) => acc + (curr.score || 0), 0) / attempts.length
+            ? attempts.reduce((acc: number, curr) => acc + (curr.score || 0), 0) / attempts.length
             : null;
 
         const attendanceRate = attendance.length > 0
-            ? (attendance.filter(a => a.status === 'present').length / attendance.length) * 100
+            ? (attendance.filter(a => a.status === 'PRESENT' || a.status === 'LATE').length / attendance.length) * 100
             : null;
 
         // 3. Generate a "Smart Comment" (Mocking the AI Generation Logic)
