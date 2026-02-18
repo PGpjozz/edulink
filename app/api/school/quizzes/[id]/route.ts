@@ -5,14 +5,15 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     const session = await getServerSession(authOptions);
     if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
     try {
+        const { id } = await params;
         const quiz = await prisma.quiz.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: {
                 questions: {
                     include: { options: true }
@@ -39,7 +40,7 @@ export async function GET(
 
 export async function POST(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== 'LEARNER') {
@@ -47,10 +48,11 @@ export async function POST(
     }
 
     try {
+        const { id } = await params;
         const { answers } = await req.json(); // { questionId: optionId }
 
         const quiz = await prisma.quiz.findUnique({
-            where: { id: params.id },
+            where: { id },
             include: { questions: { include: { options: true } } }
         });
 

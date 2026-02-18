@@ -22,7 +22,9 @@ import {
     People,
     AccountBalance,
     Refresh,
-    InfoOutlined
+    InfoOutlined,
+    AutoAwesome,
+    Lightbulb
 } from '@mui/icons-material';
 import {
     LineChart,
@@ -91,7 +93,7 @@ export default function PrincipalAnalytics() {
                 </Typography>
                 <Grid container spacing={2}>
                     {data?.aiInsights?.map((insight: any, idx: number) => (
-                        <Grid key={idx} xs={12} md={4}>
+                        <Grid key={idx} size={{ xs: 12, md: 4 }}>
                             <Paper sx={{
                                 p: 2,
                                 borderRadius: 3,
@@ -110,7 +112,7 @@ export default function PrincipalAnalytics() {
                         </Grid>
                     ))}
                     {!data?.aiInsights?.length && (
-                        <Grid xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Alert severity="info">Processing data to generate new insights...</Alert>
                         </Grid>
                     )}
@@ -119,7 +121,7 @@ export default function PrincipalAnalytics() {
 
             <Grid container spacing={3}>
                 {/* Academic Performance */}
-                <Grid xs={12} md={8}>
+                <Grid size={{ xs: 12, md: 8 }}>
                     <Paper sx={{ p: 3, borderRadius: 4, height: '100%', boxShadow: 4 }}>
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                             <Stack direction="row" spacing={1} alignItems="center">
@@ -158,7 +160,7 @@ export default function PrincipalAnalytics() {
                 </Grid>
 
                 {/* Behavioral Distribution */}
-                <Grid xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Paper sx={{ p: 3, borderRadius: 4, height: '100%', boxShadow: 4 }}>
                         <Typography variant="h6" fontWeight="bold" mb={3}>Behavioral Points</Typography>
                         <Box height={300} display="flex" justifyContent="center">
@@ -194,7 +196,7 @@ export default function PrincipalAnalytics() {
                 </Grid>
 
                 {/* Attendance Rate */}
-                <Grid xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 3, borderRadius: 4, boxShadow: 4 }}>
                         <Typography variant="h6" fontWeight="bold" mb={3}>Monthly Attendance Rate (%)</Typography>
                         <Box height={250}>
@@ -215,7 +217,7 @@ export default function PrincipalAnalytics() {
                 </Grid>
 
                 {/* Financial Health */}
-                <Grid xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 3, borderRadius: 4, boxShadow: 4, bgcolor: 'background.paper' }}>
                         <Typography variant="h6" fontWeight="bold" mb={3}>Financial Health (Collections)</Typography>
                         <Box height={250}>

@@ -1,17 +1,37 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
-    if (!session) return new NextResponse('Unauthorized', { status: 401 });
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const auth = await requireAuth({ roles: ['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN', 'LEARNER'], requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
+        const { id } = await params;
+
+        const assessment = await prisma.assessment.findFirst({
+            where: { id, subject: { schoolId: auth.schoolId as string } },
+            select: { id: true, subjectId: true, subject: { select: { teacherId: true } } }
+        });
+
+        if (!assessment) {
+            return new NextResponse('Assessment not found', { status: 404 });
+        }
+
+        if (auth.role === 'TEACHER') {
+            const teacherProfile = await prisma.teacherProfile.findUnique({
+                where: { userId: auth.userId },
+                select: { id: true }
+            });
+            if (!teacherProfile || assessment.subject.teacherId !== teacherProfile.id) {
+                return new NextResponse('Forbidden', { status: 403 });
+            }
+        }
+
         // Teachers see all submissions for assessment, Learners see only their own
-        const where: any = { assessmentId: params.id };
-        if (session.user.role === 'LEARNER') {
-            const profile = await prisma.learnerProfile.findUnique({ where: { userId: session.user.id } });
+        const where: any = { assessmentId: id };
+        if (auth.role === 'LEARNER') {
+            const profile = await prisma.learnerProfile.findUnique({ where: { userId: auth.userId } });
             if (!profile) return NextResponse.json([]);
             where.learnerId = profile.id;
         }
@@ -33,23 +53,37 @@ export async function GET(req: Request, { params }: { params: { id: string } }) 
     }
 }
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'LEARNER') {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+    const auth = await requireAuth({ roles: ['LEARNER'], requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
-        const body = await req.json();
+        const { id } = await params;
+
+        const assessment = await prisma.assessment.findFirst({
+            where: { id, subject: { schoolId: auth.schoolId as string } },
+            select: { id: true }
+        });
+
+        if (!assessment) {
+            return new NextResponse('Assessment not found', { status: 404 });
+        }
+
+        const body = await readJson<{ fileUrl?: string }>(req);
+        if (body instanceof NextResponse) return body;
         const { fileUrl } = body;
 
-        const profile = await prisma.learnerProfile.findUnique({ where: { userId: session.user.id } });
+        if (!fileUrl) {
+            return new NextResponse('Missing required fields', { status: 400 });
+        }
+
+        const profile = await prisma.learnerProfile.findUnique({ where: { userId: auth.userId } });
         if (!profile) return new NextResponse('Learner profile not found', { status: 404 });
 
         const submission = await prisma.assignmentSubmission.upsert({
             where: {
                 assessmentId_learnerId: {
-                    assessmentId: params.id,
+                    assessmentId: id,
                     learnerId: profile.id
                 }
             },
@@ -58,10 +92,19 @@ export async function POST(req: Request, { params }: { params: { id: string } })
                 submittedAt: new Date()
             },
             create: {
-                assessmentId: params.id,
+                assessmentId: id,
                 learnerId: profile.id,
                 fileUrl
             }
+        });
+
+        await writeAuditLog({
+            schoolId: auth.schoolId,
+            userId: auth.userId,
+            action: 'SUBMIT_ASSESSMENT',
+            entity: 'ASSIGNMENT_SUBMISSION',
+            entityId: submission.id,
+            details: { assessmentId: id }
         });
 
         return NextResponse.json(submission);

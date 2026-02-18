@@ -498,6 +498,7 @@ model Asset {
   name           String        // e.g. "Biology Textbook Vol 1"
   category       String        // e.g. "BOOKS", "ELECTRONICS"
   identifier     String?       // e.g. Barcode/ISBN
+  replacementPrice Float       @default(0)
   status         AssetStatus   @default(AVAILABLE)
   isBookable     Boolean       @default(true)
   bookings       AssetBooking[]

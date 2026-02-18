@@ -14,7 +14,8 @@ import {
     CircularProgress,
     LinearProgress,
     Card,
-    CardContent
+    CardContent,
+    Grid
 } from '@mui/material';
 import {
     Star,
@@ -28,7 +29,7 @@ interface BehaviorTrackerProps {
 }
 
 export default function BehaviorTracker({ learnerId }: BehaviorTrackerProps) {
-    const [records, setRecords] = useState([]);
+    const [records, setRecords] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -51,7 +52,7 @@ export default function BehaviorTracker({ learnerId }: BehaviorTrackerProps) {
     return (
         <Box>
             <Grid container spacing={2} mb={3}>
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Card sx={{ bgcolor: 'success.light', color: 'white' }}>
                         <CardContent sx={{ textAlign: 'center' }}>
                             <Typography variant="subtitle2">Total Merits</Typography>
@@ -59,7 +60,7 @@ export default function BehaviorTracker({ learnerId }: BehaviorTrackerProps) {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Card sx={{ bgcolor: 'error.light', color: 'white' }}>
                         <CardContent sx={{ textAlign: 'center' }}>
                             <Typography variant="subtitle2">Total Demerits</Typography>
@@ -67,7 +68,7 @@ export default function BehaviorTracker({ learnerId }: BehaviorTrackerProps) {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Card sx={{ bgcolor: netPoints >= 0 ? 'primary.main' : 'warning.main', color: 'white' }}>
                         <CardContent sx={{ textAlign: 'center' }}>
                             <Typography variant="subtitle2">Net Behavior Standing</Typography>
@@ -109,4 +110,4 @@ export default function BehaviorTracker({ learnerId }: BehaviorTrackerProps) {
     );
 }
 
-import { Grid } from '@mui/material';
+

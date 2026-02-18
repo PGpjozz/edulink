@@ -1,23 +1,19 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth } from '@/lib/api-auth';
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user.schoolId) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
-        let users = [];
+        let users: any[] = [];
 
-        if (session.user.role === 'TEACHER' || session.user.role === 'PRINCIPAL') {
+        if (auth.role === 'TEACHER' || auth.role === 'PRINCIPAL' || auth.role === 'SCHOOL_ADMIN') {
             // Staff can message Parents
             users = await prisma.user.findMany({
                 where: {
-                    schoolId: session.user.schoolId,
+                    schoolId: auth.schoolId as string,
                     role: 'PARENT',
                     isActive: true
                 },
@@ -29,11 +25,11 @@ export async function GET(req: Request) {
                     email: true
                 }
             });
-        } else if (session.user.role === 'PARENT') {
+        } else if (auth.role === 'PARENT') {
             // Parents can message Staff
             users = await prisma.user.findMany({
                 where: {
-                    schoolId: session.user.schoolId,
+                    schoolId: auth.schoolId as string,
                     role: { in: ['TEACHER', 'PRINCIPAL'] },
                     isActive: true
                 },

@@ -18,7 +18,8 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    CircularProgress
+    CircularProgress,
+    Paper
 } from '@mui/material';
 import {
     AccessTime,
@@ -30,10 +31,30 @@ import {
 import { useRouter, useParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 
+interface Option {
+    id: string;
+    text: string;
+}
+
+interface QuizQuestion {
+    id: string;
+    text: string;
+    options: Option[];
+}
+
+interface Quiz {
+    id: string;
+    title: string;
+    description?: string;
+    timeLimit?: number;
+    subject?: { name: string };
+    questions: QuizQuestion[];
+}
+
 export default function QuizTaking() {
     const { id } = useParams();
     const router = useRouter();
-    const [quiz, setQuiz] = useState<any>(null);
+    const [quiz, setQuiz] = useState<Quiz | null>(null);
     const [loading, setLoading] = useState(true);
     const [currentQuestion, setCurrentQuestion] = useState(0);
     const [answers, setAnswers] = useState<{ [key: string]: string }>({});
@@ -92,6 +113,7 @@ export default function QuizTaking() {
     };
 
     if (loading) return <Box display="flex" justifyContent="center" py={10}><CircularProgress /></Box>;
+    if (!quiz || !quiz.questions || quiz.questions.length === 0) return <Box p={4}><Typography>Quiz not found or has no questions.</Typography></Box>;
 
     if (result) return (
         <Container maxWidth="sm" sx={{ mt: 10 }}>
@@ -118,6 +140,7 @@ export default function QuizTaking() {
     );
 
     const question = quiz.questions[currentQuestion];
+    if (!question) return <Box p={4}><Typography>Question not found.</Typography></Box>;
     const progress = ((currentQuestion + 1) / quiz.questions.length) * 100;
 
     return (

@@ -1,3 +1,6 @@
+'use client';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import {
     Box,
     Typography,
@@ -34,7 +37,8 @@ import {
     Inventory,
     Check,
     Close,
-    Event
+    Event,
+    ReportProblem
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { format } from 'date-fns';
@@ -44,10 +48,12 @@ interface Asset {
     name: string;
     category: string;
     identifier: string | null;
-    status: 'AVAILABLE' | 'ASSIGNED' | 'MAINTENANCE' | 'LOST';
+    status: 'AVAILABLE' | 'CHECKED_OUT' | 'MAINTENANCE' | 'LOST';
     isBookable: boolean;
+    replacementPrice?: number;
     assignedTo: {
-        name: string;
+        firstName: string;
+        lastName: string;
         email: string;
     } | null;
 }
@@ -65,6 +71,7 @@ interface Booking {
 }
 
 export default function AssetManager() {
+    const searchParams = useSearchParams();
     const [assets, setAssets] = useState<Asset[]>([]);
     const [bookings, setBookings] = useState<Booking[]>([]);
     const [loading, setLoading] = useState(true);
@@ -79,10 +86,26 @@ export default function AssetManager() {
         name: '',
         category: 'BOOKS',
         identifier: '',
-        isBookable: true
+        isBookable: true,
+        replacementPrice: 0
     });
 
     const [assignUserId, setAssignUserId] = useState('');
+
+    useEffect(() => {
+        const targetTab = searchParams.get('tab');
+        const add = searchParams.get('add');
+
+        if (targetTab === 'bookings') {
+            setTab(1);
+        }
+
+        if (add === '1' || add === 'true') {
+            setTab(0);
+            setOpenAdd(true);
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     useEffect(() => {
         fetchData();
@@ -118,7 +141,7 @@ export default function AssetManager() {
             });
             if (!res.ok) throw new Error('Failed to create asset');
             setOpenAdd(false);
-            setNewAsset({ name: '', category: 'BOOKS', identifier: '', isBookable: true });
+            setNewAsset({ name: '', category: 'BOOKS', identifier: '', isBookable: true, replacementPrice: 0 });
             fetchData();
         } catch (err) {
             alert(err instanceof Error ? err.message : 'Error');
@@ -170,7 +193,7 @@ export default function AssetManager() {
         switch (status) {
             case 'AVAILABLE':
             case 'APPROVED': return 'success';
-            case 'ASSIGNED':
+            case 'CHECKED_OUT':
             case 'PENDING': return 'primary';
             case 'MAINTENANCE': return 'warning';
             case 'LOST':
@@ -247,7 +270,7 @@ export default function AssetManager() {
                                     <TableCell>
                                         {asset.assignedTo ? (
                                             <Box>
-                                                <Typography variant="body2">{asset.assignedTo.name}</Typography>
+                                                <Typography variant="body2">{asset.assignedTo.firstName} {asset.assignedTo.lastName}</Typography>
                                                 <Typography variant="caption" color="text.secondary">{asset.assignedTo.email}</Typography>
                                             </Box>
                                         ) : '-'}
@@ -263,6 +286,14 @@ export default function AssetManager() {
                                             <Tooltip title="Item Returned">
                                                 <IconButton onClick={() => handleUpdateStatus(asset.id, 'AVAILABLE')}>
                                                     <AssignmentReturn color="success" />
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
+
+                                        {asset.status === 'CHECKED_OUT' && (
+                                            <Tooltip title="Mark Lost (creates replacement invoice)">
+                                                <IconButton onClick={() => handleUpdateStatus(asset.id, 'LOST')}>
+                                                    <ReportProblem color="error" />
                                                 </IconButton>
                                             </Tooltip>
                                         )}
@@ -360,6 +391,13 @@ export default function AssetManager() {
                             value={newAsset.identifier}
                             onChange={(e) => setNewAsset({ ...newAsset, identifier: e.target.value })}
                         />
+                        <TextField
+                            label="Replacement Price"
+                            type="number"
+                            fullWidth
+                            value={newAsset.replacementPrice}
+                            onChange={(e) => setNewAsset({ ...newAsset, replacementPrice: Number(e.target.value) })}
+                        />
                         <FormControlLabel
                             control={<Switch checked={newAsset.isBookable} onChange={(e) => setNewAsset({ ...newAsset, isBookable: e.target.checked })} />}
                             label="Allow digital bookings"
@@ -389,7 +427,7 @@ export default function AssetManager() {
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setOpenAssign(false)}>Cancel</Button>
-                    <Button variant="contained" onClick={() => selectedAsset && handleUpdateStatus(selectedAsset.id, 'ASSIGNED', assignUserId)}>Assign</Button>
+                    <Button variant="contained" onClick={() => selectedAsset && handleUpdateStatus(selectedAsset.id, 'CHECKED_OUT', assignUserId)}>Assign</Button>
                 </DialogActions>
             </Dialog>
         </Box>

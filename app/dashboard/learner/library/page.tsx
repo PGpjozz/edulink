@@ -111,7 +111,7 @@ export default function LibraryPage() {
             ) : tab === 0 ? (
                 <Grid container spacing={3}>
                     {assets.map((asset) => (
-                        <Grid item xs={12} sm={6} md={4} key={asset.id}>
+                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={asset.id}>
                             <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderRadius: 2 }}>
                                 <CardContent sx={{ flexGrow: 1 }}>
                                     <Box display="flex" alignItems="center" gap={1} mb={2}>

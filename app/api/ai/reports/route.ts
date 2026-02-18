@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
-import prisma from '@/lib/prisma';
+import { prisma } from '@/lib/prisma';
 
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
                 include: { user: true }
             }),
             prisma.attendance.findMany({
-                where: { learnerId, subjectId },
+                where: { learnerId },
                 take: 10,
                 orderBy: { date: 'desc' }
             }),
@@ -45,7 +45,7 @@ export async function POST(req: Request) {
 
         // 3. Generate a "Smart Comment" (Mocking the AI Generation Logic)
         let comment = '';
-        const name = learner.user.name.split(' ')[0];
+        const name = learner.user.firstName;
 
         if (avgScore && avgScore > 80) {
             comment = `${name} has shown exceptional mastery in this subject. With an average quiz score of ${Math.round(avgScore)}%, they consistently demonstrate deep understanding of complex concepts. `;

@@ -1,5 +1,16 @@
 export const MOCK_USERS = [
     {
+        id: 'mock-provider-1',
+        email: 'provider@edulink.com',
+        password: 'provider123',
+        firstName: 'EduLink',
+        lastName: 'Provider',
+        role: 'PROVIDER',
+        schoolId: null,
+        membershipId: 'mock-membership-provider-1',
+        idNumber: null
+    },
+    {
         id: 'mock-principal-1',
         email: 'principal@demo.com',
         password: 'password123',
@@ -7,6 +18,7 @@ export const MOCK_USERS = [
         lastName: 'Smith',
         role: 'PRINCIPAL',
         schoolId: 'mock-school-1',
+        membershipId: 'mock-membership-principal-1',
         idNumber: null
     },
     {
@@ -17,6 +29,7 @@ export const MOCK_USERS = [
         lastName: 'Johnson',
         role: 'TEACHER',
         schoolId: 'mock-school-1',
+        membershipId: 'mock-membership-teacher-1',
         idNumber: null
     },
     {
@@ -27,6 +40,7 @@ export const MOCK_USERS = [
         lastName: 'Williams',
         role: 'PARENT',
         schoolId: 'mock-school-1',
+        membershipId: 'mock-membership-parent-1',
         idNumber: null
     },
     {
@@ -37,6 +51,7 @@ export const MOCK_USERS = [
         lastName: 'Davis',
         role: 'LEARNER',
         schoolId: 'mock-school-1',
+        membershipId: 'mock-membership-learner-1',
         idNumber: 'L12345'
     },
     {
@@ -47,6 +62,7 @@ export const MOCK_USERS = [
         lastName: 'User',
         role: 'SCHOOL_ADMIN',
         schoolId: 'mock-school-1',
+        membershipId: 'mock-membership-admin-1',
         idNumber: null
     }
 ];

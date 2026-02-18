@@ -12,7 +12,8 @@ import {
     TableRow,
     Divider,
     Button,
-    Grid
+    Grid,
+    Stack
 } from '@mui/material';
 import { Print, Verified, School, CalendarMonth } from '@mui/icons-material';
 
@@ -63,12 +64,12 @@ export default function ReportCard({ data }: ReportCardProps) {
 
             {/* Learner Info */}
             <Grid container spacing={4} sx={{ mb: 8, position: 'relative', zIndex: 1 }}>
-                <Grid item xs={12} md={7}>
+                <Grid size={{ xs: 12, md: 7 }}>
                     <Typography variant="overline" color="primary" sx={{ fontWeight: '900', letterSpacing: 2 }}>LEARNER IDENTITY</Typography>
                     <Typography variant="h4" fontWeight="800" sx={{ mt: 1 }}>{data.learner.name}</Typography>
                     <Typography variant="h6" color="text.secondary">Grade {data.learner.grade} &bull; {data.learner.className}</Typography>
                 </Grid>
-                <Grid item xs={12} md={5}>
+                <Grid size={{ xs: 12, md: 5 }}>
                     <Box sx={{ bgcolor: '#f8fafc', p: 3, borderRadius: 3, border: '1px solid #e2e8f0' }}>
                         <Stack spacing={1}>
                             <Box display="flex" justifyContent="space-between">

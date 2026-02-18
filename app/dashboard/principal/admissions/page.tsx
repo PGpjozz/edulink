@@ -27,7 +27,7 @@ import {
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 
 export default function AdmissionsManager() {
-    const [applications, setApplications] = useState([]);
+    const [applications, setApplications] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [actioning, setActioning] = useState<string | null>(null);
 
@@ -67,7 +67,7 @@ export default function AdmissionsManager() {
     };
 
     const columns: GridColDef[] = [
-        { field: 'createdAt', headerName: 'Date Applied', width: 120, valueFormatter: (params) => new Date(params.value).toLocaleDateString() },
+        { field: 'createdAt', headerName: 'Date Applied', width: 120, valueFormatter: (value) => new Date(value).toLocaleDateString() },
         { field: 'firstName', headerName: 'First Name', width: 130 },
         { field: 'lastName', headerName: 'Last Name', width: 130 },
         { field: 'email', headerName: 'Email', width: 200 },
@@ -121,7 +121,7 @@ export default function AdmissionsManager() {
             </Box>
 
             <Grid container spacing={3} mb={4}>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                     <Card>
                         <CardContent>
                             <Typography variant="subtitle2" color="text.secondary">Total New Applications</Typography>
@@ -131,7 +131,7 @@ export default function AdmissionsManager() {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                     <Card>
                         <CardContent>
                             <Typography variant="subtitle2" color="text.secondary">Review Rate</Typography>

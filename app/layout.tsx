@@ -4,7 +4,7 @@ import ThemeRegistry from './theme/ThemeRegistry';
 export const metadata: Metadata = {
   title: 'EduLink Intelligence',
   description: 'Premium Multiple School Management System',
-  manifest: '/manifest.json',
+  // manifest: '/manifest.json', // Temporarily disabled
   themeColor: '#2563eb',
   viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
   appleWebApp: {

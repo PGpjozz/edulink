@@ -35,7 +35,7 @@ function ClassesSection({ onViewSchedule }: { onViewSchedule: (cls: any) => void
     return (
         <Grid container spacing={3}>
             {classes.map((cls: any) => (
-                <Grid item xs={12} md={4} key={cls.id}>
+                <Grid size={{ xs: 12, md: 4 }} key={cls.id}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" fontWeight="bold">{cls.name}</Typography>
@@ -66,7 +66,7 @@ function ClassesSection({ onViewSchedule }: { onViewSchedule: (cls: any) => void
                 </Grid>
             ))}
             {classes.length === 0 && (
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                     <Typography color="text.secondary">No classes found.</Typography>
                 </Grid>
             )}
@@ -110,7 +110,7 @@ export default function TeacherDashboard() {
 
             <Grid container spacing={3} sx={{ mb: 6 }}>
                 {subjects.map((subject: any) => (
-                    <Grid xs={12} md={4} key={subject.id}>
+                    <Grid size={{ xs: 12, md: 4 }} key={subject.id}>
                         <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                             <CardContent sx={{ flexGrow: 1 }}>
                                 <Box display="flex" justifyContent="space-between" alignItems="flex-start">

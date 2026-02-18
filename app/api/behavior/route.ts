@@ -1,23 +1,42 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 
 export async function GET() {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user.schoolId) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
+        const where: any = {
+            learner: { user: { schoolId: auth.schoolId as string } }
+        };
+
+        if (auth.role === 'LEARNER') {
+            const learnerProfile = await prisma.learnerProfile.findUnique({
+                where: { userId: auth.userId },
+                select: { id: true }
+            });
+            if (!learnerProfile) return NextResponse.json([]);
+            where.learnerId = learnerProfile.id;
+        }
+
+        if (auth.role === 'PARENT') {
+            const parentProfile = await prisma.parentProfile.findUnique({
+                where: { userId: auth.userId },
+                select: { learnerIds: true }
+            });
+            if (!parentProfile?.learnerIds?.length) return NextResponse.json([]);
+            where.learnerId = { in: parentProfile.learnerIds };
+        }
+
+        if (!['PRINCIPAL', 'SCHOOL_ADMIN', 'TEACHER', 'LEARNER', 'PARENT'].includes(auth.role)) {
+            return new NextResponse('Forbidden', { status: 403 });
+        }
+
         const records = await prisma.behaviorRecord.findMany({
-            where: {
-                learner: {
-                    schoolId: session.user.schoolId
-                }
-            },
+            where,
             include: {
+                teacher: { select: { firstName: true, lastName: true, role: true } },
                 learner: {
                     include: {
                         user: {
@@ -38,23 +57,43 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user.schoolId || !['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN'].includes(session.user.role)) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
-        const body = await req.json();
+        const body = await readJson<{ learnerId?: string; type?: string; category?: string; points?: number; reason?: string }>(req);
+        if (body instanceof NextResponse) return body;
         const { learnerId, type, category, points, reason } = body;
+
+        if (!learnerId || !type || !category || points === undefined || points === null || !reason) {
+            return new NextResponse('Missing required fields', { status: 400 });
+        }
+
+        if (type !== 'MERIT' && type !== 'DEMERIT') {
+            return new NextResponse('Invalid type', { status: 400 });
+        }
+
+        const learner = await prisma.learnerProfile.findFirst({
+            where: { id: learnerId, user: { schoolId: auth.schoolId as string } },
+            include: { user: { select: { firstName: true, lastName: true } } }
+        });
+
+        if (!learner) {
+            return new NextResponse('Learner not found', { status: 404 });
+        }
+
+        const pointsNum = Number(points);
+        if (!Number.isFinite(pointsNum) || pointsNum === 0) {
+            return new NextResponse('Invalid points', { status: 400 });
+        }
 
         const record = await prisma.behaviorRecord.create({
             data: {
                 learnerId,
-                teacherId: session.user.id,
+                teacherId: auth.userId,
                 type,
                 category,
-                points: type === 'DEMERIT' ? -Math.abs(points) : Math.abs(points),
+                points: type === 'DEMERIT' ? -Math.abs(pointsNum) : Math.abs(pointsNum),
                 reason
             },
             include: {
@@ -62,25 +101,34 @@ export async function POST(req: Request) {
                     include: {
                         user: {
                             select: { firstName: true, lastName: true }
-                        },
-                        parentIds: true
+                        }
                     }
                 }
             }
         });
 
         // Send notification to parents
-        if (record.learner.parentIds && record.learner.parentIds.length > 0) {
+        const learner = record.learner;
+        if (learner.parentIds && learner.parentIds.length > 0) {
             await prisma.notification.createMany({
-                data: record.learner.parentIds.map(parentId => ({
+                data: learner.parentIds.map((parentId: string) => ({
                     userId: parentId,
-                    title: `Behavioral Update: ${record.learner.user.firstName}`,
-                    message: `${record.learner.user.firstName} received a ${type === 'MERIT' ? 'merit' : 'demerit'} for ${category}: ${reason}`,
+                    title: `Behavioral Update: ${learner.user.firstName}`,
+                    message: `${learner.user.firstName} received a ${type === 'MERIT' ? 'merit' : 'demerit'} for ${category}: ${reason}`,
                     type: 'BEHAVIOR',
                     link: '/dashboard/parent/notifications'
                 }))
             });
         }
+
+        await writeAuditLog({
+            schoolId: auth.schoolId,
+            userId: auth.userId,
+            action: 'CREATE_BEHAVIOR_RECORD',
+            entity: 'BEHAVIOR_RECORD',
+            entityId: record.id,
+            details: { learnerId, type, category, points: record.points }
+        });
 
         return NextResponse.json(record);
     } catch (error) {

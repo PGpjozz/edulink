@@ -51,7 +51,7 @@ const DRAWER_WIDTH = 280;
 
 const NAV_ITEMS = {
     PROVIDER: [
-        { label: 'Dashboard', icon: <Dashboard />, path: '/admin/dashboard' }
+        { label: 'Dashboard', icon: <Dashboard />, path: '/dashboard/provider' }
     ],
     PRINCIPAL: [
         { label: 'Overview', icon: <Dashboard />, path: '/dashboard/principal' },
@@ -153,6 +153,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                             <ListItemButton
                                 onClick={() => {
                                     router.push(item.path);
+                                    requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur?.());
                                     if (onClose) onClose();
                                 }}
                                 sx={{
@@ -211,7 +212,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                 variant="temporary"
                 open={mobileOpen}
                 onClose={onClose}
-                ModalProps={{ keepMounted: true }} // Better open performance on mobile.
+                ModalProps={{ keepMounted: true, disableScrollLock: true }} // Better open performance on mobile.
                 sx={{
                     display: { xs: 'block', md: 'none' },
                     '& .MuiDrawer-paper': {

@@ -1,17 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth, writeAuditLog } from '@/lib/api-auth';
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== 'PRINCIPAL' && session.user.role !== 'PROVIDER')) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
         const school = await prisma.school.findUnique({
-            where: { id: session.user.schoolId || '' },
+            where: { id: auth.schoolId as string },
             include: {
                 users: {
                     where: { role: 'LEARNER' },
@@ -46,6 +43,7 @@ export async function POST(req: Request) {
             // Upsert-like check to prevent double billing in same month
             const existing = await prisma.feeInvoice.findFirst({
                 where: {
+                    schoolId: invoiceData.schoolId,
                     learnerId: invoiceData.learnerId,
                     title: invoiceData.title
                 }
@@ -56,6 +54,15 @@ export async function POST(req: Request) {
                 createdCount++;
             }
         }
+
+        await writeAuditLog({
+            schoolId: school.id,
+            userId: auth.userId,
+            action: 'GENERATE_INVOICES',
+            entity: 'FEE_INVOICE',
+            entityId: school.id,
+            details: { createdCount, totalLearners: batch.length, title }
+        });
 
         return NextResponse.json({
             message: `Generated ${createdCount} invoices for ${currentMonth}`,

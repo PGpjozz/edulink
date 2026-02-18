@@ -1,32 +1,47 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user.schoolId) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(req.url);
     const userId = searchParams.get('userId');
 
     try {
         const query: any = {
-            schoolId: session.user.schoolId
+            schoolId: auth.schoolId as string
         };
 
         if (userId) {
+            const otherUser = await prisma.user.findFirst({
+                where: { id: userId, schoolId: auth.schoolId as string, isActive: true },
+                select: { id: true, role: true }
+            });
+
+            if (!otherUser) {
+                return new NextResponse('User not found', { status: 404 });
+            }
+
+            const senderRole = auth.role;
+            const recipientRole = otherUser.role;
+            const allowed =
+                ((senderRole === 'TEACHER' || senderRole === 'PRINCIPAL' || senderRole === 'SCHOOL_ADMIN') && recipientRole === 'PARENT') ||
+                (senderRole === 'PARENT' && (recipientRole === 'TEACHER' || recipientRole === 'PRINCIPAL' || recipientRole === 'SCHOOL_ADMIN'));
+
+            if (!allowed) {
+                return new NextResponse('Forbidden', { status: 403 });
+            }
+
             query.OR = [
-                { senderId: session.user.id, recipientId: userId },
-                { senderId: userId, recipientId: session.user.id }
+                { senderId: auth.userId, recipientId: userId },
+                { senderId: userId, recipientId: auth.userId }
             ];
         } else {
             query.OR = [
-                { recipientId: session.user.id },
-                { senderId: session.user.id }
+                { recipientId: auth.userId },
+                { senderId: auth.userId }
             ];
         }
 
@@ -47,28 +62,63 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user.schoolId) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
-        const body = await req.json();
+        const body = await readJson<{ recipientId?: string; subject?: string; content?: string }>(req);
+        if (body instanceof NextResponse) return body;
         const { recipientId, subject, content } = body;
 
         if (!recipientId || !subject || !content) {
             return new NextResponse('Missing required fields', { status: 400 });
         }
 
+        if (recipientId === auth.userId) {
+            return new NextResponse('Cannot message self', { status: 400 });
+        }
+
+        const recipient = await prisma.user.findFirst({
+            where: {
+                id: recipientId,
+                schoolId: auth.schoolId as string,
+                isActive: true
+            },
+            select: { id: true, role: true }
+        });
+
+        if (!recipient) {
+            return new NextResponse('Recipient not found', { status: 404 });
+        }
+
+        const senderRole = auth.role;
+        const recipientRole = recipient.role;
+
+        const allowed =
+            ((senderRole === 'TEACHER' || senderRole === 'PRINCIPAL' || senderRole === 'SCHOOL_ADMIN') && recipientRole === 'PARENT') ||
+            (senderRole === 'PARENT' && (recipientRole === 'TEACHER' || recipientRole === 'PRINCIPAL' || recipientRole === 'SCHOOL_ADMIN'));
+
+        if (!allowed) {
+            return new NextResponse('Forbidden', { status: 403 });
+        }
+
         const message = await prisma.message.create({
             data: {
-                senderId: session.user.id,
+                senderId: auth.userId,
                 recipientId,
-                schoolId: session.user.schoolId,
+                schoolId: auth.schoolId as string,
                 subject,
                 content
             }
+        });
+
+        await writeAuditLog({
+            schoolId: auth.schoolId,
+            userId: auth.userId,
+            action: 'SEND_MESSAGE',
+            entity: 'MESSAGE',
+            entityId: message.id,
+            details: { recipientId }
         });
 
         return NextResponse.json(message);

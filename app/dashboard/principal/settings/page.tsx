@@ -80,7 +80,7 @@ export default function BrandingSettings() {
 
             <form onSubmit={handleSave}>
                 <Grid container spacing={3}>
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Card>
                             <CardContent>
                                 <Box display="flex" alignItems="center" gap={1} mb={2}>
@@ -103,7 +103,7 @@ export default function BrandingSettings() {
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12} md={6}>
+                    <Grid size={{ xs: 12, md: 6 }}>
                         <Card>
                             <CardContent>
                                 <Box display="flex" alignItems="center" gap={1} mb={2}>
@@ -135,7 +135,7 @@ export default function BrandingSettings() {
                         </Card>
                     </Grid>
 
-                    <Grid item xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Divider sx={{ my: 2 }} />
                         <Box display="flex" justifyContent="flex-end">
                             <Button

@@ -26,7 +26,6 @@ import SubjectHub from './SubjectHub';
 import BehaviorTracker from './BehaviorTracker';
 import AIInsightsSection from './AIInsightsSection';
 import { MenuBook, EmojiEvents, HistoryEdu, AutoAwesome } from '@mui/icons-material';
-import { Button } from '@mui/material';
 
 interface AssessmentView {
     id: string;
@@ -52,6 +51,9 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
     const [data, setData] = useState<{ learner: any, subjects: SubjectView[] } | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [tabValue, setTabValue] = useState(0);
+    const [hubOpen, setHubOpen] = useState(false);
+    const [selectedSubject, setSelectedSubject] = useState<SubjectView | null>(null);
 
     useEffect(() => {
         const url = childId
@@ -71,6 +73,7 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
     if (loading) return <LinearProgress />;
     if (error) return <Alert severity="error">{error}</Alert>;
     if (!data) return <Typography sx={{ m: 4 }}>No data available.</Typography>;
+    if (!data.learner) return <Typography sx={{ m: 4 }}>No data available.</Typography>;
 
     // Prepare chart data
     const chartData = data?.subjects.map(sub => ({
@@ -94,13 +97,15 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
         show: { opacity: 1, y: 0 }
     };
 
-    const [tabValue, setTabValue] = useState(0);
-    const [hubOpen, setHubOpen] = useState(false);
-    const [selectedSubject, setSelectedSubject] = useState<SubjectView | null>(null);
-
     const handleOpenHub = (subject: SubjectView) => {
         setSelectedSubject(subject);
         setHubOpen(true);
+    };
+
+    const handleTabsWheelCapture = (e: any) => {
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+            e.stopPropagation();
+        }
     };
 
     return (
@@ -125,7 +130,11 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
                 <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: { md: 'flex-end' }, gap: 1 }}>
                     <Tabs
                         value={tabValue}
-                        onChange={(_, v) => setTabValue(v)}
+                        onChange={(_, v) => {
+                            setTabValue(v);
+                            requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur?.());
+                        }}
+                        onWheelCapture={handleTabsWheelCapture}
                         variant="scrollable"
                         scrollButtons="auto"
                         sx={{ borderBottom: 1, borderColor: 'divider', width: '100%' }}
@@ -164,7 +173,7 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
 
                     <Grid container spacing={3} component={motion.div} variants={container} initial="hidden" animate="show">
                         {data.subjects.map((subject) => (
-                            <Grid xs={12} md={6} lg={4} key={subject.id} component={motion.div}>
+                            <Grid size={{ xs: 12, md: 6, lg: 4 }} key={subject.id} component={motion.div}>
                                 <Card sx={{ height: '100%', transition: '0.3s', '&:hover': { transform: 'translateY(-4px)', boxShadow: 4 } }}>
                                     <CardContent>
                                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
@@ -238,13 +247,13 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
 
             {tabValue === 2 && (
                 <Box component={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <BehaviorTracker learnerId={childId || data.learner.id} />
+                    <BehaviorTracker learnerId={childId || (data.learner.id as string)} />
                 </Box>
             )}
 
             {tabValue === 3 && (
                 <Box component={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <AIInsightsSection learnerId={childId || data.learner.id} />
+                    <AIInsightsSection childId={childId || (data.learner.id as string)} />
                 </Box>
             )}
 

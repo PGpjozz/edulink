@@ -64,7 +64,7 @@ export default function ParentDashboard() {
 
             <Grid container spacing={4}>
                 {/* Child Selection Sidebar/Grid */}
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                     <Typography variant="h6" gutterBottom fontWeight="bold">My Children</Typography>
                     <Box display="flex" flexDirection="column" gap={2}>
                         {children.map((child) => (
@@ -95,15 +95,17 @@ export default function ParentDashboard() {
                 </Grid>
 
                 {/* Main Content Area */}
-                <Grid item xs={12} md={9}>
+                <Grid size={{ xs: 12, md: 9 }}>
                     {selectedChildId && (
                         <Box>
                             <Paper sx={{ p: 1, mb: 3, borderRadius: 2 }}>
                                 <Tabs
                                     value={tabValue}
-                                    onChange={(_, v) => setTabValue(v)}
-                                    variant="scrollable"
-                                    scrollButtons="auto"
+                                    onChange={(_, v) => {
+                                        setTabValue(v);
+                                        requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur?.());
+                                    }}
+                                    variant="fullWidth"
                                     indicatorColor="primary"
                                     textColor="primary"
                                 >

@@ -36,12 +36,12 @@ const columns: GridColDef[] = [
     },
     {
         field: 'date', headerName: 'Date', width: 150,
-        valueFormatter: (params) => new Date(params.value).toLocaleDateString()
+        valueFormatter: (value) => new Date(value).toLocaleDateString()
     },
     { field: 'totalMarks', headerName: 'Total Marks', width: 110 },
     {
         field: 'weight', headerName: 'Weight', width: 100,
-        valueFormatter: (params) => `${params.value}%`
+        valueFormatter: (value) => `${value}%`
     },
     {
         field: 'actions', headerName: 'Actions', flex: 1,

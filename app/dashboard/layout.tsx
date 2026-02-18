@@ -1,11 +1,29 @@
+'use client';
+import { ReactNode, useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { Box, AppBar, Toolbar, IconButton, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { Menu as MenuIcon, Brightness4, Brightness7 } from '@mui/icons-material';
 import { useThemeContext } from '@/app/theme/ThemeContext';
-import { Brightness4, Brightness7 } from '@mui/icons-material';
+import Sidebar from '@/app/components/Sidebar';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [mobileOpen, setMobileOpen] = useState(false);
     const { mode, toggleTheme } = useThemeContext();
+    const pathname = usePathname();
+
+    useEffect(() => {
+        setMobileOpen(false);
+
+        // Defensive: ensure any previous modal/drawer scroll-lock is cleared on navigation
+        if (typeof document !== 'undefined') {
+            document.body.classList.remove('MuiModal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+            document.documentElement.style.overflow = '';
+        }
+    }, [pathname]);
 
     const handleDrawerToggle = () => {
         setMobileOpen(!mobileOpen);

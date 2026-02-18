@@ -81,11 +81,12 @@ export default function SignIn() {
                     <TextField
                         fullWidth
                         label={tabIndex === 0 ? "Email Address" : "ID Number"}
-                        type={tabIndex === 0 ? "email" : "text"}
+                        type="text"
                         value={identifier}
                         onChange={(e) => setIdentifier(e.target.value)}
                         margin="normal"
                         required
+                        placeholder={tabIndex === 0 ? "Enter your email" : "Enter your ID number"}
                     />
                     <TextField
                         fullWidth

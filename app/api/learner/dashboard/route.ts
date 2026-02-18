@@ -28,7 +28,7 @@ export async function GET(req: Request) {
         });
 
         if (!learnerProfile || !learnerProfile.class) {
-            return NextResponse.json({ subjects: [], stats: {} });
+            return NextResponse.json({ learner: null, subjects: [] });
         }
 
         // 2. Get Subjects for this Class Grade

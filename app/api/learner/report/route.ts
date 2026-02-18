@@ -50,12 +50,15 @@ export async function GET(req: Request) {
         });
 
         const reportData = subjects.map(sub => {
-            const grades = sub.assessments.flatMap(a => a.grades).map(g => (g.score / sub.assessments.find(as => as.id === g.assessmentId).totalMarks) * 100);
-            const average = grades.length > 0 ? grades.reduce((a, b) => a + b, 0) / grades.length : null;
+            const grades = sub.assessments.flatMap(a => a.grades).map(g => {
+                const assessment = sub.assessments.find(as => as.id === g.assessmentId);
+                return assessment ? (g.score / assessment.totalMarks) * 100 : 0;
+            });
+            const average = grades.length > 0 ? grades.reduce((a: number, b: number) => a + b, 0) / grades.length : null;
 
             return {
                 subjectName: sub.name,
-                subjectCode: sub.code,
+                subjectCode: sub.code || '',
                 average: average ? Math.round(average) : null,
                 comment: average && average >= 50 ? 'Satisfactory achievement' : 'Needs improvement'
             };
@@ -80,7 +83,9 @@ export async function GET(req: Request) {
             subjects: reportData,
             stats: {
                 attendanceRate: Math.round(attendanceRate),
-                overallAverage: Math.round(reportData.filter(r => r.average !== null).reduce((a, b) => a + (b.average || 0), 0) / reportData.filter(r => r.average !== null).length || 0)
+                overallAverage: reportData.filter(r => r.average !== null).length > 0
+                    ? Math.round(reportData.filter(r => r.average !== null).reduce((a: number, b) => a + (b.average || 0), 0) / reportData.filter(r => r.average !== null).length)
+                    : 0
             }
         });
 

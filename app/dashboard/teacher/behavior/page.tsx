@@ -35,11 +35,11 @@ import {
 import { motion } from 'framer-motion';
 
 export default function BehaviorLedger() {
-    const [records, setRecords] = useState([]);
-    const [learners, setLearners] = useState([]);
+    const [records, setRecords] = useState<any[]>([]);
+    const [learners, setLearners] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
-    const [formData, setFormData] = useState({
+    const [formData, setFormData] = useState<any>({
         learnerId: '',
         type: 'MERIT',
         category: 'ACADEMIC',
@@ -107,7 +107,7 @@ export default function BehaviorLedger() {
             </Box>
 
             <Grid container spacing={3} mb={4}>
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Card sx={{ bgcolor: 'success.main', color: 'white', borderRadius: 3 }}>
                         <CardContent>
                             <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -120,7 +120,7 @@ export default function BehaviorLedger() {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Card sx={{ bgcolor: 'error.main', color: 'white', borderRadius: 3 }}>
                         <CardContent>
                             <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -133,7 +133,7 @@ export default function BehaviorLedger() {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Card sx={{ borderRadius: 3 }}>
                         <CardContent>
                             <Typography variant="body2" color="text.secondary">Net Behavioral Score</Typography>

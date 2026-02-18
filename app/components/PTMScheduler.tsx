@@ -35,7 +35,7 @@ interface PTMSchedulerProps {
 }
 
 export default function PTMScheduler({ role }: PTMSchedulerProps) {
-    const [sessions, setSessions] = useState([]);
+    const [sessions, setSessions] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [bookingSession, setBookingSession] = useState<any>(null);
     const [selectedSlot, setSelectedSlot] = useState<any>(null);
@@ -59,14 +59,14 @@ export default function PTMScheduler({ role }: PTMSchedulerProps) {
     }, []);
 
     const generateSlots = (session: any) => {
-        const slots = [];
+        const slots: any[] = [];
         let current = new Date(session.startTime);
         const end = new Date(session.endTime);
         const duration = session.slotDuration * 60000;
 
         while (current < end) {
             const slotEnd = new Date(current.getTime() + duration);
-            const isBooked = session.bookings.some(b =>
+            const isBooked = session.bookings.some((b: any) =>
                 new Date(b.startTime).getTime() === current.getTime()
             );
             slots.push({
@@ -115,8 +115,8 @@ export default function PTMScheduler({ role }: PTMSchedulerProps) {
             <Typography color="text.secondary" mb={4}>Book your 1:1 meeting slots with subject teachers.</Typography>
 
             <Grid container spacing={3}>
-                {sessions.map((session) => (
-                    <Grid item xs={12} md={6} key={session.id}>
+                {sessions.map((session: any) => (
+                    <Grid size={{ xs: 12, md: 6 }} key={session.id}>
                         <Card sx={{ height: '100%', borderRadius: 3 }}>
                             <CardContent>
                                 <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={2}>
@@ -133,6 +133,7 @@ export default function PTMScheduler({ role }: PTMSchedulerProps) {
                                         label={`${session.slotDuration} min slots`}
                                         size="small"
                                         variant="outlined"
+                                        sx={{ flexShrink: 0 }}
                                     />
                                 </Box>
                                 <Divider sx={{ my: 2 }} />
@@ -157,9 +158,9 @@ export default function PTMScheduler({ role }: PTMSchedulerProps) {
                                 {role === 'TEACHER' && (
                                     <Box>
                                         <Typography variant="subtitle2" fontWeight="bold" gutterBottom>Bookings ({session.bookings.length})</Typography>
-                                        <List size="small">
-                                            {session.bookings.map((booking) => (
-                                                <ListItem key={booking.id} divider>
+                                        <List sx={{ p: 0 }}>
+                                            {session.bookings.map((booking: any) => (
+                                                <ListItem key={booking.id} divider sx={{ px: 0 }}>
                                                     <ListItemText
                                                         primary={`${booking.parent.firstName} ${booking.parent.lastName}`}
                                                         secondary={`${new Date(booking.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}
@@ -180,8 +181,8 @@ export default function PTMScheduler({ role }: PTMSchedulerProps) {
                 <DialogTitle>Select a Meeting Slot</DialogTitle>
                 <DialogContent dividers>
                     <Grid container spacing={1}>
-                        {bookingSession && generateSlots(bookingSession).map((slot, index) => (
-                            <Grid item xs={4} key={index}>
+                        {bookingSession && generateSlots(bookingSession).map((slot: any, index: number) => (
+                            <Grid size={{ xs: 4 }} key={index}>
                                 <Button
                                     fullWidth
                                     variant={selectedSlot?.start?.getTime() === slot.start.getTime() ? "contained" : "outlined"}

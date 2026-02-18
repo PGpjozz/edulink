@@ -79,7 +79,7 @@ export default function AIInsightsSection({ childId }: AIInsightsSectionProps) {
                         exit={{ opacity: 0, y: -20 }}
                     >
                         <Grid container spacing={3}>
-                            <Grid item xs={12} md={8}>
+                            <Grid size={{ xs: 12, md: 8 }}>
                                 <Paper sx={{ p: 4, borderRadius: 3, position: 'relative', overflow: 'hidden' }}>
                                     <Box sx={{ position: 'absolute', top: -20, right: -20, opacity: 0.1 }}>
                                         <AutoAwesome sx={{ fontSize: 120 }} />
@@ -124,7 +124,7 @@ export default function AIInsightsSection({ childId }: AIInsightsSectionProps) {
                                 </Paper>
                             </Grid>
 
-                            <Grid item xs={12} md={4}>
+                            <Grid size={{ xs: 12, md: 4 }}>
                                 <Card sx={{ borderRadius: 3 }}>
                                     <CardContent>
                                         <Typography variant="h6" gutterBottom fontWeight="bold">AI Metadata</Typography>

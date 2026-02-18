@@ -15,6 +15,7 @@ import {
     DialogContent,
     DialogActions,
     List,
+    Paper,
     ListItem,
     ListItemText,
     IconButton,
@@ -39,11 +40,13 @@ import {
     Close,
     CheckCircle
 } from '@mui/icons-material';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 
 export default function QuizManager() {
-    const [quizzes, setQuizzes] = useState([]);
-    const [subjects, setSubjects] = useState([]);
+    const router = useRouter();
+    const [quizzes, setQuizzes] = useState<any[]>([]);
+    const [subjects, setSubjects] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [openAdd, setOpenAdd] = useState(false);
 
@@ -133,7 +136,7 @@ export default function QuizManager() {
 
             <Grid container spacing={3}>
                 {quizzes.map((quiz: any) => (
-                    <Grid xs={12} md={4} key={quiz.id} component={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                    <Grid size={{ xs: 12, md: 4 }} key={quiz.id} component={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
                         <Card sx={{ borderRadius: 3, boxShadow: 3, border: '1px solid', borderColor: 'divider' }}>
                             <CardContent>
                                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
@@ -170,7 +173,7 @@ export default function QuizManager() {
                     </Grid>
                 ))}
                 {quizzes.length === 0 && (
-                    <Grid xs={12}>
+                    <Grid size={{ xs: 12 }}>
                         <Paper sx={{ p: 6, textAlign: 'center', borderRadius: 4, bgcolor: 'action.hover' }}>
                             <QuestionAnswer sx={{ fontSize: 60, color: 'text.disabled', opacity: 0.2, mb: 2 }} />
                             <Typography variant="h6" color="text.secondary">Ready to build your first quiz?</Typography>
@@ -185,7 +188,7 @@ export default function QuizManager() {
                 <DialogTitle sx={{ fontWeight: 'bold' }}>Intelligence Quiz Builder</DialogTitle>
                 <DialogContent dividers>
                     <Grid container spacing={3} sx={{ mt: 0.5 }}>
-                        <Grid xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <FormControl fullWidth>
                                 <InputLabel>Assign to Subject</InputLabel>
                                 <Select
@@ -199,7 +202,7 @@ export default function QuizManager() {
                                 </Select>
                             </FormControl>
                         </Grid>
-                        <Grid xs={12} md={6}>
+                        <Grid size={{ xs: 12, md: 6 }}>
                             <TextField
                                 fullWidth
                                 label="Quiz Title"
@@ -208,7 +211,7 @@ export default function QuizManager() {
                                 onChange={(e) => setNewQuiz({ ...newQuiz, title: e.target.value })}
                             />
                         </Grid>
-                        <Grid xs={12} md={9}>
+                        <Grid size={{ xs: 12, md: 9 }}>
                             <TextField
                                 fullWidth
                                 multiline
@@ -218,7 +221,7 @@ export default function QuizManager() {
                                 onChange={(e) => setNewQuiz({ ...newQuiz, description: e.target.value })}
                             />
                         </Grid>
-                        <Grid xs={12} md={3}>
+                        <Grid size={{ xs: 12, md: 3 }}>
                             <TextField
                                 fullWidth
                                 type="number"
@@ -228,12 +231,12 @@ export default function QuizManager() {
                             />
                         </Grid>
 
-                        <Grid xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Build Questions</Typography>
                             {newQuiz.questions.map((q, qIdx) => (
                                 <Paper key={qIdx} elevation={0} sx={{ p: 3, mb: 3, border: '1px solid', borderColor: 'divider', borderRadius: 3, bgcolor: 'background.default' }}>
                                     <Grid container spacing={2}>
-                                        <Grid xs={10}>
+                                        <Grid size={{ xs: 10 }}>
                                             <TextField
                                                 fullWidth
                                                 variant="standard"
@@ -247,7 +250,7 @@ export default function QuizManager() {
                                                 }}
                                             />
                                         </Grid>
-                                        <Grid xs={2}>
+                                        <Grid size={{ xs: 2 }}>
                                             <TextField
                                                 fullWidth
                                                 type="number"
@@ -261,7 +264,7 @@ export default function QuizManager() {
                                                 }}
                                             />
                                         </Grid>
-                                        <Grid item xs={12}>
+                                        <Grid size={{ xs: 12 }}>
                                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 2, mb: 1 }}>Define Options (Check the correct answer)</Typography>
                                             {q.options.map((o, oIdx) => (
                                                 <Stack key={oIdx} direction="row" spacing={1} alignItems="center" sx={{ mb: 1.5 }}>
@@ -302,7 +305,7 @@ export default function QuizManager() {
                                     </Grid>
                                 </Paper>
                             ))}
-                            <Button fullWidth variant="dashed" startIcon={<Add />} onClick={addQuestion} sx={{ py: 1.5, borderStyle: 'dashed', borderRadius: 3 }}>
+                            <Button fullWidth variant="outlined" startIcon={<Add />} onClick={addQuestion} sx={{ py: 1.5, borderStyle: 'dashed', borderRadius: 3 }}>
                                 Add Next Question
                             </Button>
                         </Grid>

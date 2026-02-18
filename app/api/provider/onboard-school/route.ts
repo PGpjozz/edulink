@@ -1,18 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth, readJson } from '@/lib/api-auth';
 import bcrypt from 'bcryptjs';
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== 'PROVIDER') {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['PROVIDER'] });
+    if (auth instanceof NextResponse) return auth;
 
     try {
-        const body = await req.json();
+        const body = await readJson<any>(req);
+        if (body instanceof NextResponse) return body;
         const {
             schoolName,
             tier,
@@ -23,6 +20,26 @@ export async function POST(req: Request) {
             principalEmail,
             principalPassword
         } = body;
+
+        if (
+            !schoolName ||
+            !tier ||
+            monthlyFee === undefined ||
+            monthlyFee === null ||
+            monthlyFee === '' ||
+            !contactEmail ||
+            !principalFirstName ||
+            !principalLastName ||
+            !principalEmail ||
+            !principalPassword
+        ) {
+            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        const monthlyFeeNumber = Number(monthlyFee);
+        if (!Number.isFinite(monthlyFeeNumber) || monthlyFeeNumber < 0) {
+            return NextResponse.json({ error: 'Invalid monthlyFee' }, { status: 400 });
+        }
 
         // Check if principal email already exists
         const existingUser = await prisma.user.findUnique({
@@ -43,7 +60,7 @@ export async function POST(req: Request) {
                 data: {
                     name: schoolName,
                     tier,
-                    monthlyFee: parseFloat(monthlyFee),
+                    monthlyFee: monthlyFeeNumber,
                     contactEmail,
                     isActive: true,
                     gradesOffered: ['8', '9', '10', '11', '12']
@@ -67,9 +84,9 @@ export async function POST(req: Request) {
             await tx.auditLog.create({
                 data: {
                     schoolId: school.id,
-                    userId: session.user.id,
-                    action: 'Onboard School',
-                    entity: 'School',
+                    userId: auth.userId,
+                    action: 'ONBOARD_SCHOOL',
+                    entity: 'SCHOOL',
                     entityId: school.id,
                     details: {
                         schoolName,

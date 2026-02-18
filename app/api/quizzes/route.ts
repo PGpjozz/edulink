@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session) return new NextResponse('Unauthorized', { status: 401 });
+    const auth = await requireAuth({ requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(req.url);
     const subjectId = searchParams.get('subjectId');
@@ -13,19 +12,28 @@ export async function GET(req: Request) {
 
     try {
         if (quizId) {
-            const quiz = await prisma.quiz.findUnique({
-                where: { id: quizId },
+            const quiz = await prisma.quiz.findFirst({
+                where: { id: quizId, subject: { schoolId: auth.schoolId as string } },
                 include: {
                     questions: {
                         include: { options: true }
                     }
                 }
             });
+            if (!quiz) return new NextResponse('Quiz not found', { status: 404 });
             return NextResponse.json(quiz);
         }
 
+        if (subjectId) {
+            const subject = await prisma.subject.findFirst({
+                where: { id: subjectId, schoolId: auth.schoolId as string },
+                select: { id: true }
+            });
+            if (!subject) return new NextResponse('Subject not found', { status: 404 });
+        }
+
         const quizzes = await prisma.quiz.findMany({
-            where: subjectId ? { subjectId } : { subject: { schoolId: session.user.schoolId } },
+            where: subjectId ? { subjectId } : { subject: { schoolId: auth.schoolId as string } },
             include: { _count: { select: { questions: true, attempts: true } } },
             orderBy: { createdAt: 'desc' }
         });
@@ -37,14 +45,36 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'TEACHER') {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
-        const body = await req.json();
+        const body = await readJson<any>(req);
+        if (body instanceof NextResponse) return body;
         const { subjectId, title, description, timeLimit, questions } = body;
+
+        if (!subjectId || !title || !Array.isArray(questions)) {
+            return new NextResponse('Missing required fields', { status: 400 });
+        }
+
+        const subject = await prisma.subject.findFirst({
+            where: { id: subjectId, schoolId: auth.schoolId as string },
+            select: { id: true, teacherId: true }
+        });
+
+        if (!subject) {
+            return new NextResponse('Subject not found', { status: 404 });
+        }
+
+        if (auth.role === 'TEACHER') {
+            const teacherProfile = await prisma.teacherProfile.findUnique({
+                where: { userId: auth.userId },
+                select: { id: true }
+            });
+            if (!teacherProfile || subject.teacherId !== teacherProfile.id) {
+                return new NextResponse('Forbidden', { status: 403 });
+            }
+        }
 
         const quiz = await prisma.quiz.create({
             data: {
@@ -68,6 +98,15 @@ export async function POST(req: Request) {
             include: { questions: { include: { options: true } } }
         });
 
+        await writeAuditLog({
+            schoolId: auth.schoolId,
+            userId: auth.userId,
+            action: 'CREATE_QUIZ',
+            entity: 'QUIZ',
+            entityId: quiz.id,
+            details: { subjectId, title }
+        });
+
         return NextResponse.json(quiz);
     } catch (error) {
         console.error(error);
@@ -77,17 +116,20 @@ export async function POST(req: Request) {
 
 // Submitting a quiz attempt
 export async function PATCH(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'LEARNER') {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['LEARNER'], requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
-        const body = await req.json();
+        const body = await readJson<any>(req);
+        if (body instanceof NextResponse) return body;
         const { quizId, answers } = body; // answers: [{ questionId, selectedOptionId }]
 
-        const quiz = await prisma.quiz.findUnique({
-            where: { id: quizId },
+        if (!quizId || !Array.isArray(answers)) {
+            return new NextResponse('Missing required fields', { status: 400 });
+        }
+
+        const quiz = await prisma.quiz.findFirst({
+            where: { id: quizId, subject: { schoolId: auth.schoolId as string } },
             include: { questions: { include: { options: true } } }
         });
 
@@ -118,18 +160,23 @@ export async function PATCH(req: Request) {
 
         const attempt = await prisma.quizAttempt.create({
             data: {
-                quizId,
-                learnerId: session.user.id, // Assuming user.id is learnerProfile.id or linked
-                // Actually, session.user.id is User.id. We need LearnerProfile.id
-                // Let's use a nested query or assume session has it. 
-                // Better: find learner profile
-                learner: { connect: { userId: session.user.id } },
+                quiz: { connect: { id: quizId } },
+                learner: { connect: { userId: auth.userId } },
                 score,
                 completedAt: new Date(),
                 answers: {
                     create: quizAnswers
                 }
             }
+        });
+
+        await writeAuditLog({
+            schoolId: auth.schoolId,
+            userId: auth.userId,
+            action: 'SUBMIT_QUIZ',
+            entity: 'QUIZ_ATTEMPT',
+            entityId: attempt.id,
+            details: { quizId, score }
         });
 
         return NextResponse.json(attempt);

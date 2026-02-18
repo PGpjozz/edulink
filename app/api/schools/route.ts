@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== 'PROVIDER') {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['PROVIDER'] });
+    if (auth instanceof NextResponse) return auth;
 
     try {
         const schools = await prisma.school.findMany({
@@ -28,27 +24,33 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== 'PROVIDER') {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['PROVIDER'] });
+    if (auth instanceof NextResponse) return auth;
 
     try {
-        const body = await req.json();
+        const body = await readJson<{ name?: string; contactEmail?: string; tier?: string }>(req);
+        if (body instanceof NextResponse) return body;
         const { name, contactEmail, tier } = body;
+
+        if (!name || !contactEmail || !tier) {
+            return new NextResponse('Missing required fields', { status: 400 });
+        }
 
         const school = await prisma.school.create({
             data: {
                 name,
                 contactEmail,
-                billing: {
-                    create: {
-                        tier,
-                        status: 'ACTIVE'
-                    }
-                }
+                tier,
             }
+        });
+
+        await writeAuditLog({
+            schoolId: school.id,
+            userId: auth.userId,
+            action: 'CREATE_SCHOOL',
+            entity: 'SCHOOL',
+            entityId: school.id,
+            details: { name, tier, contactEmail }
         });
 
         return NextResponse.json(school);

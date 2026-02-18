@@ -13,7 +13,7 @@ export async function GET() {
     try {
         const learners = await prisma.learnerProfile.findMany({
             where: {
-                class: {
+                user: {
                     schoolId: session.user.schoolId
                 }
             },

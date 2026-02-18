@@ -1,17 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
+import bcrypt from 'bcryptjs';
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== 'PRINCIPAL' && session.user.role !== 'SCHOOL_ADMIN')) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
         const applications = await prisma.application.findMany({
-            where: { schoolId: session.user.schoolId || '' },
+            where: { schoolId: auth.schoolId as string },
             orderBy: { createdAt: 'desc' }
         });
         return NextResponse.json(applications);
@@ -21,14 +19,22 @@ export async function GET(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== 'PRINCIPAL' && session.user.role !== 'SCHOOL_ADMIN')) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
-        const body = await req.json();
+        const body = await readJson<{ id?: string; status?: string }>(req);
+        if (body instanceof NextResponse) return body;
         const { id, status } = body;
+
+        if (!id || !status) {
+            return new NextResponse('Missing required fields', { status: 400 });
+        }
+
+        const allowedStatuses = ['PENDING', 'APPROVED', 'REJECTED'];
+        if (!allowedStatuses.includes(status)) {
+            return new NextResponse('Invalid status', { status: 400 });
+        }
 
         const application = await prisma.application.findUnique({
             where: { id },
@@ -37,8 +43,13 @@ export async function PATCH(req: Request) {
 
         if (!application) return new NextResponse('Application not found', { status: 404 });
 
+        if (application.schoolId !== (auth.schoolId as string)) {
+            return new NextResponse('Forbidden', { status: 403 });
+        }
+
         // If approved, create the user and learner profile
         if (status === 'APPROVED' && application.status !== 'APPROVED') {
+            const hashedPassword = await bcrypt.hash('password123', 10);
             const newUser = await prisma.user.create({
                 data: {
                     schoolId: application.schoolId,
@@ -47,7 +58,7 @@ export async function PATCH(req: Request) {
                     lastName: application.lastName,
                     role: 'LEARNER',
                     // Default password or invite flow - here we'll just create a dummy
-                    password: 'password123',
+                    password: hashedPassword,
                     isActive: true,
                     learnerProfile: {
                         create: {
@@ -58,13 +69,24 @@ export async function PATCH(req: Request) {
             });
 
             // Log the approval in audit logs
-            await prisma.auditLog.create({
-                data: {
-                    schoolId: application.schoolId,
-                    userId: session.user.id,
-                    action: 'APPROVE_APPLICATION',
-                    details: `Approved application for ${application.firstName} ${application.lastName}`
-                }
+            await writeAuditLog({
+                schoolId: application.schoolId,
+                userId: auth.userId,
+                action: 'APPROVE_APPLICATION',
+                entity: 'APPLICATION',
+                entityId: application.id,
+                details: { learnerUserId: newUser.id, message: `Approved application for ${application.firstName} ${application.lastName}` }
+            });
+        }
+
+        if (status === 'REJECTED' && application.status !== 'REJECTED') {
+            await writeAuditLog({
+                schoolId: application.schoolId,
+                userId: auth.userId,
+                action: 'REJECT_APPLICATION',
+                entity: 'APPLICATION',
+                entityId: application.id,
+                details: { message: `Rejected application for ${application.firstName} ${application.lastName}` }
             });
         }
 

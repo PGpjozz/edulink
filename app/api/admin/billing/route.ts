@@ -1,7 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 
 const TIER_PRICES = {
     SMALL: 500,
@@ -16,11 +15,8 @@ const TIER_LIMITS = {
 };
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== 'PROVIDER') {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['PROVIDER'] });
+    if (auth instanceof NextResponse) return auth;
 
     try {
         const billingHistory = await prisma.billing.findMany({
@@ -34,15 +30,17 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== 'PROVIDER') {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['PROVIDER'] });
+    if (auth instanceof NextResponse) return auth;
 
     try {
-        const body = await req.json();
+        const body = await readJson<{ schoolId?: string }>(req);
+        if (body instanceof NextResponse) return body;
         const { schoolId } = body;
+
+        if (!schoolId) {
+            return new NextResponse('Missing schoolId', { status: 400 });
+        }
 
         const school = await prisma.school.findUnique({
             where: { id: schoolId },
@@ -72,15 +70,13 @@ export async function POST(req: Request) {
         });
 
         // Create Audit Log
-        await prisma.auditLog.create({
-            data: {
-                schoolId,
-                userId: session.user.id,
-                action: 'GENERATE_BILL',
-                entity: 'BILLING',
-                entityId: billing.id,
-                details: { totalAmount, learnerCount }
-            }
+        await writeAuditLog({
+            schoolId,
+            userId: auth.userId,
+            action: 'GENERATE_BILL',
+            entity: 'BILLING',
+            entityId: billing.id,
+            details: { totalAmount, learnerCount }
         });
 
         return NextResponse.json(billing);

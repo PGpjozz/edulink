@@ -8,8 +8,8 @@ export async function GET(req: Request) {
     if (!session) return new NextResponse('Unauthorized', { status: 401 });
 
     try {
-        const schoolId = session.user.schoolId;
-        const sessions = await prisma.ptmSession.findMany({
+        const schoolId = session.user.schoolId || '';
+        const sessions = await prisma.pTMSession.findMany({
             where: { schoolId },
             include: {
                 teacher: { select: { firstName: true, lastName: true } },
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
         const body = await req.json();
         const { date, startTime, endTime, slotDuration } = body;
 
-        const ptmSession = await prisma.ptmSession.create({
+        const ptmSession = await prisma.pTMSession.create({
             data: {
                 schoolId: session.user.schoolId!,
                 teacherId: session.user.id,
@@ -66,7 +66,7 @@ export async function PATCH(req: Request) {
         const body = await req.json();
         const { sessionId, learnerId, startTime, endTime } = body;
 
-        const booking = await prisma.ptmBooking.create({
+        const booking = await prisma.pTMBooking.create({
             data: {
                 sessionId,
                 learnerId,
@@ -77,7 +77,7 @@ export async function PATCH(req: Request) {
         });
 
         return NextResponse.json(booking);
-    } catch (error) {
+    } catch (error: any) {
         // If unique constraint fails (already booked)
         if (error.code === 'P2002') {
             return new NextResponse('Slot already booked', { status: 400 });

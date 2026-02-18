@@ -37,8 +37,8 @@ interface SubjectHubProps {
 }
 
 export default function SubjectHub({ subjectId, role }: SubjectHubProps) {
-    const [resources, setResources] = useState([]);
-    const [assessments, setAssessments] = useState([]);
+    const [resources, setResources] = useState<any[]>([]);
+    const [assessments, setAssessments] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [uploadOpen, setUploadOpen] = useState(false);
 
@@ -125,7 +125,7 @@ export default function SubjectHub({ subjectId, role }: SubjectHubProps) {
         <Box>
             <Grid container spacing={4}>
                 {/* Resources Section */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 3, borderRadius: 2, height: '100%' }}>
                         <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
                             <Typography variant="h6" fontWeight="bold">Learning Resources</Typography>
@@ -168,7 +168,7 @@ export default function SubjectHub({ subjectId, role }: SubjectHubProps) {
                 </Grid>
 
                 {/* Submissions/Assessments Section */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Paper sx={{ p: 3, borderRadius: 2, height: '100%' }}>
                         <Typography variant="h6" fontWeight="bold" gutterBottom>Active Tasks</Typography>
                         <Divider sx={{ mb: 2 }} />

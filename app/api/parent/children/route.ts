@@ -1,18 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth } from '@/lib/api-auth';
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || session.user.role !== 'PARENT') {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['PARENT'], requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
         const parentProfile = await prisma.parentProfile.findUnique({
-            where: { userId: session.user.id }
+            where: { userId: auth.userId }
         });
 
         if (!parentProfile || !parentProfile.learnerIds.length) {
@@ -21,7 +17,8 @@ export async function GET(req: Request) {
 
         const children = await prisma.learnerProfile.findMany({
             where: {
-                id: { in: parentProfile.learnerIds }
+                id: { in: parentProfile.learnerIds },
+                user: { schoolId: auth.schoolId as string }
             },
             include: {
                 user: {

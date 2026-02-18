@@ -73,7 +73,7 @@ export default function FinancialDashboard() {
 
             {/* KPI Cards */}
             <Grid container spacing={3} mb={4}>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                     <Card sx={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', borderRadius: 3 }}>
                         <CardContent>
                             <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -86,7 +86,7 @@ export default function FinancialDashboard() {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                     <Card sx={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)', color: 'white', borderRadius: 3 }}>
                         <CardContent>
                             <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -99,7 +99,7 @@ export default function FinancialDashboard() {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                     <Card sx={{ background: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)', color: 'white', borderRadius: 3 }}>
                         <CardContent>
                             <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -112,7 +112,7 @@ export default function FinancialDashboard() {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                     <Card sx={{ background: 'linear-gradient(135deg, #30cfd0 0%, #330867 100%)', color: 'white', borderRadius: 3 }}>
                         <CardContent>
                             <Box display="flex" justifyContent="space-between" alignItems="center">
@@ -129,7 +129,7 @@ export default function FinancialDashboard() {
 
             {/* Charts */}
             <Grid container spacing={3}>
-                <Grid item xs={12} md={8}>
+                <Grid size={{ xs: 12, md: 8 }}>
                     <Paper sx={{ p: 3, borderRadius: 3, height: 400 }}>
                         <Typography variant="h6" fontWeight="bold" mb={2}>Monthly Revenue Trend</Typography>
                         <ResponsiveContainer width="100%" height="85%">
@@ -145,7 +145,7 @@ export default function FinancialDashboard() {
                         </ResponsiveContainer>
                     </Paper>
                 </Grid>
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Paper sx={{ p: 3, borderRadius: 3, height: 400 }}>
                         <Typography variant="h6" fontWeight="bold" mb={2}>Invoice Status</Typography>
                         <ResponsiveContainer width="100%" height="85%">

@@ -72,7 +72,7 @@ export default function TeacherGradebook() {
             ) : (
                 <Grid container spacing={3}>
                     {subjects.map((subject) => (
-                        <Grid item xs={12} md={6} lg={4} key={subject.id}>
+                        <Grid size={{ xs: 12, md: 6, lg: 4 }} key={subject.id}>
                             <Card
                                 sx={{
                                     height: '100%',
@@ -130,7 +130,7 @@ export default function TeacherGradebook() {
                         </Grid>
                     ))}
                     {subjects.length === 0 && (
-                        <Grid item xs={12}>
+                        <Grid size={{ xs: 12 }}>
                             <Box py={10} textAlign="center">
                                 <Assignment sx={{ fontSize: 60, color: 'grey.300', mb: 2 }} />
                                 <Typography color="text.secondary">No subjects found for your profile.</Typography>

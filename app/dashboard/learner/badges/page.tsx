@@ -22,8 +22,8 @@ import {
 import { motion } from 'framer-motion';
 
 export default function LearnerLeaderboard() {
-    const [leaderboard, setLeaderboard] = useState([]);
-    const [myRank, setMyRank] = useState(null);
+    const [leaderboard, setLeaderboard] = useState<any[]>([]);
+    const [myRank, setMyRank] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -62,7 +62,7 @@ export default function LearnerLeaderboard() {
                 <Card sx={{ mb: 4, background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', color: 'white', borderRadius: 4 }}>
                     <CardContent>
                         <Grid container spacing={2} alignItems="center">
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <Box display="flex" alignItems="center" gap={2}>
                                     <Avatar sx={{ width: 60, height: 60, bgcolor: 'white', color: 'primary.main' }}>
                                         {myRank.name.charAt(0)}
@@ -73,7 +73,7 @@ export default function LearnerLeaderboard() {
                                     </Box>
                                 </Box>
                             </Grid>
-                            <Grid item xs={12} md={6}>
+                            <Grid size={{ xs: 12, md: 6 }}>
                                 <Box textAlign={{ xs: 'left', md: 'right' }}>
                                     <Typography variant="h4" fontWeight="bold">{myRank.points} Points</Typography>
                                     <LinearProgress
@@ -106,17 +106,17 @@ export default function LearnerLeaderboard() {
                         transition={{ delay: index * 0.05 }}
                     >
                         <Grid container spacing={2} alignItems="center">
-                            <Grid item xs={2} md={1}>
+                            <Grid size={{ xs: 2, md: 1 }}>
                                 <Box display="flex" justifyContent="center">
                                     {getRankIcon(index + 1)}
                                 </Box>
                             </Grid>
-                            <Grid item xs={1}>
+                            <Grid size={{ xs: 1 }}>
                                 <Typography variant="h5" fontWeight="bold" color="text.secondary">
                                     {index + 1}
                                 </Typography>
                             </Grid>
-                            <Grid item xs={5} md={6}>
+                            <Grid size={{ xs: 5, md: 6 }}>
                                 <Box display="flex" alignItems="center" gap={2}>
                                     <Avatar sx={{ bgcolor: 'primary.main' }}>{student.name.charAt(0)}</Avatar>
                                     <Box>
@@ -127,7 +127,7 @@ export default function LearnerLeaderboard() {
                                     </Box>
                                 </Box>
                             </Grid>
-                            <Grid item xs={4} md={3}>
+                            <Grid size={{ xs: 4, md: 3 }}>
                                 <Box textAlign="right">
                                     <Chip
                                         icon={<Whatshot />}

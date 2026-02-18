@@ -37,7 +37,7 @@ export async function GET(req: Request) {
 
         // --- SIMULATED AI ANALYSIS LOGIC ---
         // Group by subject
-        const subjectStats: any = {};
+        const subjectStats: Record<string, number[]> = {};
         grades.forEach(g => {
             const subName = g.assessment.subject.name;
             if (!subjectStats[subName]) subjectStats[subName] = [];
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
 
         const averages = Object.keys(subjectStats).map(name => ({
             name,
-            avg: subjectStats[name].reduce((a, b) => a + b, 0) / subjectStats[name].length
+            avg: subjectStats[name].reduce((a: number, b: number) => a + b, 0) / subjectStats[name].length
         }));
 
         const strongSubjects = averages.filter(s => s.avg >= 75).map(s => s.name);
@@ -63,7 +63,7 @@ export async function GET(req: Request) {
         };
 
         // Cache the insight
-        await prisma.aiInsight.create({
+        await prisma.aIInsight.create({
             data: {
                 learnerId,
                 term: "Current Term",

@@ -103,7 +103,7 @@ export default function AuditLogsPage() {
                                 </TableCell>
                             </TableRow>
                         ) : (
-                            logs.map((log) => (
+                            logs.map((log: any) => (
                                 <TableRow key={log.id} hover>
                                     <TableCell>
                                         <Typography variant="body2">{new Date(log.createdAt).toLocaleString()}</Typography>

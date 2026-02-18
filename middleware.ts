@@ -11,13 +11,24 @@ export default withAuth(
             return NextResponse.next();
         }
 
+        // Unauthenticated redirects
+        if (!token) {
+            if (path.startsWith("/admin") || path.startsWith("/dashboard/provider")) {
+                return NextResponse.redirect(new URL(`/auth/provider-signin?callbackUrl=${encodeURIComponent(path)}`, req.url));
+            }
+
+            if (path.startsWith("/dashboard")) {
+                return NextResponse.redirect(new URL("/auth/signin", req.url));
+            }
+        }
+
         // Role-based protection
         if (path.startsWith("/admin") && token?.role !== "PROVIDER") {
             return NextResponse.redirect(new URL("/unauthorized", req.url));
         }
 
-        if (path.startsWith("/dashboard") && !token) {
-            return NextResponse.redirect(new URL("/auth/signin", req.url));
+        if (path.startsWith("/dashboard/provider") && token?.role !== "PROVIDER") {
+            return NextResponse.redirect(new URL("/unauthorized", req.url));
         }
 
         // TODO: Add more granular role checks here as we build out feature routes
@@ -27,10 +38,10 @@ export default withAuth(
     },
     {
         callbacks: {
-            authorized: ({ token }) => !!token,
+            authorized: () => true,
         },
         pages: {
-            signIn: "/auth/signin",
+            signIn: "/auth/provider-signin",
         },
     }
 );
@@ -39,8 +50,6 @@ export const config = {
     matcher: [
         "/dashboard/:path*",
         "/admin/:path*",
-        "/api/schools/:path*",
-        // Exclude public assets
-        "/((?!api/auth|_next/static|_next/image|favicon.ico).*)"
+        "/api/schools/:path*"
     ],
 };

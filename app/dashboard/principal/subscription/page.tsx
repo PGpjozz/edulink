@@ -19,7 +19,7 @@ import {
 } from '@mui/material';
 import {
     ReceiptLong,
-    PlanIc as PlanIcon, // Placeholder icon
+    Payment as PlanIcon,
     CheckCircle,
     Warning,
     CreditCard,
@@ -86,8 +86,8 @@ export default function SchoolSubscription() {
     const usagePercent = Math.min(100, (learnerCount / tierLimit) * 100);
 
     const columns: GridColDef[] = [
-        { field: 'createdAt', headerName: 'Invoiced Date', width: 150, valueFormatter: (params) => new Date(params.value).toLocaleDateString() },
-        { field: 'totalAmount', headerName: 'Amount', width: 130, valueFormatter: (params) => `R ${params.value.toFixed(2)}` },
+        { field: 'createdAt', headerName: 'Invoiced Date', width: 150, valueFormatter: (value: any) => new Date(value).toLocaleDateString() },
+        { field: 'totalAmount', headerName: 'Amount', width: 130, valueFormatter: (value: any) => `R ${Number(value).toFixed(2)}` },
         {
             field: 'status', headerName: 'Status', width: 150,
             renderCell: (params) => (
@@ -126,7 +126,7 @@ export default function SchoolSubscription() {
 
             <Grid container spacing={3}>
                 {/* Plan Overview */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Card sx={{ height: '100%', position: 'relative', overflow: 'hidden' }}>
                         <Box sx={{ position: 'absolute', top: -20, right: -20, opacity: 0.1 }}>
                             <SchoolIcon sx={{ fontSize: 150 }} />
@@ -162,7 +162,7 @@ export default function SchoolSubscription() {
                 </Grid>
 
                 {/* Status Card */}
-                <Grid item xs={12} md={6}>
+                <Grid size={{ xs: 12, md: 6 }}>
                     <Card sx={{ height: '100%' }}>
                         <CardContent>
                             <Typography variant="h6" fontWeight="bold" gutterBottom>Platform Status</Typography>
@@ -196,7 +196,7 @@ export default function SchoolSubscription() {
                 </Grid>
 
                 {/* Billing History */}
-                <Grid item xs={12}>
+                <Grid size={{ xs: 12 }}>
                     <Paper sx={{ p: 2 }}>
                         <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ p: 1 }}>EduLink Invoices</Typography>
                         <Box sx={{ height: 400, width: '100%' }}>

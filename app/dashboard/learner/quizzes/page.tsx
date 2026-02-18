@@ -20,7 +20,8 @@ import {
     QuestionAnswer,
     Timer,
     CheckCircle,
-    PlayArrow
+    PlayArrow,
+    AutoAwesome
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
@@ -56,7 +57,7 @@ export default function LearnerQuizzes() {
             </Box>
 
             <Grid container spacing={3}>
-                <Grid xs={12} md={8}>
+                <Grid size={{ xs: 12, md: 8 }}>
                     <Typography variant="h6" fontWeight="bold" mb={2}>Active Challenges</Typography>
                     <Stack spacing={2}>
                         {quizzes.filter((q: any) => q.isPublished).map((quiz: any) => (
@@ -101,7 +102,7 @@ export default function LearnerQuizzes() {
                     </Stack>
                 </Grid>
 
-                <Grid xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Typography variant="h6" fontWeight="bold" mb={2}>Performance Stats</Typography>
                     <Card sx={{ borderRadius: 4, mb: 3 }}>
                         <CardContent>

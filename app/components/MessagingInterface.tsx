@@ -20,7 +20,9 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    MenuItem
+    MenuItem,
+    Badge,
+    ListItemButton
 } from '@mui/material';
 import { Send, Search, Person, School, Add } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
@@ -189,26 +191,30 @@ export default function MessagingInterface() {
                 <List sx={{ flexGrow: 1, overflowY: 'auto' }}>
                     {conversations.map((convo) => (
                         <ListItem
-                            button
                             key={convo.id}
-                            selected={selectedUserId === convo.id}
-                            onClick={() => setSelectedUserId(convo.id)}
+                            disablePadding
                             sx={{ px: { xs: 1, sm: 2 } }}
                         >
-                            <ListItemAvatar>
-                                <Badge color="success" variant="dot" invisible={false}>
-                                    <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
-                                        {convo.user.firstName[0]}
-                                    </Avatar>
-                                </Badge>
-                            </ListItemAvatar>
-                            <ListItemText
-                                primary={`${convo.user.firstName} ${convo.user.lastName}`}
-                                secondary={convo.lastMessage}
-                                sx={{ display: { xs: 'none', sm: 'block' } }}
-                                primaryTypographyProps={{ fontWeight: selectedUserId === convo.id ? 'bold' : 'medium' }}
-                                secondaryTypographyProps={{ noWrap: true }}
-                            />
+                            <ListItemButton
+                                selected={selectedUserId === convo.id}
+                                onClick={() => setSelectedUserId(convo.id)}
+                                sx={{ borderRadius: 2 }}
+                            >
+                                <ListItemAvatar>
+                                    <Badge color="success" variant="dot" invisible={false}>
+                                        <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
+                                            {convo.user.firstName[0]}
+                                        </Avatar>
+                                    </Badge>
+                                </ListItemAvatar>
+                                <ListItemText
+                                    primary={`${convo.user.firstName} ${convo.user.lastName}`}
+                                    secondary={convo.lastMessage}
+                                    sx={{ display: { xs: 'none', sm: 'block' } }}
+                                    primaryTypographyProps={{ fontWeight: selectedUserId === convo.id ? 'bold' : 'medium' }}
+                                    secondaryTypographyProps={{ noWrap: true }}
+                                />
+                            </ListItemButton>
                         </ListItem>
                     ))}
                 </List>

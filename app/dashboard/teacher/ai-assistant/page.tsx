@@ -93,7 +93,7 @@ export default function AIAssistant() {
             </Box>
 
             <Grid container spacing={4}>
-                <Grid xs={12} md={5}>
+                <Grid size={{ xs: 12, md: 5 }}>
                     <Paper sx={{ p: 4, borderRadius: 4, border: '1px solid', borderColor: 'divider' }}>
                         <Typography variant="h6" fontWeight="bold" gutterBottom>Report Comment Generator</Typography>
                         <Typography variant="body2" color="text.secondary" mb={4}>
@@ -109,7 +109,7 @@ export default function AIAssistant() {
                                     onChange={(e) => setSelectedLearner(e.target.value)}
                                 >
                                     {learners.map((l: any) => (
-                                        <MenuItem key={l.id} value={l.id}>{l.user.name}</MenuItem>
+                                        <MenuItem key={l.id} value={l.id}>{l.user.firstName} {l.user.lastName}</MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
@@ -160,12 +160,12 @@ export default function AIAssistant() {
                     </Alert>
                 </Grid>
 
-                <Grid xs={12} md={7}>
+                <Grid size={{ xs: 12, md: 7 }}>
                     <AnimatePresence mode="wait">
                         {result ? (
                             <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
                                 <Paper sx={{ p: 4, borderRadius: 4, bgcolor: 'background.paper', position: 'relative', overflow: 'hidden' }}>
-                                    <Box sx={{ position: 'absolute', top: 0, right: 0, p: 2, p: 1, px: 2, bgcolor: 'primary.main', color: 'primary.contrastText', borderBottomLeftRadius: 16 }}>
+                                    <Box sx={{ position: 'absolute', top: 0, right: 0, p: 1, px: 2, bgcolor: 'primary.main', color: 'primary.contrastText', borderBottomLeftRadius: 16 }}>
                                         <Typography variant="caption" fontWeight="bold">AI GENERATED</Typography>
                                     </Box>
 

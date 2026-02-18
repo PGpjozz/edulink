@@ -26,7 +26,7 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 
 export default function PrincipalFinance() {
     const [stats, setStats] = useState({ totalInvoiced: 0, totalPaid: 0, count: 0 });
-    const [invoices, setInvoices] = useState([]);
+    const [invoices, setInvoices] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
     const [message, setMessage] = useState('');
@@ -41,8 +41,8 @@ export default function PrincipalFinance() {
             const data = await res.json();
             setInvoices(data);
 
-            const total = data.reduce((acc, curr) => acc + curr.amount, 0);
-            const paid = data.filter(i => i.status === 'PAID').reduce((acc, curr) => acc + curr.amount, 0);
+            const total = data.reduce((acc: number, curr: any) => acc + curr.amount, 0);
+            const paid = data.filter((i: any) => i.status === 'PAID').reduce((acc: number, curr: any) => acc + curr.amount, 0);
             setStats({ totalInvoiced: total, totalPaid: paid, count: data.length });
         } catch (err) {
             console.error(err);
@@ -71,10 +71,10 @@ export default function PrincipalFinance() {
     }, []);
 
     const columns: GridColDef[] = [
-        { field: 'createdAt', headerName: 'Created', width: 120, valueFormatter: (params) => new Date(params.value).toLocaleDateString() },
-        { field: 'learner', headerName: 'Learner', flex: 1, valueGetter: (params) => `${params.row.learner?.user?.firstName} ${params.row.learner?.user?.lastName}` },
+        { field: 'createdAt', headerName: 'Created', width: 120, valueFormatter: (value: any) => new Date(value).toLocaleDateString() },
+        { field: 'learner', headerName: 'Learner', flex: 1, valueGetter: (_value: any, row: any) => `${row?.learner?.user?.firstName} ${row?.learner?.user?.lastName}` },
         { field: 'title', headerName: 'Description', flex: 1.5 },
-        { field: 'amount', headerName: 'Amount', width: 120, valueFormatter: (params) => `R ${params.value.toFixed(2)}` },
+        { field: 'amount', headerName: 'Amount', width: 120, valueFormatter: (value: any) => `R ${Number(value).toFixed(2)}` },
         { field: 'status', headerName: 'Status', width: 120 },
     ];
 
@@ -98,7 +98,7 @@ export default function PrincipalFinance() {
             {message && <Alert severity="success" sx={{ mb: 4 }}>{message}</Alert>}
 
             <Grid container spacing={3} mb={4}>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                     <Card sx={{ bgcolor: 'primary.main', color: 'white', borderRadius: 3 }}>
                         <CardContent>
                             <Typography variant="subtitle2" sx={{ opacity: 0.8 }}>Total Invoiced</Typography>
@@ -106,7 +106,7 @@ export default function PrincipalFinance() {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                     <Card sx={{ bgcolor: 'success.main', color: 'white', borderRadius: 3 }}>
                         <CardContent>
                             <Typography variant="subtitle2" sx={{ opacity: 0.8 }}>Total Collected</Typography>
@@ -114,7 +114,7 @@ export default function PrincipalFinance() {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                     <Card sx={{ bgcolor: 'warning.main', color: 'white', borderRadius: 3 }}>
                         <CardContent>
                             <Typography variant="subtitle2" sx={{ opacity: 0.8 }}>Collection Rate</Typography>
@@ -124,7 +124,7 @@ export default function PrincipalFinance() {
                         </CardContent>
                     </Card>
                 </Grid>
-                <Grid item xs={12} md={3}>
+                <Grid size={{ xs: 12, md: 3 }}>
                     <Card sx={{ border: '2px dashed', borderColor: 'divider', borderRadius: 3, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <CardContent sx={{ textAlign: 'center' }}>
                             <Button

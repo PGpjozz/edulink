@@ -84,7 +84,7 @@ export default function BillingPortal() {
             <Typography variant="h5" fontWeight="bold" gutterBottom>Financial Overview</Typography>
 
             <Grid container spacing={3} mb={4}>
-                <Grid item xs={12} md={4}>
+                <Grid size={{ xs: 12, md: 4 }}>
                     <Card sx={{ bgcolor: 'error.main', color: 'white' }}>
                         <CardContent>
                             <Typography variant="subtitle2">Outstanding Balance</Typography>

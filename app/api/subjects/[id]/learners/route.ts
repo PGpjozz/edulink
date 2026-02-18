@@ -3,14 +3,14 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
-export async function GET(req: Request, { params }: { params: { id: string } }) {
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
 
     if (!session || !session.user.schoolId) {
         return new NextResponse('Unauthorized', { status: 401 });
     }
 
-    const subjectId = params.id;
+    const { id: subjectId } = await params;
 
     try {
         // 1. Get Subject to find Grade/School (but Subject doesn't strictly link to ONE class in schema?

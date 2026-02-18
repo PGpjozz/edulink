@@ -1,14 +1,10 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user.schoolId) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN', 'LEARNER', 'PARENT'], requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(req.url);
     const assessmentId = searchParams.get('assessmentId');
@@ -18,10 +14,29 @@ export async function GET(req: Request) {
     }
 
     try {
+        const assessment = await prisma.assessment.findFirst({
+            where: { id: assessmentId, subject: { schoolId: auth.schoolId as string } },
+            select: { id: true, subject: { select: { teacherId: true } } }
+        });
+
+        if (!assessment) {
+            return new NextResponse('Assessment not found', { status: 404 });
+        }
+
+        if (auth.role === 'TEACHER') {
+            const teacherProfile = await prisma.teacherProfile.findUnique({
+                where: { userId: auth.userId },
+                select: { id: true }
+            });
+            if (!teacherProfile || assessment.subject.teacherId !== teacherProfile.id) {
+                return new NextResponse('Forbidden', { status: 403 });
+            }
+        }
+
         const grades = await prisma.grade.findMany({
             where: {
                 assessmentId,
-                assessment: { subject: { schoolId: session.user.schoolId } }
+                assessment: { subject: { schoolId: auth.schoolId as string } }
             },
             include: {
                 learner: {
@@ -29,6 +44,24 @@ export async function GET(req: Request) {
                 }
             }
         });
+
+        if (auth.role === 'LEARNER') {
+            const learnerProfile = await prisma.learnerProfile.findUnique({
+                where: { userId: auth.userId },
+                select: { id: true }
+            });
+            if (!learnerProfile) return NextResponse.json([]);
+            return NextResponse.json(grades.filter((g) => g.learnerId === learnerProfile.id));
+        }
+
+        if (auth.role === 'PARENT') {
+            const parentProfile = await prisma.parentProfile.findUnique({
+                where: { userId: auth.userId },
+                select: { learnerIds: true }
+            });
+            if (!parentProfile?.learnerIds?.length) return NextResponse.json([]);
+            return NextResponse.json(grades.filter((g) => parentProfile.learnerIds.includes(g.learnerId)));
+        }
 
         return NextResponse.json(grades);
     } catch (error) {
@@ -38,20 +71,49 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user.schoolId) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
-
-    // Teachers/Admins can grade
-    if (!['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN'].includes(session.user.role)) {
-        return new NextResponse('Forbidden', { status: 403 });
-    }
+    const auth = await requireAuth({ roles: ['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
-        const body = await req.json();
+        const body = await readJson<any>(req);
+        if (body instanceof NextResponse) return body;
         const { assessmentId, grades } = body; // grades: [{ learnerId, score, comments }]
+
+        if (!assessmentId || !Array.isArray(grades)) {
+            return new NextResponse('Missing required fields', { status: 400 });
+        }
+
+        const assessment = await prisma.assessment.findFirst({
+            where: { id: assessmentId, subject: { schoolId: auth.schoolId as string } },
+            select: { id: true, subject: { select: { teacherId: true } } }
+        });
+
+        if (!assessment) {
+            return new NextResponse('Assessment not found', { status: 404 });
+        }
+
+        if (auth.role === 'TEACHER') {
+            const teacherProfile = await prisma.teacherProfile.findUnique({
+                where: { userId: auth.userId },
+                select: { id: true }
+            });
+            if (!teacherProfile || assessment.subject.teacherId !== teacherProfile.id) {
+                return new NextResponse('Forbidden', { status: 403 });
+            }
+        }
+
+        const learnerIds = grades.map((g: any) => g.learnerId).filter(Boolean);
+        if (learnerIds.length !== grades.length) {
+            return new NextResponse('Invalid grades payload', { status: 400 });
+        }
+
+        const validLearnerCount = await prisma.learnerProfile.count({
+            where: { id: { in: learnerIds }, user: { schoolId: auth.schoolId as string } }
+        });
+
+        if (validLearnerCount !== learnerIds.length) {
+            return new NextResponse('Invalid learnerIds', { status: 400 });
+        }
 
         // Bulk upsert using transaction or Promise.all
         // Prisma createMany doesn't support upsert, so we loop
@@ -66,32 +128,29 @@ export async function POST(req: Request) {
                             }
                         },
                         update: {
-                            score: parseFloat(g.score),
+                            score: Number(g.score),
                             comments: g.comments
                         },
                         create: {
                             assessmentId,
                             learnerId: g.learnerId,
-                            score: parseFloat(g.score),
+                            score: Number(g.score),
                             comments: g.comments
                         }
                     })
                 )
             );
 
-            // Log the action
-            await tx.auditLog.create({
-                data: {
-                    schoolId: session.user.schoolId as string,
-                    userId: session.user.id,
-                    action: 'Update Grades',
-                    entity: 'Assessment',
-                    entityId: assessmentId,
-                    details: { learnerCount: grades.length }
-                }
-            });
-
             return upserts;
+        });
+
+        await writeAuditLog({
+            schoolId: auth.schoolId,
+            userId: auth.userId,
+            action: 'UPDATE_GRADES',
+            entity: 'ASSESSMENT',
+            entityId: assessmentId,
+            details: { learnerCount: grades.length }
         });
 
         return NextResponse.json(results);

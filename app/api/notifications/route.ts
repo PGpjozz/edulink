@@ -1,18 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth, readJson } from '@/lib/api-auth';
 
 export async function GET() {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth();
+    if (auth instanceof NextResponse) return auth;
 
     try {
         const notifications = await prisma.notification.findMany({
-            where: { userId: session.user.id },
+            where: { userId: auth.userId },
             orderBy: { createdAt: 'desc' },
             take: 50
         });
@@ -25,17 +21,29 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth();
+    if (auth instanceof NextResponse) return auth;
 
     try {
-        const { id, isRead } = await req.json();
+        const body = await readJson<{ id?: string; isRead?: boolean }>(req);
+        if (body instanceof NextResponse) return body;
+        const { id, isRead } = body;
+
+        if (!id || typeof isRead !== 'boolean') {
+            return new NextResponse('Missing required fields', { status: 400 });
+        }
+
+        const existing = await prisma.notification.findFirst({
+            where: { id, userId: auth.userId },
+            select: { id: true }
+        });
+
+        if (!existing) {
+            return new NextResponse('Notification not found', { status: 404 });
+        }
 
         const updated = await prisma.notification.update({
-            where: { id, userId: session.user.id },
+            where: { id },
             data: { isRead }
         });
 

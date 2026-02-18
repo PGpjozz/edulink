@@ -113,7 +113,7 @@ export default function QuizResults({ params }: { params: Promise<{ id: string }
                     <TableBody>
                         {attempts.map((attempt: any) => (
                             <TableRow key={attempt.id} hover>
-                                <TableCell>{attempt.learner?.user?.name || 'Unknown Student'}</TableCell>
+                                <TableCell>{attempt.learner?.user?.firstName} {attempt.learner?.user?.lastName}</TableCell>
                                 <TableCell>{new Date(attempt.completedAt).toLocaleDateString()}</TableCell>
                                 <TableCell>12m 45s</TableCell>
                                 <TableCell align="right">
