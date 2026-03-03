@@ -30,12 +30,11 @@ export const authOptions: NextAuthOptions = {
                         password: true,
                         role: true,
                         schoolId: true,
-                        membershipId: true,
                         isActive: true,
                     }
                 });
 
-                if (!user || !user.isActive) {
+                if (!user || !user.isActive || !user.password) {
                     throw new Error("Invalid credentials");
                 }
 
@@ -50,7 +49,6 @@ export const authOptions: NextAuthOptions = {
                     email: user.email || '',
                     role: user.role,
                     schoolId: user.schoolId,
-                    membershipId: user.membershipId ?? undefined,
                 };
             }
         })
@@ -62,7 +60,6 @@ export const authOptions: NextAuthOptions = {
                 token.id = user.id;
                 token.role = user.role;
                 token.schoolId = user.schoolId;
-                token.membershipId = user.membershipId;
             }
             return token;
         },
@@ -71,7 +68,6 @@ export const authOptions: NextAuthOptions = {
                 session.user.id = token.id as string;
                 session.user.role = token.role as string;
                 session.user.schoolId = token.schoolId as string | null;
-                session.user.membershipId = token.membershipId as string;
             }
             return session;
         }

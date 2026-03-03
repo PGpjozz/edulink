@@ -38,9 +38,13 @@ export default function NextAppDirEmotionCacheProvider(props: NextAppDirEmotionC
     const { options, CacheProvider: Component = CacheProvider, children } = props;
 
     const [{ cache, flush }] = React.useState(() => {
+        const insertionPoint =
+            typeof document !== 'undefined'
+                ? (document.getElementById('emotion-insertion-point') as HTMLElement | null) ?? undefined
+                : undefined;
         const cache = createCache({
             ...options,
-            insertionPoint: 'emotion-insertion-point',
+            ...(insertionPoint ? { insertionPoint } : {}),
         });
         cache.compat = true;
         const prevInsert = cache.insert;
