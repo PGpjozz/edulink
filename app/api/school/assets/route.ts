@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Prisma } from '@prisma/client';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 import type { AssetStatus } from '@prisma/client';
 
@@ -195,7 +196,7 @@ export async function PATCH(req: Request) {
                 select: { id: true }
             });
 
-            const result = await prisma.$transaction(async (tx) => {
+            const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
                 const updated = await tx.asset.update({
                     where: { id },
                     data: {
