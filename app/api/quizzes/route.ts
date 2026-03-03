@@ -139,7 +139,7 @@ export async function PATCH(req: Request) {
         let earnedPoints = 0;
         let totalPoints = 0;
 
-        const quizAnswers = [];
+        const quizAnswers: { questionId: string; selectedOptionId: string }[] = [];
 
         for (const question of quiz.questions) {
             totalPoints += question.points;

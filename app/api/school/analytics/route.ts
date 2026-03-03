@@ -84,7 +84,7 @@ export async function GET() {
         const financeStats = financialData;
 
         // 5. Generate AI Strategic Insights (Agentic Logic)
-        const aiInsights = [];
+        const aiInsights: { type: string; title: string; content: string }[] = [];
 
         if (academicStats._avg.score && academicStats._avg.score < 50) {
             aiInsights.push({

@@ -33,7 +33,7 @@ export async function POST(req: Request) {
         // (which might be the parent's ID in some configurations, or we'll just 
         // find a parent linked to this school/learner).
 
-        const alertsSent = [];
+        const alertsSent: { id: string }[] = [];
 
         for (const invoice of overdueInvoices) {
             // Find the parent for this learner

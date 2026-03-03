@@ -22,7 +22,7 @@ export async function GET() {
         const collectionRate = totalInvoiced > 0 ? (totalPaid / totalInvoiced) * 100 : 0;
 
         // Monthly revenue for last 6 months
-        const monthlyRevenue = [];
+        const monthlyRevenue: { month: string; invoiced: number; collected: number }[] = [];
         for (let i = 5; i >= 0; i--) {
             const date = new Date();
             date.setMonth(date.getMonth() - i);

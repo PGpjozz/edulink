@@ -62,7 +62,7 @@ export async function POST(
         let totalPoints = 0;
         let earnedPoints = 0;
 
-        const quizAnswersData = [];
+        const quizAnswersData: { questionId: string; selectedOptionId: string }[] = [];
 
         for (const question of quiz.questions) {
             totalPoints += question.points;
