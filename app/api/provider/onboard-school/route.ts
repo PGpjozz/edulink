@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { Prisma } from '@prisma/client';
 import { requireAuth, readJson } from '@/lib/api-auth';
 import bcrypt from 'bcryptjs';
 
@@ -55,7 +54,7 @@ export async function POST(req: Request) {
         const hashedPassword = await bcrypt.hash(principalPassword, 10);
 
         // Create school and principal in a transaction
-        const result = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
+        const result = await prisma.$transaction(async (tx) => {
             // Create School
             const school = await tx.school.create({
                 data: {
