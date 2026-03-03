@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 export async function GET(req: Request) {
     const auth = await requireAuth({ roles: ['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN', 'LEARNER', 'PARENT'], requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
@@ -117,7 +119,7 @@ export async function POST(req: Request) {
 
         // Bulk upsert using transaction or Promise.all
         // Prisma createMany doesn't support upsert, so we loop
-        const results = await prisma.$transaction(async (tx) => {
+        const results = await prisma.$transaction(async (tx: TxClient) => {
             const upserts = await Promise.all(
                 grades.map((g: any) =>
                     tx.grade.upsert({

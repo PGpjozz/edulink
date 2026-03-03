@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson } from '@/lib/api-auth';
 import bcrypt from 'bcryptjs';
 
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 export async function POST(req: Request) {
     const auth = await requireAuth({ roles: ['PROVIDER'] });
     if (auth instanceof NextResponse) return auth;
@@ -54,7 +56,7 @@ export async function POST(req: Request) {
         const hashedPassword = await bcrypt.hash(principalPassword, 10);
 
         // Create school and principal in a transaction
-        const result = await prisma.$transaction(async (tx) => {
+        const result = await prisma.$transaction(async (tx: TxClient) => {
             // Create School
             const school = await tx.school.create({
                 data: {

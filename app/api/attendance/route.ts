@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 export async function GET(req: Request) {
     const auth = await requireAuth({ requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
@@ -158,7 +160,7 @@ export async function POST(req: Request) {
         }
 
         // Transaction: Delete existing records for this class/date, then create new ones
-        await prisma.$transaction(async (tx) => {
+        await prisma.$transaction(async (tx: TxClient) => {
             await tx.attendance.deleteMany({
                 where: {
                     learner: { classId },

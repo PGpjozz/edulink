@@ -3,6 +3,8 @@ import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 import type { AssetStatus } from '@prisma/client';
 
+type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
 export async function GET(req: Request) {
     const auth = await requireAuth({ requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
@@ -195,7 +197,7 @@ export async function PATCH(req: Request) {
                 select: { id: true }
             });
 
-            const result = await prisma.$transaction(async (tx) => {
+            const result = await prisma.$transaction(async (tx: TxClient) => {
                 const updated = await tx.asset.update({
                     where: { id },
                     data: {
