@@ -43,7 +43,7 @@ export async function POST(req: Request) {
             : null;
 
         const attendanceRate = attendance.length > 0
-            ? (attendance.filter(a => a.status === 'PRESENT' || a.status === 'LATE').length / attendance.length) * 100
+            ? (attendance.filter((a: any) => a.status === 'PRESENT' || a.status === 'LATE').length / attendance.length) * 100
             : null;
 
         // 3. Generate a "Smart Comment" (Mocking the AI Generation Logic)
