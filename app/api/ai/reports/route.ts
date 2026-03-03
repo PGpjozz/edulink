@@ -36,7 +36,10 @@ export async function POST(req: Request) {
 
         // 2. Synthesize performance data
         const avgScore = attempts.length > 0
-            ? attempts.reduce((acc: number, curr) => acc + (curr.score || 0), 0) / attempts.length
+            ? attempts.reduce(
+                (acc: number, curr: { score: number | null }) => acc + (curr.score || 0),
+                0
+            ) / attempts.length
             : null;
 
         const attendanceRate = attendance.length > 0

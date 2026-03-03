@@ -1,5 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
+import { prisma } from "./prisma";
+import bcrypt from "bcryptjs";
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -10,40 +12,46 @@ export const authOptions: NextAuthOptions = {
                 password: { label: "Password", type: "password" }
             },
             async authorize(credentials) {
-                console.log('NextAuth received credentials:', credentials);
-                
                 if (!credentials?.identifier || !credentials?.password) {
                     throw new Error("Missing credentials");
                 }
 
                 const { identifier, password } = credentials;
 
-                // Use mock mode only
-                const { MOCK_USERS } = await import('./mock-data');
-                let mockUser;
+                const user = await prisma.user.findFirst({
+                    where: identifier.includes('@')
+                        ? { email: identifier }
+                        : { idNumber: identifier },
+                    select: {
+                        id: true,
+                        email: true,
+                        firstName: true,
+                        lastName: true,
+                        password: true,
+                        role: true,
+                        schoolId: true,
+                        membershipId: true,
+                        isActive: true,
+                    }
+                });
 
-                if (identifier.includes('@')) {
-                    mockUser = MOCK_USERS.find(u => u.email === identifier);
-                } else {
-                    mockUser = MOCK_USERS.find(u => u.idNumber === identifier);
+                if (!user || !user.isActive) {
+                    throw new Error("Invalid credentials");
                 }
 
-                console.log('Mock user found:', mockUser ? { id: mockUser.id, email: mockUser.email, role: mockUser.role } : null);
-
-                if (mockUser && mockUser.password === password) {
-                    console.log('Authentication successful');
-                    return {
-                        id: mockUser.id,
-                        name: `${mockUser.firstName} ${mockUser.lastName}`,
-                        email: mockUser.email || '',
-                        role: mockUser.role,
-                        schoolId: mockUser.schoolId,
-                        membershipId: mockUser.membershipId
-                    };
+                const passwordMatch = await bcrypt.compare(password, user.password);
+                if (!passwordMatch) {
+                    throw new Error("Invalid credentials");
                 }
-                
-                console.log('Authentication failed - throwing error');
-                throw new Error("Invalid credentials");
+
+                return {
+                    id: user.id,
+                    name: `${user.firstName} ${user.lastName}`,
+                    email: user.email || '',
+                    role: user.role,
+                    schoolId: user.schoolId,
+                    membershipId: user.membershipId ?? undefined,
+                };
             }
         })
     ],

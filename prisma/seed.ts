@@ -1,14 +1,19 @@
+import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
-    throw new Error('DATABASE_URL is not set');
-}
+const rawUrl = process.env.DATABASE_URL!;
+// Strip channel_binding which pg doesn't support
+const connectionString = rawUrl.replace(/[&?]channel_binding=[^&]*/g, '');
 
-const pool = new Pool({ connectionString });
+// Use pg over port 5432
+const pool = new Pool({
+    connectionString,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 30000,
+});
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
