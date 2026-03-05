@@ -47,7 +47,7 @@ export async function POST(req: Request) {
     try {
         const body = await readJson<{ firstName?: string; lastName?: string; email?: string; role?: string; idNumber?: string }>(req);
         if (body instanceof NextResponse) return body;
-        const { firstName, lastName, email, role, idNumber } = body;
+        const { firstName, lastName, email, role, idNumber, password: rawPassword } = body as any;
 
         if (!firstName || !lastName || !role) {
             return new NextResponse('Missing required fields', { status: 400 });
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
             return new NextResponse('idNumber is required for learners', { status: 400 });
         }
 
-        const hashedPassword = await bcrypt.hash('password123', 10); // Default password
+        const hashedPassword = await bcrypt.hash(rawPassword || 'password123', 10);
 
         const user = await prisma.user.create({
             data: {

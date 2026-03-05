@@ -20,9 +20,17 @@ export async function GET(req: Request) {
     const offset = parseInt(searchParams.get('offset') || '0');
 
     try {
+        const schoolFilter = {
+            schoolId: session.user.schoolId,
+            OR: [
+                { userId: null },
+                { user: { role: { not: 'PROVIDER' as any }, schoolId: session.user.schoolId } }
+            ]
+        };
+
         const [logs, total] = await Promise.all([
             prisma.auditLog.findMany({
-                where: { schoolId: session.user.schoolId },
+                where: schoolFilter,
                 include: {
                     user: {
                         select: {
@@ -38,7 +46,7 @@ export async function GET(req: Request) {
                 skip: offset
             }),
             prisma.auditLog.count({
-                where: { schoolId: session.user.schoolId }
+                where: schoolFilter
             })
         ]);
 
