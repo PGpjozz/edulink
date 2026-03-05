@@ -31,8 +31,11 @@ export default withAuth(
             return NextResponse.redirect(new URL("/unauthorized", req.url));
         }
 
-        // TODO: Add more granular role checks here as we build out feature routes
-        // e.g. /school/[id]/... check if user belongs to school
+        // PROVIDER must NOT access school dashboards
+        const schoolDashboardPaths = ["/dashboard/principal", "/dashboard/teacher", "/dashboard/learner", "/dashboard/parent", "/dashboard/messages"];
+        if (token?.role === "PROVIDER" && schoolDashboardPaths.some(p => path.startsWith(p))) {
+            return NextResponse.redirect(new URL("/dashboard/provider", req.url));
+        }
 
         return NextResponse.next();
     },

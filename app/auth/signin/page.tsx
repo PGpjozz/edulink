@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
+import { signIn, signOut, getSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import {
     Box,
@@ -40,6 +40,13 @@ export default function SignIn() {
             setError('Invalid credentials');
             setLoading(false);
         } else {
+            const session = await getSession();
+            if (session?.user?.role === 'PROVIDER') {
+                await signOut({ redirect: false });
+                setError('Provider accounts must sign in at the provider portal.');
+                setLoading(false);
+                return;
+            }
             router.push('/dashboard');
             router.refresh();
         }
@@ -109,6 +116,13 @@ export default function SignIn() {
                         {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
                     </Button>
                 </Box>
+
+                <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 2 }}>
+                    EduLink provider?{' '}
+                    <a href="/auth/provider-signin" style={{ color: 'inherit', fontWeight: 600 }}>
+                        Sign in at the provider portal
+                    </a>
+                </Typography>
             </Paper>
         </Container>
     );
