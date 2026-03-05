@@ -60,10 +60,10 @@ export async function GET(req: Request) {
 
         // ─── TEACHERS ─────────────────────────────────────────────────
         const teacherData = [
-            { email: 'jvanzyl@westview.edu.za',      firstName: 'Johan',    lastName: 'van Zyl',    qualifications: 'BSc Mathematics, PGCE' },
-            { email: 'pmokoena@westview.edu.za',      firstName: 'Priya',    lastName: 'Mokoena',    qualifications: 'BA English, PGCE' },
-            { email: 'sbotha@westview.edu.za',        firstName: 'Stefan',   lastName: 'Botha',      qualifications: 'BSc Physics, PGCE' },
-            { email: 'lndlovu@westview.edu.za',       firstName: 'Lungelo',  lastName: 'Ndlovu',     qualifications: 'BCom Accounting, PGCE' },
+            { email: 'jvanzyl@westview.edu.za', firstName: 'Johan', lastName: 'van Zyl', qualifications: 'BSc Mathematics, PGCE' },
+            { email: 'pmokoena@westview.edu.za', firstName: 'Priya', lastName: 'Mokoena', qualifications: 'BA English, PGCE' },
+            { email: 'sbotha@westview.edu.za', firstName: 'Stefan', lastName: 'Botha', qualifications: 'BSc Physics, PGCE' },
+            { email: 'lndlovu@westview.edu.za', firstName: 'Lungelo', lastName: 'Ndlovu', qualifications: 'BCom Accounting, PGCE' },
         ];
 
         const teacherProfiles: { id: string; email: string }[] = [];
@@ -93,8 +93,8 @@ export async function GET(req: Request) {
 
         // ─── CLASSES ──────────────────────────────────────────────────
         const classData = [
-            { name: '8A',  grade: '8',  teacherIdx: 0 },
-            { name: '9A',  grade: '9',  teacherIdx: 1 },
+            { name: '8A', grade: '8', teacherIdx: 0 },
+            { name: '9A', grade: '9', teacherIdx: 1 },
             { name: '10A', grade: '10', teacherIdx: 2 },
             { name: '11A', grade: '11', teacherIdx: 3 },
             { name: '12A', grade: '12', teacherIdx: 0 },
@@ -120,11 +120,11 @@ export async function GET(req: Request) {
 
         // ─── SUBJECTS ─────────────────────────────────────────────────
         const subjectDefs = [
-            { name: 'Mathematics',           code: 'MATH',  teacherIdx: 0 },
-            { name: 'English Home Language', code: 'ENG',   teacherIdx: 1 },
-            { name: 'Physical Sciences',     code: 'SCI',   teacherIdx: 2 },
-            { name: 'Accounting',            code: 'ACC',   teacherIdx: 3 },
-            { name: 'Life Orientation',      code: 'LO',    teacherIdx: 1 },
+            { name: 'Mathematics', code: 'MATH', teacherIdx: 0 },
+            { name: 'English Home Language', code: 'ENG', teacherIdx: 1 },
+            { name: 'Physical Sciences', code: 'SCI', teacherIdx: 2 },
+            { name: 'Accounting', code: 'ACC', teacherIdx: 3 },
+            { name: 'Life Orientation', code: 'LO', teacherIdx: 1 },
         ];
 
         const allSubjects: { id: string; grade: string; name: string }[] = [];
@@ -153,30 +153,30 @@ export async function GET(req: Request) {
         // ─── LEARNERS ─────────────────────────────────────────────────
         const learnerDefs = [
             // Grade 8
-            { firstName: 'Ayanda',    lastName: 'Nkosi',     idNumber: '0801015001083', grade: '8',  classIdx: 0 },
-            { firstName: 'Ruan',      lastName: 'Vermeulen', idNumber: '0804025002082', grade: '8',  classIdx: 0 },
-            { firstName: 'Keamogetse',lastName: 'Sithole',   idNumber: '0802015003081', grade: '8',  classIdx: 0 },
-            { firstName: 'Mia',       lastName: 'Erasmus',   idNumber: '0803025004080', grade: '8',  classIdx: 0 },
+            { firstName: 'Ayanda', lastName: 'Nkosi', idNumber: '0801015001083', grade: '8', classIdx: 0 },
+            { firstName: 'Ruan', lastName: 'Vermeulen', idNumber: '0804025002082', grade: '8', classIdx: 0 },
+            { firstName: 'Keamogetse', lastName: 'Sithole', idNumber: '0802015003081', grade: '8', classIdx: 0 },
+            { firstName: 'Mia', lastName: 'Erasmus', idNumber: '0803025004080', grade: '8', classIdx: 0 },
             // Grade 9
-            { firstName: 'Sipho',     lastName: 'Zulu',      idNumber: '0701015005089', grade: '9',  classIdx: 1 },
-            { firstName: 'Danielle',  lastName: 'du Plessis',idNumber: '0703025006088', grade: '9',  classIdx: 1 },
-            { firstName: 'Thabo',     lastName: 'Molefe',    idNumber: '0702015007087', grade: '9',  classIdx: 1 },
-            { firstName: 'Jade',      lastName: 'Jacobs',    idNumber: '0704025008086', grade: '9',  classIdx: 1 },
+            { firstName: 'Sipho', lastName: 'Zulu', idNumber: '0701015005089', grade: '9', classIdx: 1 },
+            { firstName: 'Danielle', lastName: 'du Plessis', idNumber: '0703025006088', grade: '9', classIdx: 1 },
+            { firstName: 'Thabo', lastName: 'Molefe', idNumber: '0702015007087', grade: '9', classIdx: 1 },
+            { firstName: 'Jade', lastName: 'Jacobs', idNumber: '0704025008086', grade: '9', classIdx: 1 },
             // Grade 10
-            { firstName: 'Nomsa',     lastName: 'Khumalo',   idNumber: '0601015009085', grade: '10', classIdx: 2 },
-            { firstName: 'Werner',    lastName: 'Steyn',     idNumber: '0603025010084', grade: '10', classIdx: 2 },
-            { firstName: 'Lindiwe',   lastName: 'Mthembu',   idNumber: '0602015011083', grade: '10', classIdx: 2 },
-            { firstName: 'Michael',   lastName: 'Coetzee',   idNumber: '0604025012082', grade: '10', classIdx: 2 },
+            { firstName: 'Nomsa', lastName: 'Khumalo', idNumber: '0601015009085', grade: '10', classIdx: 2 },
+            { firstName: 'Werner', lastName: 'Steyn', idNumber: '0603025010084', grade: '10', classIdx: 2 },
+            { firstName: 'Lindiwe', lastName: 'Mthembu', idNumber: '0602015011083', grade: '10', classIdx: 2 },
+            { firstName: 'Michael', lastName: 'Coetzee', idNumber: '0604025012082', grade: '10', classIdx: 2 },
             // Grade 11
-            { firstName: 'Zanele',    lastName: 'Mahlangu',  idNumber: '0501015013081', grade: '11', classIdx: 3 },
-            { firstName: 'Pieter',    lastName: 'van der Berg',idNumber: '0503025014080',grade: '11',classIdx: 3 },
-            { firstName: 'Ntombi',    lastName: 'Shabalala',  idNumber: '0502015015089',grade: '11', classIdx: 3 },
-            { firstName: 'Caitlin',   lastName: 'Olivier',   idNumber: '0504025016088', grade: '11', classIdx: 3 },
+            { firstName: 'Zanele', lastName: 'Mahlangu', idNumber: '0501015013081', grade: '11', classIdx: 3 },
+            { firstName: 'Pieter', lastName: 'van der Berg', idNumber: '0503025014080', grade: '11', classIdx: 3 },
+            { firstName: 'Ntombi', lastName: 'Shabalala', idNumber: '0502015015089', grade: '11', classIdx: 3 },
+            { firstName: 'Caitlin', lastName: 'Olivier', idNumber: '0504025016088', grade: '11', classIdx: 3 },
             // Grade 12
-            { firstName: 'Bongani',   lastName: 'Dube',      idNumber: '0401015017087', grade: '12', classIdx: 4 },
-            { firstName: 'Annika',    lastName: 'Louw',      idNumber: '0403025018086', grade: '12', classIdx: 4 },
-            { firstName: 'Siyanda',   lastName: 'Mkhize',    idNumber: '0402015019085', grade: '12', classIdx: 4 },
-            { firstName: 'Elsa',      lastName: 'Pretorius', idNumber: '0404025020084', grade: '12', classIdx: 4 },
+            { firstName: 'Bongani', lastName: 'Dube', idNumber: '0401015017087', grade: '12', classIdx: 4 },
+            { firstName: 'Annika', lastName: 'Louw', idNumber: '0403025018086', grade: '12', classIdx: 4 },
+            { firstName: 'Siyanda', lastName: 'Mkhize', idNumber: '0402015019085', grade: '12', classIdx: 4 },
+            { firstName: 'Elsa', lastName: 'Pretorius', idNumber: '0404025020084', grade: '12', classIdx: 4 },
         ];
 
         const learnerProfiles: { id: string; grade: string; firstName: string }[] = [];
@@ -212,8 +212,8 @@ export async function GET(req: Request) {
 
         // ─── ASSESSMENTS + GRADES ─────────────────────────────────────
         const terms = [
-            { title: 'Term 1 Test',  type: 'TEST',  weight: 20, totalMarks: 50,  daysAgo: 60 },
-            { title: 'Term 1 Exam',  type: 'EXAM',  weight: 30, totalMarks: 100, daysAgo: 30 },
+            { title: 'Term 1 Test', type: 'TEST', weight: 20, totalMarks: 50, daysAgo: 60 },
+            { title: 'Term 1 Exam', type: 'EXAM', weight: 30, totalMarks: 100, daysAgo: 30 },
             { title: 'Assignment 1', type: 'ASSIGNMENT', weight: 10, totalMarks: 20, daysAgo: 45 },
         ];
 
@@ -288,7 +288,8 @@ export async function GET(req: Request) {
                     where: { learnerId: lp.id, title: `Monthly Tuition - ${month}` }
                 });
                 if (!existing) {
-                    const due = new Date(month.split(' ')[1] + '-' + (months.indexOf(month) + 1).toString().padStart(2,'0') + '-25');
+                    const monthIndex = months.indexOf(month);
+                    const due = new Date(2026, monthIndex, 25);
                     const status = invoiceStatuses[rand(0, invoiceStatuses.length - 1)];
                     const invoice = await prisma.feeInvoice.create({
                         data: {
@@ -317,11 +318,11 @@ export async function GET(req: Request) {
 
         // ─── BEHAVIOR RECORDS ─────────────────────────────────────────
         const behaviorExamples = [
-            { type: 'POSITIVE', category: 'ACADEMIC',  points: 5,  reason: 'Outstanding test performance' },
-            { type: 'POSITIVE', category: 'SPORT',     points: 3,  reason: 'Represented school at athletics' },
-            { type: 'NEGATIVE', category: 'CONDUCT',   points: -2, reason: 'Disrupted class' },
-            { type: 'POSITIVE', category: 'ACADEMIC',  points: 4,  reason: 'Submitted exemplary assignment' },
-            { type: 'NEGATIVE', category: 'CONDUCT',   points: -3, reason: 'Late to school on 3 occasions' },
+            { type: 'MERIT', category: 'ACADEMIC', points: 5, reason: 'Outstanding test performance' },
+            { type: 'MERIT', category: 'SPORT', points: 3, reason: 'Represented school at athletics' },
+            { type: 'DEMERIT', category: 'CONDUCT', points: 2, reason: 'Disrupted class' },
+            { type: 'MERIT', category: 'ACADEMIC', points: 4, reason: 'Submitted exemplary assignment' },
+            { type: 'DEMERIT', category: 'CONDUCT', points: 3, reason: 'Late to school on 3 occasions' },
         ];
 
         const mathTeacher = await prisma.user.findFirst({ where: { email: 'jvanzyl@westview.edu.za' } });
