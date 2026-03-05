@@ -45,15 +45,15 @@ export async function POST(req: Request) {
     if (auth instanceof NextResponse) return auth;
 
     try {
-        const body = await readJson<{ firstName?: string; lastName?: string; email?: string; role?: string; idNumber?: string }>(req);
+        const body = await readJson<any>(req);
         if (body instanceof NextResponse) return body;
-        const { firstName, lastName, email, role, idNumber, password: rawPassword } = body as any;
+        const { firstName, lastName, email, role, idNumber, password: rawPassword, grade, learnerProfileId } = body;
 
         if (!firstName || !lastName || !role) {
             return new NextResponse('Missing required fields', { status: 400 });
         }
 
-        const allowedRoles = ['TEACHER', 'LEARNER', 'SCHOOL_ADMIN', 'PRINCIPAL'];
+        const allowedRoles = ['TEACHER', 'LEARNER', 'SCHOOL_ADMIN', 'PRINCIPAL', 'PARENT'];
         if (!allowedRoles.includes(role)) {
             return new NextResponse('Invalid role', { status: 400 });
         }
@@ -66,6 +66,22 @@ export async function POST(req: Request) {
             return new NextResponse('idNumber is required for learners', { status: 400 });
         }
 
+        if (role === 'LEARNER' && !grade) {
+            return new NextResponse('grade is required for learners', { status: 400 });
+        }
+
+        // Validate learnerProfileId for PARENT linking
+        let linkedLearnerProfile: { id: string } | null = null;
+        if (role === 'PARENT' && learnerProfileId) {
+            linkedLearnerProfile = await prisma.learnerProfile.findFirst({
+                where: { id: learnerProfileId, user: { schoolId: auth.schoolId as string } },
+                select: { id: true }
+            });
+            if (!linkedLearnerProfile) {
+                return new NextResponse('Invalid learner profile ID', { status: 400 });
+            }
+        }
+
         const hashedPassword = await bcrypt.hash(rawPassword || 'password123', 10);
 
         const user = await prisma.user.create({
@@ -73,23 +89,36 @@ export async function POST(req: Request) {
                 firstName,
                 lastName,
                 email,
-                idNumber, // Optional for some roles, required for learner
+                idNumber,
                 password: hashedPassword,
                 role: role as any,
                 schoolId: auth.schoolId as string,
                 isActive: true,
-                // Create profile based on role
                 ...(role === 'LEARNER' && {
-                    learnerProfile: { create: { grade: '8' } }
+                    learnerProfile: { create: { grade: grade as string } }
                 }),
                 ...(role === 'TEACHER' && {
                     teacherProfile: { create: {} }
                 }),
-                ...(role === 'PRINCIPAL' && {
-                    // Principal logic if needed
-                })
+                ...(role === 'PARENT' && {
+                    parentProfile: { create: { learnerIds: linkedLearnerProfile ? [linkedLearnerProfile.id] : [] } }
+                }),
             }
         });
+
+        // Bidirectional link: also add parent User ID to LearnerProfile.parentIds
+        if (role === 'PARENT' && linkedLearnerProfile) {
+            const existing = await prisma.learnerProfile.findUnique({
+                where: { id: linkedLearnerProfile.id },
+                select: { parentIds: true }
+            });
+            if (existing && !existing.parentIds.includes(user.id)) {
+                await prisma.learnerProfile.update({
+                    where: { id: linkedLearnerProfile.id },
+                    data: { parentIds: { push: user.id } }
+                });
+            }
+        }
 
         await writeAuditLog({
             schoolId: auth.schoolId,
@@ -97,7 +126,7 @@ export async function POST(req: Request) {
             action: 'CREATE_USER',
             entity: 'USER',
             entityId: user.id,
-            details: { createdRole: role, email: user.email, idNumber: user.idNumber }
+            details: { createdRole: role, email: user.email, idNumber: user.idNumber, grade }
         });
 
         return NextResponse.json({

@@ -201,6 +201,11 @@ export async function GET(req: Request) {
                 update: { learnerIds: [childProfileId] },
                 create: { userId: u.id, learnerIds: [childProfileId] }
             });
+            // Bidirectional: ensure parent user ID is in LearnerProfile.parentIds
+            const lp = await prisma.learnerProfile.findUnique({ where: { id: childProfileId }, select: { parentIds: true } });
+            if (lp && !lp.parentIds.includes(u.id)) {
+                await prisma.learnerProfile.update({ where: { id: childProfileId }, data: { parentIds: { push: u.id } } });
+            }
             parentUsers.push({ userId: u.id, firstName: p.firstName, lIdx: p.lIdx });
         }
         counts.parents = parentDefs.length;

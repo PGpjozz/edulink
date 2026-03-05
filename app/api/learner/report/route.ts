@@ -20,13 +20,34 @@ export async function GET(req: Request) {
     }
 
     try {
-        const learnerProfile = await prisma.learnerProfile.findUnique({
-            where: { userId: learnerUserId },
-            include: {
-                class: true,
-                user: { select: { firstName: true, lastName: true } }
+        // PARENT: verify they are linked to this child
+        if (session.user.role === 'PARENT') {
+            const parentProfile = await prisma.parentProfile.findUnique({
+                where: { userId: session.user.id },
+                select: { learnerIds: true }
+            });
+            const lp = await prisma.learnerProfile.findUnique({
+                where: { userId: learnerUserId },
+                select: { id: true }
+            });
+            if (!lp || !parentProfile?.learnerIds.includes(lp.id)) {
+                return new NextResponse('Forbidden', { status: 403 });
             }
-        });
+        }
+
+        const [learnerProfile, school] = await Promise.all([
+            prisma.learnerProfile.findUnique({
+                where: { userId: learnerUserId },
+                include: {
+                    class: true,
+                    user: { select: { firstName: true, lastName: true } }
+                }
+            }),
+            prisma.school.findUnique({
+                where: { id: session.user.schoolId as string },
+                select: { name: true }
+            })
+        ]);
 
         if (!learnerProfile || !learnerProfile.class) {
             return new NextResponse('Learner not found', { status: 404 });
@@ -78,7 +99,7 @@ export async function GET(req: Request) {
                 name: `${learnerProfile.user.firstName} ${learnerProfile.user.lastName}`,
                 grade: learnerProfile.class.grade,
                 className: learnerProfile.class.name,
-                schoolName: 'EduLink Academy' // In real app, fetch from school model
+                schoolName: school?.name ?? 'School'
             },
             subjects: reportData,
             stats: {
