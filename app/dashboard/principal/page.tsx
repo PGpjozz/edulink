@@ -764,11 +764,6 @@ export default function PrincipalDashboard() {
                                     disableRowSelectionOnClick
                                 />
                             </Box>
-                            <AddClassModal
-                                open={isClassModalOpen}
-                                onClose={() => setIsClassModalOpen(false)}
-                                onSuccess={fetchClasses}
-                            />
                         </Box>
                     )}
 
@@ -792,11 +787,6 @@ export default function PrincipalDashboard() {
                                     disableRowSelectionOnClick
                                 />
                             </Box>
-                            <AddUserModal
-                                open={isUserModalOpen}
-                                onClose={() => setIsUserModalOpen(false)}
-                                onSuccess={fetchUsers}
-                            />
                         </Box>
                     )}
 
@@ -825,6 +815,16 @@ export default function PrincipalDashboard() {
                 </Box>
             </Paper>
 
+            <AddClassModal
+                open={isClassModalOpen}
+                onClose={() => setIsClassModalOpen(false)}
+                onSuccess={() => { fetchClasses(); if (tabIndex === 0) fetchOverview(); }}
+            />
+            <AddUserModal
+                open={isUserModalOpen}
+                onClose={() => setIsUserModalOpen(false)}
+                onSuccess={() => { fetchUsers(); if (tabIndex === 0) fetchOverview(); }}
+            />
             <AssignTeacherModal
                 open={assignOpen}
                 onClose={() => setAssignOpen(false)}
