@@ -1,19 +1,34 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
 import bcrypt from 'bcryptjs';
-import { readJson } from '@/lib/api-auth';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
 import { sendEmail, passwordResetEmailHtml } from '@/lib/email';
+import { parseBody, serverError } from '@/lib/http';
+import { getClientIp, rateLimit } from '@/lib/rate-limit';
+
+const forgotPasswordSchema = z.object({
+    email: z.string().trim().email().toLowerCase(),
+});
 
 // Dev-friendly reset: sets a one-time temp password. In production, send email with token.
 export async function POST(req: Request) {
-    const body = await readJson<{ email?: string }>(req);
+    // Throttle to slow down enumeration / forced-reset abuse.
+    const ip = getClientIp(req);
+    const limit = rateLimit(`forgot-password:${ip}`, 5, 15 * 60 * 1000);
+    if (!limit.ok) {
+        return NextResponse.json(
+            { error: 'Too many requests. Please try again later.' },
+            { status: 429, headers: { 'Retry-After': String(Math.ceil(limit.retryAfterMs / 1000)) } }
+        );
+    }
+
+    const body = await parseBody(req, forgotPasswordSchema);
     if (body instanceof NextResponse) return body;
 
-    const email = body.email?.trim().toLowerCase();
-    if (!email) {
-        return NextResponse.json({ error: 'Email required' }, { status: 400 });
-    }
+    const email = body.email;
+
+    try {
 
     const user = await prisma.user.findFirst({
         where: { email: { equals: email, mode: 'insensitive' } },
@@ -48,4 +63,7 @@ export async function POST(req: Request) {
             : 'Temporary password generated. You must change it after signing in.',
         ...(process.env.NODE_ENV !== 'production' && !emailResult.sent ? { tempPassword } : {}),
     });
+    } catch (e) {
+        return serverError('forgot-password', e);
+    }
 }

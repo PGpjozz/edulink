@@ -91,5 +91,8 @@ export const authOptions: NextAuthOptions = {
     session: {
         strategy: "jwt",
     },
-    secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-for-development-change-in-production',
+    // No insecure hardcoded fallback: NextAuth requires a secret in production
+    // and will throw if it is missing, which is the desired fail-fast behaviour.
+    // In development it auto-generates an ephemeral secret.
+    secret: process.env.NEXTAUTH_SECRET,
 };

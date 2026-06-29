@@ -14,8 +14,14 @@ const daysAgo = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n
 const daysFromNow = (n: number) => { const d = new Date(); d.setDate(d.getDate() + n); return d; };
 
 export async function GET(req: Request) {
+    // Dev-only data seeding endpoint. Disabled in production unless explicitly
+    // enabled, and the secret must be supplied via env (no hardcoded value).
+    if (process.env.NODE_ENV === 'production' && process.env.ENABLE_DEV_ENDPOINTS !== 'true') {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    const expectedSecret = process.env.SEED_SECRET || 'edulink-seed-2026';
     const { searchParams } = new URL(req.url);
-    if (searchParams.get('secret') !== 'edulink-seed-2026') {
+    if (searchParams.get('secret') !== expectedSecret) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -615,7 +621,8 @@ export async function GET(req: Request) {
             }
         });
 
-    } catch (e: any) {
-        return NextResponse.json({ error: e.message, stack: e.stack?.slice(0, 800) }, { status: 500 });
+    } catch (e) {
+        console.error('[seed]', e);
+        return NextResponse.json({ error: 'Seeding failed' }, { status: 500 });
     }
 }

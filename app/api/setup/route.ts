@@ -3,8 +3,14 @@ import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 
 export async function GET(req: Request) {
+    // Dev-only bootstrap endpoint (creates/resets the provider account).
+    // Disabled in production unless explicitly enabled; secret comes from env.
+    if (process.env.NODE_ENV === 'production' && process.env.ENABLE_DEV_ENDPOINTS !== 'true') {
+        return NextResponse.json({ error: 'Not found' }, { status: 404 });
+    }
+    const expectedSecret = process.env.SETUP_SECRET || 'edulink-setup-2026';
     const { searchParams } = new URL(req.url);
-    if (searchParams.get('secret') !== 'edulink-setup-2026') {
+    if (searchParams.get('secret') !== expectedSecret) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
@@ -35,7 +41,8 @@ export async function GET(req: Request) {
         });
 
         return NextResponse.json({ status: 'created', email: user.email });
-    } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+    } catch (e) {
+        console.error('[setup]', e);
+        return NextResponse.json({ error: 'Setup failed' }, { status: 500 });
     }
 }
