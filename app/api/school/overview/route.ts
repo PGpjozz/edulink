@@ -14,6 +14,7 @@ export async function GET() {
         const dueSoonDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
         const [
+            school,
             learners,
             staff,
             teachers,
@@ -31,6 +32,10 @@ export async function GET() {
             recentBookings,
             recentBehavior
         ] = await Promise.all([
+            prisma.school.findUnique({
+                where: { id: schoolId },
+                select: { name: true, tier: true }
+            }),
             prisma.learnerProfile.count({ where: { user: { schoolId } } }),
             prisma.user.count({
                 where: {
@@ -112,6 +117,10 @@ export async function GET() {
 
         return NextResponse.json({
             lastUpdated: new Date().toISOString(),
+            school: {
+                name: school?.name ?? 'School',
+                tier: school?.tier ?? null
+            },
             kpis: {
                 learners,
                 teachers,

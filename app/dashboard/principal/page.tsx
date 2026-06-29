@@ -34,6 +34,8 @@ import {
     XAxis,
     YAxis,
     CartesianGrid,
+    Legend,
+    LabelList,
     Tooltip as RechartsTooltip
 } from 'recharts';
 import AddClassModal from './AddClassModal';
@@ -71,6 +73,10 @@ interface SubjectData {
 
 type OverviewResponse = {
     lastUpdated: string;
+    school?: {
+        name: string;
+        tier: string | null;
+    };
     kpis: {
         learners: number;
         teachers: number;
@@ -215,6 +221,19 @@ export default function PrincipalDashboard() {
         }
     };
 
+    const formatCompactCurrency = (value: number) => {
+        try {
+            return new Intl.NumberFormat('en-ZA', {
+                style: 'currency',
+                currency: 'ZAR',
+                notation: 'compact',
+                maximumFractionDigits: 1
+            }).format(value);
+        } catch {
+            return `R ${Number(value || 0).toFixed(0)}`;
+        }
+    };
+
     const getInvoiceChipColor = (status: string) => {
         if (status === 'PAID') return 'success';
         if (status === 'OVERDUE') return 'error';
@@ -251,7 +270,7 @@ export default function PrincipalDashboard() {
         { field: 'name', headerName: 'Class Name', flex: 1 },
         { field: 'grade', headerName: 'Grade', width: 100 },
         {
-            field: 'learners', headerName: 'Learners', width: 100,
+            field: 'learners', headerName: 'Learners', width: 130, type: 'number', align: 'left', headerAlign: 'left',
             valueGetter: (_value: any, row: any) => row?._count?.learners || 0
         },
         {
@@ -283,7 +302,7 @@ export default function PrincipalDashboard() {
                     <Button
                         variant="outlined"
                         size="small"
-                        onClick={() => window.location.href = `/dashboard/principal/class/${params.row.id}/timetable`}
+                        onClick={() => router.push(`/dashboard/principal/class/${params.row.id}/timetable`)}
                     >
                         Timetable
                     </Button>
@@ -331,8 +350,23 @@ export default function PrincipalDashboard() {
             field: 'email', headerName: 'Email / ID', flex: 1.5,
             valueGetter: (_value: any, row: any) => row?.email || row?.idNumber || '-'
         },
-        { field: 'role', headerName: 'Role', width: 120 },
-        { field: 'isActive', headerName: 'Status', width: 100, type: 'boolean' },
+        {
+            field: 'role', headerName: 'Role', width: 150,
+            valueGetter: (_value: any, row: any) => (row?.role ? String(row.role).replace(/_/g, ' ') : ''),
+            renderCell: (params: any) => (
+                <Chip size="small" variant="outlined" label={params.value} />
+            )
+        },
+        {
+            field: 'isActive', headerName: 'Status', width: 120,
+            renderCell: (params: any) => (
+                <Chip
+                    size="small"
+                    label={params.row?.isActive ? 'Active' : 'Inactive'}
+                    color={params.row?.isActive ? 'success' : 'default'}
+                />
+            )
+        },
     ];
 
     const handleSaveAssignment = async (teacherProfileId: string | null) => {
@@ -366,9 +400,26 @@ export default function PrincipalDashboard() {
 
     return (
         <Container maxWidth="xl" sx={{ mt: 4 }}>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-                School Management
-            </Typography>
+            <Box
+                display="flex"
+                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                justifyContent="space-between"
+                flexDirection={{ xs: 'column', sm: 'row' }}
+                gap={1}
+                mb={2}
+            >
+                <Box>
+                    <Typography variant="h4" fontWeight="bold">
+                        {overview?.school?.name || 'School Management'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Principal dashboard
+                    </Typography>
+                </Box>
+                {overview?.school?.tier && (
+                    <Chip label={`${overview.school.tier} plan`} color="primary" variant="outlined" />
+                )}
+            </Box>
 
             <Paper sx={{ width: '100%', mb: 4 }}>
                 <Tabs
@@ -615,16 +666,33 @@ export default function PrincipalDashboard() {
                                                         <Button size="small" onClick={() => router.push('/dashboard/principal/assets')}>Open</Button>
                                                     </Box>
                                                     <Box sx={{ width: '100%', height: 300 }}>
-                                                        <ResponsiveContainer width="100%" height="100%">
-                                                            <PieChart>
-                                                                <Pie data={assetChartData} dataKey="value" nameKey="name" outerRadius={100}>
-                                                                    {assetChartData.map((_, index) => (
-                                                                        <Cell key={`cell-${index}`} fill={ASSET_COLORS[index % ASSET_COLORS.length]} />
-                                                                    ))}
-                                                                </Pie>
-                                                                <RechartsTooltip />
-                                                            </PieChart>
-                                                        </ResponsiveContainer>
+                                                        {overview.kpis.assets.total === 0 ? (
+                                                            <Box height="100%" display="flex" alignItems="center" justifyContent="center">
+                                                                <Typography variant="body2" color="text.secondary">
+                                                                    No assets recorded yet.
+                                                                </Typography>
+                                                            </Box>
+                                                        ) : (
+                                                            <ResponsiveContainer width="100%" height="100%">
+                                                                <PieChart>
+                                                                    <Pie
+                                                                        data={assetChartData}
+                                                                        dataKey="value"
+                                                                        nameKey="name"
+                                                                        innerRadius={55}
+                                                                        outerRadius={95}
+                                                                        paddingAngle={2}
+                                                                        label={(entry: any) => (entry.value > 0 ? entry.value : '')}
+                                                                    >
+                                                                        {assetChartData.map((_, index) => (
+                                                                            <Cell key={`cell-${index}`} fill={ASSET_COLORS[index % ASSET_COLORS.length]} />
+                                                                        ))}
+                                                                    </Pie>
+                                                                    <RechartsTooltip formatter={(value: any, name: any) => [`${value} asset(s)`, name]} />
+                                                                    <Legend verticalAlign="bottom" height={36} />
+                                                                </PieChart>
+                                                            </ResponsiveContainer>
+                                                        )}
                                                     </Box>
                                                 </CardContent>
                                             </Card>
@@ -638,12 +706,18 @@ export default function PrincipalDashboard() {
                                                     </Box>
                                                     <Box sx={{ width: '100%', height: 300 }}>
                                                         <ResponsiveContainer width="100%" height="100%">
-                                                            <BarChart data={invoiceAmountChartData}>
+                                                            <BarChart data={invoiceAmountChartData} margin={{ top: 20, right: 8, left: 8, bottom: 0 }}>
                                                                 <CartesianGrid strokeDasharray="3 3" />
                                                                 <XAxis dataKey="name" />
-                                                                <YAxis />
-                                                                <RechartsTooltip />
-                                                                <Bar dataKey="amount" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                                                                <YAxis width={70} tickFormatter={(v: number) => formatCompactCurrency(Number(v))} />
+                                                                <RechartsTooltip formatter={(value: any) => formatCurrency(Number(value))} />
+                                                                <Bar dataKey="amount" fill="#f59e0b" radius={[6, 6, 0, 0]}>
+                                                                    <LabelList
+                                                                        dataKey="amount"
+                                                                        position="top"
+                                                                        formatter={(v: any) => formatCompactCurrency(Number(v))}
+                                                                    />
+                                                                </Bar>
                                                             </BarChart>
                                                         </ResponsiveContainer>
                                                     </Box>
@@ -797,7 +871,7 @@ export default function PrincipalDashboard() {
                                 <Button
                                     variant="contained"
                                     startIcon={<AddIcon />}
-                                    onClick={() => window.location.href = '/dashboard/teacher/subjects'}
+                                    onClick={() => router.push('/dashboard/teacher/subjects')}
                                 >
                                     Add Subject
                                 </Button>
