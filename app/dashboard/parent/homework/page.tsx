@@ -38,7 +38,7 @@ function ParentHomeworkInner() {
 
             {selected && (
                 <ParentChildPicker
-                    children={children}
+                    learners={children}
                     value={selected.id}
                     onChange={setChildId}
                 />
