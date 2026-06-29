@@ -303,6 +303,43 @@ export async function GET(req: Request) {
         }
         counts.behaviorRecords = teacherUsers.length * 6;
 
+        // ─── HOMEWORK ────────────────────────────────────────────────
+        const homeworkDefs = [
+            { title: 'Algebra Worksheet Ch 5', teacherIdx: 0, classIdx: 4, subjectName: 'Mathematics', grade: '12', dueInDays: 3, withSubmissions: true },
+            { title: 'Essay: My Hero', teacherIdx: 1, classIdx: 1, subjectName: 'English Home Language', grade: '9', dueInDays: 5, withSubmissions: true },
+            { title: 'Physics Lab Report', teacherIdx: 2, classIdx: 2, subjectName: 'Physical Sciences', grade: '10', dueInDays: 7, withSubmissions: false },
+        ];
+        let homeworkCount = 0;
+        for (const hd of homeworkDefs) {
+            const subj = allSubjects.find(s => s.name === hd.subjectName && s.grade === hd.grade);
+            const cls = classes[hd.classIdx];
+            const teacher = teacherUsers[hd.teacherIdx];
+            const exists = await prisma.homework.findFirst({ where: { schoolId, title: hd.title, classId: cls.id } });
+            if (!exists) {
+                const hw = await prisma.homework.create({
+                    data: {
+                        schoolId,
+                        teacherId: teacher.userId,
+                        subjectId: subj?.id,
+                        classId: cls.id,
+                        title: hd.title,
+                        description: 'Complete and submit by the due date.',
+                        dueDate: daysFromNow(hd.dueInDays),
+                    },
+                });
+                if (hd.withSubmissions) {
+                    const classLearners = learnerProfiles.filter(lp => lp.grade === hd.grade);
+                    for (const lp of classLearners.slice(0, 2)) {
+                        await prisma.homeworkSubmission.create({
+                            data: { homeworkId: hw.id, learnerId: lp.id, note: 'Submitted via portal' },
+                        });
+                    }
+                }
+                homeworkCount++;
+            }
+        }
+        counts.homework = homeworkCount;
+
         // ─── RESOURCES ───────────────────────────────────────────────
         const resourceDefs = [
             { name: 'Mathematics', resources: [{ title: 'Algebra Study Guide', type: 'PDF' }, { title: 'Geometry Practice Problems', type: 'PDF' }, { title: 'Calculus Introduction Video', type: 'MP4' }] },

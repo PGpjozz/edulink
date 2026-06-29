@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Paper, Typography, Box, Stack, Chip, Button, Skeleton } from '@mui/material';
+import { Paper, Typography, Box, Stack, Chip, Button, Skeleton, Alert } from '@mui/material';
 import { Assignment, EventAvailable } from '@mui/icons-material';
 import Link from 'next/link';
 
@@ -19,14 +19,17 @@ export default function TeacherTodayPanel() {
     const [classes, setClasses] = useState<ClassItem[]>([]);
     const [loading, setLoading] = useState(true);
 
+    const [error, setError] = useState<string | null>(null);
+
     useEffect(() => {
         Promise.all([
-            fetch('/api/homework').then((r) => r.json()),
-            fetch('/api/classes').then((r) => r.json()),
+            fetch('/api/homework').then((r) => r.ok ? r.json() : []),
+            fetch('/api/classes').then((r) => r.ok ? r.json() : []),
         ]).then(([hw, cls]) => {
             setHomework(Array.isArray(hw) ? hw : []);
             setClasses(Array.isArray(cls) ? cls : []);
-        }).finally(() => setLoading(false));
+        }).catch(() => setError('Could not load today\'s overview'))
+        .finally(() => setLoading(false));
     }, []);
 
     const now = Date.now();
@@ -39,6 +42,14 @@ export default function TeacherTodayPanel() {
 
     if (loading) {
         return <Skeleton variant="rounded" height={120} sx={{ mb: 3 }} />;
+    }
+
+    if (error) {
+        return (
+            <Alert severity="warning" sx={{ mb: 3 }}>
+                {error}
+            </Alert>
+        );
     }
 
     if (dueSoon.length === 0 && needsGrading.length === 0 && classes.length === 0) {

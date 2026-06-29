@@ -11,7 +11,8 @@ import {
     Button,
     Chip,
     Dialog,
-    CircularProgress
+    Skeleton,
+    Alert,
 } from '@mui/material';
 import {
     Assignment as AssignmentIcon,
@@ -25,16 +26,49 @@ import TeacherTodayPanel from '@/app/components/TeacherTodayPanel';
 type ClassInfo = { id: string; name: string; grade: string; _count?: { learners?: number }; timetable?: unknown };
 type SubjectSummary = { id: string; name: string; grade: string; code?: string; _count?: { assessments?: number } };
 
+function SubjectCardSkeleton() {
+    return (
+        <Grid size={{ xs: 12, md: 4 }}>
+            <Skeleton variant="rounded" height={200} />
+        </Grid>
+    );
+}
+
 function ClassesSection({ onViewSchedule }: { onViewSchedule: (cls: ClassInfo) => void }) {
     const [classes, setClasses] = useState<ClassInfo[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const router = useRouter();
 
     useEffect(() => {
         fetch('/api/classes')
-            .then(res => res.json())
-            .then(data => setClasses(data))
-            .catch(err => console.error(err));
+            .then((res) => {
+                if (!res.ok) throw new Error('Failed to load classes');
+                return res.json();
+            })
+            .then((data) => {
+                if (!Array.isArray(data)) throw new Error('Invalid response');
+                setClasses(data);
+            })
+            .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load classes'))
+            .finally(() => setLoading(false));
     }, []);
+
+    if (loading) {
+        return (
+            <Grid container spacing={3}>
+                {[1, 2].map((i) => (
+                    <Grid size={{ xs: 12, md: 4 }} key={i}>
+                        <Skeleton variant="rounded" height={160} />
+                    </Grid>
+                ))}
+            </Grid>
+        );
+    }
+
+    if (error) {
+        return <Alert severity="error">{error}</Alert>;
+    }
 
     return (
         <Grid container spacing={3}>
@@ -81,18 +115,23 @@ function ClassesSection({ onViewSchedule }: { onViewSchedule: (cls: ClassInfo) =
 export default function TeacherDashboard() {
     const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const [timetableOpen, setTimetableOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
     const router = useRouter();
 
     useEffect(() => {
         fetch('/api/subjects')
-            .then(res => res.json())
-            .then(data => {
-                setSubjects(data);
-                setLoading(false);
+            .then((res) => {
+                if (!res.ok) throw new Error('Failed to load subjects');
+                return res.json();
             })
-            .catch(err => setLoading(false));
+            .then((data) => {
+                if (!Array.isArray(data)) throw new Error('Invalid response');
+                setSubjects(data);
+            })
+            .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load subjects'))
+            .finally(() => setLoading(false));
     }, []);
 
     const handleViewSchedule = (cls: ClassInfo) => {
@@ -110,41 +149,61 @@ export default function TeacherDashboard() {
 
             <TeacherTodayPanel />
 
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }}>
+                    {error}
+                </Alert>
+            )}
+
             <Typography variant="h6" gutterBottom color="text.secondary">
                 Assigned Subjects
             </Typography>
 
             <Grid container spacing={3} sx={{ mb: 6 }}>
-                {subjects.map((subject) => (
-                    <Grid size={{ xs: 12, md: 4 }} key={subject.id}>
-                        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <CardContent sx={{ flexGrow: 1 }}>
-                                <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                                    <Typography variant="h5" fontWeight="bold" gutterBottom>
-                                        {subject.name}
-                                    </Typography>
-                                    <Chip label={`Grade ${subject.grade}`} size="small" color="primary" />
-                                </Box>
-                                <Typography color="text.secondary" gutterBottom>
-                                    Code: {subject.code || '-'}
-                                </Typography>
-                                <Typography variant="body2" sx={{ mt: 2 }}>
-                                    {subject._count?.assessments || 0} Assessments
-                                </Typography>
-                            </CardContent>
-                            <Box p={2} pt={0}>
-                                <Button
-                                    variant="outlined"
-                                    fullWidth
-                                    startIcon={<AssignmentIcon />}
-                                    onClick={() => router.push(`/dashboard/teacher/subject/${subject.id}`)}
-                                >
-                                    Manage Assessments
-                                </Button>
-                            </Box>
-                        </Card>
+                {loading ? (
+                    <>
+                        <SubjectCardSkeleton />
+                        <SubjectCardSkeleton />
+                        <SubjectCardSkeleton />
+                    </>
+                ) : subjects.length === 0 ? (
+                    <Grid size={{ xs: 12 }}>
+                        <Typography color="text.secondary">
+                            No subjects assigned yet.
+                        </Typography>
                     </Grid>
-                ))}
+                ) : (
+                    subjects.map((subject) => (
+                        <Grid size={{ xs: 12, md: 4 }} key={subject.id}>
+                            <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                                <CardContent sx={{ flexGrow: 1 }}>
+                                    <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                                        <Typography variant="h5" fontWeight="bold" gutterBottom>
+                                            {subject.name}
+                                        </Typography>
+                                        <Chip label={`Grade ${subject.grade}`} size="small" color="primary" />
+                                    </Box>
+                                    <Typography color="text.secondary" gutterBottom>
+                                        Code: {subject.code || '-'}
+                                    </Typography>
+                                    <Typography variant="body2" sx={{ mt: 2 }}>
+                                        {subject._count?.assessments || 0} Assessments
+                                    </Typography>
+                                </CardContent>
+                                <Box p={2} pt={0}>
+                                    <Button
+                                        variant="outlined"
+                                        fullWidth
+                                        startIcon={<AssignmentIcon />}
+                                        onClick={() => router.push(`/dashboard/teacher/subject/${subject.id}`)}
+                                    >
+                                        Manage Assessments
+                                    </Button>
+                                </Box>
+                            </Card>
+                        </Grid>
+                    ))
+                )}
             </Grid>
 
             <Box mb={4}>
@@ -154,14 +213,6 @@ export default function TeacherDashboard() {
 
             <ClassesSection onViewSchedule={handleViewSchedule} />
 
-            {loading && <CircularProgress sx={{ mt: 4 }} />}
-            {!loading && subjects.length === 0 && (
-                <Typography color="text.secondary" sx={{ mt: 2 }}>
-                    No subjects assigned yet.
-                </Typography>
-            )}
-
-            {/* Schedule Modal */}
             <Dialog
                 open={timetableOpen}
                 onClose={() => setTimetableOpen(false)}
