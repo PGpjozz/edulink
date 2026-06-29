@@ -11,12 +11,46 @@ const PERIODS = [
     { num: 5, time: '12:30 - 13:30' }
 ];
 
+interface TimetableSlot {
+    period: number;
+    subjectName: string;
+    time?: string;
+}
+
 interface TimetableViewProps {
-    timetable: any; // { Monday: [{ period: 1, subjectName: '...' }] }
+    timetable: Record<string, unknown> | null | undefined;
+}
+
+function normalizeSlot(raw: Record<string, unknown>): TimetableSlot | null {
+    const period = (raw.period ?? raw.p) as number | undefined;
+    const subjectName = (raw.subjectName ?? raw.subject) as string | undefined;
+    if (!period || !subjectName) return null;
+    return {
+        period,
+        subjectName,
+        time: raw.time as string | undefined,
+    };
+}
+
+function normalizeTimetable(timetable: Record<string, unknown>): Record<string, TimetableSlot[]> {
+    const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+    const normalized: Record<string, TimetableSlot[]> = {};
+
+    for (const day of days) {
+        const slots = timetable[day];
+        if (!Array.isArray(slots)) continue;
+        normalized[day] = slots
+            .map((slot) => normalizeSlot(slot as Record<string, unknown>))
+            .filter((slot): slot is TimetableSlot => slot !== null);
+    }
+
+    return normalized;
 }
 
 export default function TimetableView({ timetable }: TimetableViewProps) {
-    if (!timetable || Object.keys(timetable).length === 0) {
+    const normalized = timetable ? normalizeTimetable(timetable as Record<string, unknown>) : null;
+
+    if (!normalized || Object.keys(normalized).length === 0) {
         return (
             <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
                 <Typography color="text.secondary">No timetable scheduled yet.</Typography>
@@ -45,7 +79,7 @@ export default function TimetableView({ timetable }: TimetableViewProps) {
                             <Typography variant="caption" color="text.secondary">{period.time}</Typography>
                         </Box>
                         {DAYS.map(day => {
-                            const slot = timetable[day]?.find((s: any) => s.period === period.num);
+                            const slot = normalized[day]?.find((s) => s.period === period.num);
                             return (
                                 <Box key={day} flex={1} px={0.5}>
                                     <Paper

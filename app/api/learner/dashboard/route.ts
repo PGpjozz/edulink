@@ -24,7 +24,10 @@ export async function GET(req: Request) {
         // 1. Get Learner Profile to find Class
         const learnerProfile = await prisma.learnerProfile.findUnique({
             where: { userId: learnerUserId },
-            include: { class: true }
+            include: {
+                class: true,
+                user: { select: { firstName: true, lastName: true } }
+            }
         });
 
         if (!learnerProfile || !learnerProfile.class) {
@@ -49,7 +52,16 @@ export async function GET(req: Request) {
         });
 
         // 3. Process Data
-        const processedSubjects = subjects.map(sub => {
+        // Deduplicate subjects that share the same code (e.g. legacy seed data)
+        const seenCodes = new Set<string>();
+        const uniqueSubjects = subjects.filter(sub => {
+            const key = sub.code || sub.name;
+            if (seenCodes.has(key)) return false;
+            seenCodes.add(key);
+            return true;
+        });
+
+        const processedSubjects = uniqueSubjects.map(sub => {
             const assessmentsWithGrades = sub.assessments.map(ass => {
                 const gradeEntry = ass.grades[0];
                 return {
@@ -78,10 +90,11 @@ export async function GET(req: Request) {
 
         return NextResponse.json({
             learner: {
-                name: `${session.user.name}`, // Should fetch specific learner name if needed
+                id: learnerProfile.id,
+                name: `${learnerProfile.user.firstName} ${learnerProfile.user.lastName}`,
                 grade: learnerProfile.class.grade,
                 className: learnerProfile.class.name,
-                timetable: learnerProfile.class.timetable // Added
+                timetable: learnerProfile.class.timetable
             },
             subjects: processedSubjects
         });

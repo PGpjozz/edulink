@@ -123,6 +123,7 @@ const NAV_ITEMS: Record<string, { label: string; icon: React.ReactNode; path: st
         { label: 'Digital Library', icon: <Book />, path: '/dashboard/learner/library' },
         { label: 'Quizzes', icon: <QuestionAnswer />, path: '/dashboard/learner/quizzes' },
         { label: 'Academic Report', icon: <Assignment />, path: '/dashboard/learner/report' },
+        { label: 'House Points', icon: <EmojiEventsIcon />, path: '/dashboard/learner/badges' },
         { label: 'Messages', icon: <Message />, path: '/dashboard/messages' }
     ],
     PARENT: [

@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import {
     Box,
-    Container,
     Typography,
     Card,
     CardContent,
@@ -17,8 +16,10 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    Button
+    Button,
+    Paper
 } from '@mui/material';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import AnalyticsChart from './AnalyticsChart';
 import TimetableView from './TimetableView';
@@ -108,6 +109,12 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
         }
     };
 
+    const overallAverage = (() => {
+        const withAvg = data.subjects.filter((s) => s.average !== null);
+        if (withAvg.length === 0) return null;
+        return Math.round(withAvg.reduce((sum, s) => sum + (s.average ?? 0), 0) / withAvg.length);
+    })();
+
     return (
         <Box>
             <Box
@@ -119,11 +126,12 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
                 gap={2}
             >
                 <Box>
-                    <Typography variant="h4" fontWeight="bold">
-                        {childId ? `${data.learner.name}'s Progress` : 'My Progress'}
+                    <Typography variant="h5" fontWeight="bold">
+                        {childId ? `${data.learner.name}'s Progress` : 'Academic Overview'}
                     </Typography>
-                    <Typography variant="h6" color="primary">
-                        {data.learner.className} • Grade {data.learner.grade}
+                    <Typography variant="body1" color="primary">
+                        {data.learner.className} · Grade {data.learner.grade}
+                        {overallAverage !== null && ` · ${overallAverage}% average`}
                     </Typography>
                 </Box>
 
@@ -148,8 +156,8 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
                     <Button
                         variant="outlined"
                         size="small"
-                        fullWidth={false}
-                        onClick={() => window.location.href = childId ? `/dashboard/learner/report?childId=${childId}` : '/dashboard/learner/report'}
+                        component={Link}
+                        href={childId ? `/dashboard/learner/report?childId=${childId}` : '/dashboard/learner/report'}
                         sx={{ mt: { xs: 1, md: 0 } }}
                     >
                         View Term Report
@@ -159,6 +167,14 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
 
             {tabValue === 0 && (
                 <>
+                    {data.subjects.length === 0 ? (
+                        <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 2 }}>
+                            <Typography color="text.secondary">
+                                No subject data available yet. Check back after your first assessments.
+                            </Typography>
+                        </Paper>
+                    ) : (
+                    <>
                     {data.subjects.length > 0 && (
                         <Box mb={4} component={motion.div} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
                             <AnalyticsChart
@@ -235,6 +251,8 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
                             </Grid>
                         ))}
                     </Grid>
+                    </>
+                    )}
                 </>
             )}
 

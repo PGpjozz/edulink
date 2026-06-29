@@ -28,14 +28,21 @@ import { motion } from 'framer-motion';
 
 export default function LearnerQuizzes() {
     const [quizzes, setQuizzes] = useState([]);
+    const [stats, setStats] = useState<{ completed: number; averageScore: number | null; focusArea: { subject: string; message: string } | null } | null>(null);
     const [loading, setLoading] = useState(true);
     const router = useRouter();
 
     const fetchQuizzes = async () => {
         try {
-            const res = await fetch('/api/school/quizzes');
-            const data = await res.json();
+            const [quizRes, statsRes] = await Promise.all([
+                fetch('/api/school/quizzes'),
+                fetch('/api/learner/quiz-stats')
+            ]);
+            const data = await quizRes.json();
             setQuizzes(data);
+            if (statsRes.ok) {
+                setStats(await statsRes.json());
+            }
         } catch (err) {
             console.error(err);
         } finally {
@@ -108,30 +115,36 @@ export default function LearnerQuizzes() {
                         <CardContent>
                             <Box display="flex" justifyContent="space-between" mb={2}>
                                 <Typography variant="body2">Completed</Typography>
-                                <Typography variant="h6" fontWeight="bold">12</Typography>
+                                <Typography variant="h6" fontWeight="bold">{stats?.completed ?? 0}</Typography>
                             </Box>
                             <Box display="flex" justifyContent="space-between" mb={2}>
                                 <Typography variant="body2">Avg Score</Typography>
-                                <Typography variant="h6" fontWeight="bold" color="success.main">84%</Typography>
+                                <Typography variant="h6" fontWeight="bold" color={stats?.averageScore != null ? 'success.main' : 'text.secondary'}>
+                                    {stats?.averageScore != null ? `${stats.averageScore}%` : '—'}
+                                </Typography>
                             </Box>
                             <Divider sx={{ my: 1 }} />
-                            <Button fullWidth size="small" sx={{ mt: 1 }}>Detailed Insights</Button>
+                            <Button fullWidth size="small" sx={{ mt: 1 }} component="a" href="/dashboard/learner">
+                                View Academic Progress
+                            </Button>
                         </CardContent>
                     </Card>
 
+                    {stats?.focusArea && (
                     <Box mb={3}>
                         <Typography variant="subtitle2" fontWeight="bold" mb={1} display="flex" alignItems="center" gap={1}>
                             <AutoAwesome color="primary" fontSize="small" /> AI Recommendations
                         </Typography>
                         <Paper sx={{ p: 2, borderRadius: 3, bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider' }}>
                             <Typography variant="caption" display="block" color="primary" fontWeight="bold" gutterBottom>
-                                FOCUS AREA: GENETICS
+                                FOCUS AREA: {stats.focusArea.subject.toUpperCase()}
                             </Typography>
                             <Typography variant="body2">
-                                Based on your last Biology quiz, we suggest reviewing <strong>Punnett Squares</strong> and <strong>Mendelian Inheritance</strong> before the next assessment.
+                                {stats.focusArea.message}
                             </Typography>
                         </Paper>
                     </Box>
+                    )}
 
                     <Paper sx={{ p: 3, borderRadius: 4, bgcolor: 'primary.main', color: 'primary.contrastText' }}>
                         <Typography variant="h6" fontWeight="bold" gutterBottom>Did you know?</Typography>

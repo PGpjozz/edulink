@@ -49,6 +49,27 @@ export default function LearnerLeaderboard() {
         return <Star color="action" />;
     };
 
+    if (loading) {
+        return (
+            <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+                <LinearProgress />
+            </Container>
+        );
+    }
+
+    if (leaderboard.length === 0) {
+        return (
+            <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
+                <Box mb={4} textAlign="center">
+                    <Typography variant="h3" fontWeight="900">House Points Leaderboard</Typography>
+                    <Typography color="text.secondary" variant="h6" sx={{ mt: 1 }}>
+                        No rankings yet. Earn merits through positive behavior to climb the board!
+                    </Typography>
+                </Box>
+            </Container>
+        );
+    }
+
     return (
         <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }} component={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <Box mb={4} textAlign="center">

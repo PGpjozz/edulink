@@ -1,14 +1,26 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaNeon } from '@prisma/adapter-neon';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { neonConfig } from '@neondatabase/serverless';
+import { Pool } from 'pg';
 import ws from 'ws';
 
 // Required for PrismaNeon in Node.js (Next.js API routes)
 neonConfig.webSocketConstructor = ws;
 
+function isLocalDatabase(connectionString: string) {
+    return /localhost|127\.0\.0\.1/.test(connectionString) || /sslmode=disable/.test(connectionString);
+}
+
 const prismaClientSingleton = (connectionString: string) => {
     if (!connectionString) {
         throw new Error('DATABASE_URL is not set');
+    }
+
+    if (isLocalDatabase(connectionString)) {
+        const url = connectionString.replace(/[&?]channel_binding=[^&]*/g, '');
+        const pool = new Pool({ connectionString: url });
+        return new PrismaClient({ adapter: new PrismaPg(pool) });
     }
 
     const adapter = new PrismaNeon({ connectionString });
