@@ -34,6 +34,8 @@ export default function AIAssistant() {
     const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
 
     // Selection state
     const [selectedLearner, setSelectedLearner] = useState('');
@@ -64,24 +66,36 @@ export default function AIAssistant() {
     const handleGenerate = async () => {
         setGenerating(true);
         setResult(null);
+        setError(null);
+        setCopied(false);
         try {
             const res = await fetch('/api/ai/reports', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ learnerId: selectedLearner, subjectId: selectedSubject, tone })
             });
-            const data: ReportResult = await res.json();
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.error || 'Failed to generate comment');
+                return;
+            }
+            if (!data.comment || !data.dataPoints) {
+                setError('Received an invalid response from the server');
+                return;
+            }
             setResult(data);
-        } catch (err) {
-            console.error(err);
+        } catch {
+            setError('Failed to generate comment. Please try again.');
         } finally {
             setGenerating(false);
         }
     };
 
-    const copyToClipboard = () => {
+    const copyToClipboard = async () => {
         if (result?.comment) {
-            navigator.clipboard.writeText(result.comment);
+            await navigator.clipboard.writeText(result.comment);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
         }
     };
 
@@ -152,6 +166,9 @@ export default function AIAssistant() {
                             >
                                 Generate AI Comment
                             </Button>
+                            {error && (
+                                <Alert severity="error">{error}</Alert>
+                            )}
                         </Stack>
                     </Paper>
 
@@ -181,15 +198,19 @@ export default function AIAssistant() {
                                     <Divider sx={{ my: 4 }} />
 
                                     <Typography variant="subtitle2" gutterBottom>Data Insights Used:</Typography>
-                                    <Stack direction="row" spacing={2} mb={4}>
-                                        <Chip label={`Avg Score: ${Math.round(result.dataPoints.avgScore)}%`} color="success" variant="outlined" />
-                                        <Chip label={`Attendance: ${Math.round(result.dataPoints.attendanceRate)}%`} color="primary" variant="outlined" />
-                                        <Chip label={`${result.dataPoints.assessmentsCount} Tests`} variant="outlined" />
+                                    <Stack direction="row" spacing={2} mb={4} flexWrap="wrap" useFlexGap>
+                                        {result.dataPoints.avgScore > 0 && (
+                                            <Chip label={`Avg Score: ${Math.round(result.dataPoints.avgScore)}%`} color="success" variant="outlined" />
+                                        )}
+                                        {result.dataPoints.attendanceRate > 0 && (
+                                            <Chip label={`Attendance: ${Math.round(result.dataPoints.attendanceRate)}%`} color="primary" variant="outlined" />
+                                        )}
+                                        <Chip label={`${result.dataPoints.assessmentsCount} Quizzes`} variant="outlined" />
                                     </Stack>
 
                                     <Stack direction="row" spacing={2}>
                                         <Button variant="contained" startIcon={<ContentCopy />} onClick={copyToClipboard} sx={{ borderRadius: 2 }}>
-                                            Copy Comment
+                                            {copied ? 'Copied!' : 'Copy Comment'}
                                         </Button>
                                         <Button variant="outlined" startIcon={<Refresh />} onClick={handleGenerate} sx={{ borderRadius: 2 }}>
                                             Regenerate

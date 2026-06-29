@@ -25,7 +25,7 @@ interface AssessmentData {
     weight: number;
 }
 
-const columns: GridColDef[] = [
+const baseColumns: GridColDef[] = [
     { field: 'title', headerName: 'Title', flex: 1 },
     {
         field: 'type', headerName: 'Type', width: 130,
@@ -42,24 +42,28 @@ const columns: GridColDef[] = [
         field: 'weight', headerName: 'Weight', width: 100,
         valueFormatter: (value) => `${value}%`
     },
-    {
-        field: 'actions', headerName: 'Actions', flex: 1,
-        renderCell: (params) => (
-            <Button
-                variant="contained"
-                size="small"
-                onClick={() => window.location.href = `${window.location.pathname}/assessment/${params.row.id}`}
-            >
-                Grade
-            </Button>
-        )
-    }
 ];
 
 export default function SubjectDetail() {
     const router = useRouter();
     const params = useParams();
     const subjectId = params.id as string;
+
+    const columns: GridColDef[] = [
+        ...baseColumns,
+        {
+            field: 'actions', headerName: 'Actions', flex: 1,
+            renderCell: (params) => (
+                <Button
+                    variant="contained"
+                    size="small"
+                    onClick={() => router.push(`/dashboard/teacher/subject/${subjectId}/assessment/${params.row.id}`)}
+                >
+                    Grade
+                </Button>
+            )
+        }
+    ];
 
     const [assessments, setAssessments] = useState<AssessmentData[]>([]);
     const [loading, setLoading] = useState(true);

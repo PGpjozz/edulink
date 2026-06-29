@@ -23,7 +23,8 @@ import {
     Checkbox,
     Stack,
     Chip,
-    CircularProgress
+    CircularProgress,
+    Alert,
 } from '@mui/material';
 import {
     Add,
@@ -77,6 +78,8 @@ export default function QuizManager() {
     const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [openAdd, setOpenAdd] = useState(false);
+    const [createError, setCreateError] = useState('');
+    const [creating, setCreating] = useState(false);
 
     const [newQuiz, setNewQuiz] = useState<NewQuiz>({
         subjectId: '',
@@ -122,25 +125,32 @@ export default function QuizManager() {
     };
 
     const handleCreate = async () => {
+        setCreateError('');
+        setCreating(true);
         try {
             const res = await fetch('/api/school/quizzes', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(newQuiz)
             });
-            if (res.ok) {
-                setOpenAdd(false);
-                fetchData();
-                setNewQuiz({
-                    subjectId: '',
-                    title: '',
-                    description: '',
-                    timeLimit: 30,
-                    questions: [{ text: '', points: 1, options: [{ text: '', isCorrect: true }, { text: '', isCorrect: false }] }]
-                });
+            const data = await res.json();
+            if (!res.ok) {
+                setCreateError(data.error || 'Failed to create quiz');
+                return;
             }
-        } catch (err) {
-            console.error(err);
+            setOpenAdd(false);
+            fetchData();
+            setNewQuiz({
+                subjectId: '',
+                title: '',
+                description: '',
+                timeLimit: 30,
+                questions: [{ text: '', points: 1, options: [{ text: '', isCorrect: true }, { text: '', isCorrect: false }] }]
+            });
+        } catch {
+            setCreateError('Failed to create quiz. Please try again.');
+        } finally {
+            setCreating(false);
         }
     };
 
@@ -233,6 +243,9 @@ export default function QuizManager() {
             <Dialog open={openAdd} onClose={() => setOpenAdd(false)} maxWidth="md" fullWidth PaperProps={{ sx: { borderRadius: 4 } }}>
                 <DialogTitle sx={{ fontWeight: 'bold' }}>Intelligence Quiz Builder</DialogTitle>
                 <DialogContent dividers>
+                    {createError && (
+                        <Alert severity="error" sx={{ mb: 2 }}>{createError}</Alert>
+                    )}
                     <Grid container spacing={3} sx={{ mt: 0.5 }}>
                         <Grid size={{ xs: 12, md: 6 }}>
                             <FormControl fullWidth>
@@ -358,14 +371,14 @@ export default function QuizManager() {
                     </Grid>
                 </DialogContent>
                 <DialogActions sx={{ p: 3 }}>
-                    <Button onClick={() => setOpenAdd(false)} color="inherit">Discard Draft</Button>
+                    <Button onClick={() => setOpenAdd(false)} color="inherit" disabled={creating}>Discard Draft</Button>
                     <Button
                         variant="contained"
                         onClick={handleCreate}
-                        disabled={!newQuiz.title || !newQuiz.subjectId}
+                        disabled={!newQuiz.title || !newQuiz.subjectId || creating}
                         sx={{ px: 4, borderRadius: 2 }}
                     >
-                        Publish Quiz
+                        {creating ? 'Saving…' : 'Save Quiz'}
                     </Button>
                 </DialogActions>
             </Dialog>

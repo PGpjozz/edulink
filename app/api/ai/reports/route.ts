@@ -1,18 +1,28 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { requireAuth } from '@/lib/api-auth';
+import { canAccessLearner } from '@/lib/staff-context';
+import { GRADING_ROLES } from '@/lib/permissions';
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== 'staff' && session.user.role !== 'principal')) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth({ requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
+
+    if (!(GRADING_ROLES as readonly string[]).includes(auth.role)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
     try {
         const { learnerId, subjectId, tone = 'professional' } = await req.json();
 
-        // 1. Fetch relevant data for the student
+        if (!learnerId || !subjectId) {
+            return NextResponse.json({ error: 'Learner and subject are required' }, { status: 400 });
+        }
+
+        if (!(await canAccessLearner(auth, learnerId))) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+
         const [learner, attendance, attempts] = await Promise.all([
             prisma.learnerProfile.findUnique({
                 where: { id: learnerId },
@@ -75,8 +85,8 @@ export async function POST(req: Request) {
         return NextResponse.json({
             comment,
             dataPoints: {
-                avgScore,
-                attendanceRate,
+                avgScore: avgScore ?? 0,
+                attendanceRate: attendanceRate ?? 0,
                 assessmentsCount: attempts.length
             }
         });

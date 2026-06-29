@@ -9,8 +9,13 @@ export async function GET(req: Request) {
 
     try {
         const schoolId = session.user.schoolId || '';
+        const where: { schoolId: string; teacherId?: string } = { schoolId };
+        if (session.user.role === 'TEACHER') {
+            where.teacherId = session.user.id;
+        }
+
         const sessions = await prisma.pTMSession.findMany({
-            where: { schoolId },
+            where,
             include: {
                 teacher: { select: { firstName: true, lastName: true } },
                 bookings: {

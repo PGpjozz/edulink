@@ -123,6 +123,24 @@ export async function GET(req: Request) {
         }
         counts.subjects = subjectDefs.length;
 
+        // ─── CLASS-SUBJECT LINKS (enables gradebook + assessment grading) ─
+        for (const cls of classes) {
+            const gradeSubjects = allSubjects.filter((s) => s.grade === cls.grade);
+            for (const sub of gradeSubjects) {
+                await prisma.classSubject.upsert({
+                    where: { classId_subjectId: { classId: cls.id, subjectId: sub.id } },
+                    create: {
+                        classId: cls.id,
+                        subjectId: sub.id,
+                        teacherProfileId: teacherUsers[sub.tIdx].profileId,
+                    },
+                    update: {
+                        teacherProfileId: teacherUsers[sub.tIdx].profileId,
+                    },
+                });
+            }
+        }
+
         // ─── LEARNERS ────────────────────────────────────────────────
         const learnerDefs = [
             { firstName: 'Ayanda', lastName: 'Nkosi', idNumber: '0801015001083', grade: '8', cIdx: 0 },
