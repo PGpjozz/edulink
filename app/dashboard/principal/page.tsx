@@ -344,6 +344,7 @@ function PrincipalDashboard() {
         if (!res.ok) throw new Error(await res.text());
         fetchDepartments();
         fetchUsers();
+        notify(hodUserId ? 'Head of Department assigned.' : 'Head of Department unassigned.');
     };
 
     const openClassSubjects = (cls: ClassData) => {
@@ -462,8 +463,8 @@ function PrincipalDashboard() {
         },
     ];
 
-    const [toast, setToast] = useState('');
-    const notify = (message: string) => setToast(message);
+    const [toast, setToast] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
+    const notify = (msg: string, severity: 'success' | 'error' = 'success') => setToast({ msg, severity });
 
     const handleSaveAssignment = async (teacherProfileId: string | null) => {
         if (!assignTarget) return;
@@ -1026,6 +1027,7 @@ function PrincipalDashboard() {
                                 </FormControl>
                                 <Button
                                     variant="contained"
+                                    disabled={!newDeptName.trim()}
                                     onClick={async () => {
                                         if (!newDeptName.trim()) return;
                                         const res = await fetch('/api/departments', {
@@ -1036,11 +1038,15 @@ function PrincipalDashboard() {
                                                 hodUserId: newDeptHodUserId || null,
                                             }),
                                         });
-                                        if (!res.ok) return;
+                                        if (!res.ok) {
+                                            notify((await res.text()) || 'Failed to create department.', 'error');
+                                            return;
+                                        }
                                         setNewDeptName('');
                                         setNewDeptHodUserId('');
                                         fetchDepartments();
                                         fetchUsers();
+                                        notify('Department created.');
                                     }}
                                 >
                                     Add department
@@ -1135,16 +1141,17 @@ function PrincipalDashboard() {
                 subjects={subjects}
                 teachers={teacherOptions}
                 onUpdated={fetchClasses}
+                onNotify={notify}
             />
 
             <Snackbar
                 open={!!toast}
                 autoHideDuration={5000}
-                onClose={() => setToast('')}
+                onClose={() => setToast(null)}
                 anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
             >
-                <Alert severity="success" variant="filled" onClose={() => setToast('')} sx={{ width: '100%' }}>
-                    {toast}
+                <Alert severity={toast?.severity ?? 'success'} variant="filled" onClose={() => setToast(null)} sx={{ width: '100%' }}>
+                    {toast?.msg}
                 </Alert>
             </Snackbar>
         </Container>
