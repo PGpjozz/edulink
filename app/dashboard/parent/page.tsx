@@ -1,50 +1,37 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import {
-    Box,
-    Container,
-    Typography,
-    Card,
-    CardActionArea,
-    CardContent,
-    Grid,
-    Avatar,
-    CircularProgress,
-    Tabs,
-    Tab,
-    Divider,
-    Paper
+    Box, Container, Typography, Card, CardActionArea, CardContent, Grid, Avatar,
+    CircularProgress, Paper, Alert, Button, Stack,
 } from '@mui/material';
-import { Person as PersonIcon, School, Assessment, EventRepeat } from '@mui/icons-material';
-import { useRouter } from 'next/navigation';
+import { Person as PersonIcon, Notifications, Assignment, Payments } from '@mui/icons-material';
+import Link from 'next/link';
 import LearnerProgressView from '@/app/components/LearnerProgressView';
+import AnnouncementsFeed from '@/app/components/AnnouncementsFeed';
+import { useParentChild } from '@/lib/useParentChild';
 
-export default function ParentDashboard() {
-    const [children, setChildren] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedChildId, setSelectedChildId] = useState<string | null>(null);
-    const [tabValue, setTabValue] = useState(0);
-    const router = useRouter();
+function ParentDashboardInner() {
+    const { children, selected, loading, setChildId } = useParentChild();
+    const [unread, setUnread] = useState(0);
 
     useEffect(() => {
-        fetch('/api/parent/children')
-            .then(res => res.json())
-            .then(data => {
-                setChildren(data);
-                if (data.length > 0) {
-                    setSelectedChildId(data[0].id);
+        fetch('/api/notifications')
+            .then((r) => r.json())
+            .then((data) => {
+                if (Array.isArray(data)) {
+                    setUnread(data.filter((n: { isRead: boolean }) => !n.isRead).length);
                 }
-                setLoading(false);
-            })
-            .catch(() => setLoading(false));
+            });
     }, []);
 
-    if (loading) return (
-        <Box display="flex" justifyContent="center" py={10}>
-            <CircularProgress />
-        </Box>
-    );
+    if (loading) {
+        return (
+            <Box display="flex" justifyContent="center" py={10}>
+                <CircularProgress />
+            </Box>
+        );
+    }
 
     if (children.length === 0) {
         return (
@@ -55,15 +42,35 @@ export default function ParentDashboard() {
         );
     }
 
+    const childQ = selected ? `?childId=${selected.id}` : '';
+
     return (
         <Container maxWidth="xl" sx={{ mt: 4 }}>
             <Box mb={4}>
                 <Typography variant="h4" fontWeight="bold">Parent Portal</Typography>
-                <Typography color="text.secondary">Supporting your children's educational journey.</Typography>
+                <Typography color="text.secondary">Supporting your children&apos;s educational journey.</Typography>
             </Box>
 
+            <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mb: 3 }}>
+                {unread > 0 && (
+                    <Button component={Link} href={`/dashboard/parent/notifications${childQ}`} variant="outlined" startIcon={<Notifications />} color="warning">
+                        {unread} unread alert{unread > 1 ? 's' : ''}
+                    </Button>
+                )}
+                <Button component={Link} href={`/dashboard/parent/homework${childQ}`} variant="outlined" startIcon={<Assignment />}>
+                    Homework
+                </Button>
+                <Button component={Link} href={`/dashboard/parent/billing${childQ}`} variant="outlined" startIcon={<Payments />}>
+                    Billing
+                </Button>
+            </Stack>
+
+            <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2 }}>
+                <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Announcements</Typography>
+                <AnnouncementsFeed compact />
+            </Paper>
+
             <Grid container spacing={4}>
-                {/* Child Selection Sidebar/Grid */}
                 <Grid size={{ xs: 12, md: 3 }}>
                     <Typography variant="h6" gutterBottom fontWeight="bold">My Children</Typography>
                     <Box display="flex" flexDirection="column" gap={2}>
@@ -71,20 +78,22 @@ export default function ParentDashboard() {
                             <Card
                                 key={child.id}
                                 sx={{
-                                    border: selectedChildId === child.id ? '2px solid' : 'none',
+                                    border: selected?.id === child.id ? '2px solid' : 'none',
                                     borderColor: 'primary.main',
-                                    boxShadow: selectedChildId === child.id ? 4 : 1
+                                    boxShadow: selected?.id === child.id ? 4 : 1,
                                 }}
                             >
-                                <CardActionArea onClick={() => setSelectedChildId(child.id)}>
+                                <CardActionArea onClick={() => setChildId(child.id)}>
                                     <CardContent>
                                         <Box display="flex" alignItems="center" gap={2}>
-                                            <Avatar sx={{ bgcolor: selectedChildId === child.id ? 'primary.main' : 'grey.400' }}>
+                                            <Avatar sx={{ bgcolor: selected?.id === child.id ? 'primary.main' : 'grey.400' }}>
                                                 <PersonIcon />
                                             </Avatar>
                                             <Box>
                                                 <Typography variant="subtitle1" fontWeight="bold">{child.name}</Typography>
-                                                <Typography variant="body2" color="text.secondary">Grade {child.grade} ({child.className})</Typography>
+                                                <Typography variant="body2" color="text.secondary">
+                                                    Grade {child.grade} ({child.className})
+                                                </Typography>
                                             </Box>
                                         </Box>
                                     </CardContent>
@@ -94,36 +103,18 @@ export default function ParentDashboard() {
                     </Box>
                 </Grid>
 
-                {/* Main Content Area */}
                 <Grid size={{ xs: 12, md: 9 }}>
-                    {selectedChildId && (
-                        <Box>
-                            <Paper sx={{ p: 1, mb: 3, borderRadius: 2 }}>
-                                <Tabs
-                                    value={tabValue}
-                                    onChange={(_, v) => {
-                                        setTabValue(v);
-                                        requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur?.());
-                                    }}
-                                    variant="fullWidth"
-                                    indicatorColor="primary"
-                                    textColor="primary"
-                                >
-                                    <Tab label="Performance & Timetable" icon={<Assessment fontSize="small" />} iconPosition="start" />
-                                </Tabs>
-                            </Paper>
-
-                            <Box animate={{ opacity: 1 }} component={motion.div} key={selectedChildId} initial={{ opacity: 0 }}>
-                                <LearnerProgressView childId={selectedChildId} />
-                            </Box>
-                        </Box>
-                    )}
+                    {selected && <LearnerProgressView childId={selected.id} />}
                 </Grid>
             </Grid>
         </Container>
     );
 }
 
-// Missing motion import handled via layout or component
-import { motion } from 'framer-motion';
-import { Alert } from '@mui/material';
+export default function ParentDashboard() {
+    return (
+        <Suspense fallback={<Box display="flex" justifyContent="center" py={10}><CircularProgress /></Box>}>
+            <ParentDashboardInner />
+        </Suspense>
+    );
+}

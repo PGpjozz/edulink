@@ -16,7 +16,6 @@ import {
     TableHead,
     TableRow,
     Paper,
-    Divider,
     CircularProgress,
     Dialog,
     DialogTitle,
@@ -25,17 +24,19 @@ import {
     Alert
 } from '@mui/material';
 import {
-    Payment as PaymentIcon,
-    History,
     CreditCard,
     CheckCircle
 } from '@mui/icons-material';
+import PayFastRedirect from '@/app/components/PayFastRedirect';
+import { startPayFastCheckout } from '@/lib/payfast-client';
 
 export default function BillingPortal() {
     const [invoices, setInvoices] = useState([]);
     const [loading, setLoading] = useState(true);
     const [paying, setPaying] = useState<string | null>(null);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [payfast, setPayfast] = useState<{ action: string; fields: Record<string, string> } | null>(null);
+    const [payMessage, setPayMessage] = useState('');
 
     const fetchInvoices = async () => {
         setLoading(true);
@@ -56,22 +57,35 @@ export default function BillingPortal() {
 
     const handlePay = async (invoiceId: string) => {
         setPaying(invoiceId);
+        setPayMessage('');
         try {
-            const res = await fetch('/api/parent/payments', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ invoiceId })
-            });
-            if (res.ok) {
-                setShowSuccess(true);
-                fetchInvoices();
-            }
+            const result = await startPayFastCheckout(
+                { type: 'PARENT_FEE', invoiceId },
+                (data) => setPayfast({ action: data.action, fields: data.fields }),
+                async () => {
+                    const res = await fetch('/api/parent/payments', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ invoiceId }),
+                    });
+                    if (res.ok) {
+                        setShowSuccess(true);
+                        fetchInvoices();
+                    }
+                }
+            );
+            if (!result.ok) setPayMessage(result.error || 'Payment failed');
+            else if (result.simulated) setPayMessage('Simulated payment (PayFast not configured).');
         } catch (err) {
             console.error(err);
         } finally {
             setPaying(null);
         }
     };
+
+    if (payfast) {
+        return <PayFastRedirect action={payfast.action} fields={payfast.fields} />;
+    }
 
     if (loading) return <CircularProgress />;
 
@@ -82,6 +96,7 @@ export default function BillingPortal() {
     return (
         <Box>
             <Typography variant="h5" fontWeight="bold" gutterBottom>Financial Overview</Typography>
+            {payMessage && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setPayMessage('')}>{payMessage}</Alert>}
 
             <Grid container spacing={3} mb={4}>
                 <Grid size={{ xs: 12, md: 4 }}>

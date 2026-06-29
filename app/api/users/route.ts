@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 
 // GET: Fetch users (Teachers, Learners, Admins)
 export async function GET(req: Request) {
-    const auth = await requireAuth({ roles: ['PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    const auth = await requireAuth({ schoolAdmin: true, requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
 
     try {
@@ -22,6 +22,7 @@ export async function GET(req: Request) {
                 idNumber: true,
                 role: true,
                 isActive: true,
+                permissions: true,
                 teacherProfile: { select: { id: true } }
             },
             orderBy: { role: 'asc' }
@@ -47,13 +48,13 @@ export async function POST(req: Request) {
     try {
         const body = await readJson<any>(req);
         if (body instanceof NextResponse) return body;
-        const { firstName, lastName, email, role, idNumber, password: rawPassword, grade, learnerProfileId } = body;
+        const { firstName, lastName, email, role, idNumber, password: rawPassword, grade, learnerProfileId, departmentId, alsoTeaches } = body;
 
         if (!firstName || !lastName || !role) {
             return new NextResponse('Missing required fields', { status: 400 });
         }
 
-        const allowedRoles = ['TEACHER', 'LEARNER', 'SCHOOL_ADMIN', 'PRINCIPAL', 'PARENT'];
+        const allowedRoles = ['TEACHER', 'LEARNER', 'SCHOOL_ADMIN', 'PRINCIPAL', 'PARENT', 'HOD'];
         if (!allowedRoles.includes(role)) {
             return new NextResponse('Invalid role', { status: 400 });
         }
@@ -82,7 +83,12 @@ export async function POST(req: Request) {
             }
         }
 
+        const usesDefaultPassword = !rawPassword;
         const hashedPassword = await bcrypt.hash(rawPassword || 'password123', 10);
+        const needsTeacherProfile =
+            role === 'TEACHER' ||
+            role === 'HOD' ||
+            (alsoTeaches && ['PRINCIPAL', 'SCHOOL_ADMIN'].includes(role));
 
         const user = await prisma.user.create({
             data: {
@@ -94,11 +100,16 @@ export async function POST(req: Request) {
                 role: role as any,
                 schoolId: auth.schoolId as string,
                 isActive: true,
+                mustChangePassword: usesDefaultPassword,
                 ...(role === 'LEARNER' && {
                     learnerProfile: { create: { grade: grade as string } }
                 }),
-                ...(role === 'TEACHER' && {
-                    teacherProfile: { create: {} }
+                ...(needsTeacherProfile && {
+                    teacherProfile: {
+                        create: {
+                            departmentId: departmentId || undefined,
+                        },
+                    },
                 }),
                 ...(role === 'PARENT' && {
                     parentProfile: { create: { learnerIds: linkedLearnerProfile ? [linkedLearnerProfile.id] : [] } }

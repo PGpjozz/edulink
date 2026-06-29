@@ -4,10 +4,14 @@ import { Session } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { canManageSchool, GRADING_ROLES, SCHOOL_ADMIN_ROLES } from '@/lib/permissions';
 
 type RequireAuthOptions = {
     roles?: string[];
     requireSchoolId?: boolean;
+    /** Use permission groups instead of raw role list */
+    schoolAdmin?: boolean;
+    gradingStaff?: boolean;
 };
 
 export type AuthContext = {
@@ -15,6 +19,9 @@ export type AuthContext = {
     userId: string;
     role: string;
     schoolId: string | null;
+    mustChangePassword: boolean;
+    hasTeacherProfile: boolean;
+    permissions: string[];
 };
 
 export async function requireAuth(options: RequireAuthOptions = {}): Promise<AuthContext | NextResponse> {
@@ -26,6 +33,17 @@ export async function requireAuth(options: RequireAuthOptions = {}): Promise<Aut
 
     const role = String(session.user.role);
     const schoolId = session.user.schoolId ? String(session.user.schoolId) : null;
+    const mustChangePassword = Boolean(session.user.mustChangePassword);
+    const hasTeacherProfile = Boolean(session.user.hasTeacherProfile);
+    const permissions = session.user.permissions ?? [];
+
+    if (options.schoolAdmin && !canManageSchool(role)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    if (options.gradingStaff && !(GRADING_ROLES as readonly string[]).includes(role)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     if (options.roles && !options.roles.includes(role)) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -40,7 +58,14 @@ export async function requireAuth(options: RequireAuthOptions = {}): Promise<Aut
         userId: String(session.user.id),
         role,
         schoolId,
+        mustChangePassword,
+        hasTeacherProfile,
+        permissions,
     };
+}
+
+export function schoolAdminOr(roles: string[]) {
+    return [...SCHOOL_ADMIN_ROLES, ...roles];
 }
 
 export async function readJson<T = unknown>(req: Request): Promise<T | NextResponse> {

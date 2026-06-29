@@ -32,7 +32,7 @@ export default withAuth(
         }
 
         // PROVIDER must NOT access school dashboards
-        const schoolDashboardPaths = ["/dashboard/principal", "/dashboard/teacher", "/dashboard/learner", "/dashboard/parent", "/dashboard/messages"];
+        const schoolDashboardPaths = ["/dashboard/principal", "/dashboard/school-owner", "/dashboard/teacher", "/dashboard/hod", "/dashboard/learner", "/dashboard/parent", "/dashboard/messages", "/dashboard/announcements", "/dashboard/payment"];
         if (token?.role === "PROVIDER" && schoolDashboardPaths.some(p => path.startsWith(p))) {
             return NextResponse.redirect(new URL("/dashboard/provider", req.url));
         }

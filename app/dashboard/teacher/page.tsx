@@ -20,6 +20,7 @@ import {
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import TimetableView from '@/app/components/TimetableView';
+import TeacherTodayPanel from '@/app/components/TeacherTodayPanel';
 
 type ClassInfo = { id: string; name: string; grade: string; _count?: { learners?: number }; timetable?: unknown };
 type SubjectSummary = { id: string; name: string; grade: string; code?: string; _count?: { assessments?: number } };
@@ -106,6 +107,8 @@ export default function TeacherDashboard() {
                     My Classroom
                 </Typography>
             </Box>
+
+            <TeacherTodayPanel />
 
             <Typography variant="h6" gutterBottom color="text.secondary">
                 Assigned Subjects

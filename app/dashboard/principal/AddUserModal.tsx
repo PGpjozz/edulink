@@ -49,6 +49,7 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [successInfo, setSuccessInfo] = useState('');
+    const [alsoTeaches, setAlsoTeaches] = useState(false);
     const [learners, setLearners] = useState<LearnerOption[]>([]);
 
     useEffect(() => {
@@ -92,6 +93,7 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
                     password: finalPassword,
                     grade: role === 'LEARNER' ? grade : undefined,
                     learnerProfileId: role === 'PARENT' && learnerProfileId ? learnerProfileId : undefined,
+                    alsoTeaches: role === 'SCHOOL_ADMIN' ? alsoTeaches : undefined,
                 }),
             });
 
@@ -154,11 +156,27 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
                             <InputLabel>Role</InputLabel>
                             <Select value={role} label="Role" onChange={(e) => { setRole(e.target.value); setError(''); }}>
                                 <MenuItem value="TEACHER">Teacher</MenuItem>
+                                <MenuItem value="HOD">Head of Department (HOD)</MenuItem>
                                 <MenuItem value="LEARNER">Learner</MenuItem>
                                 <MenuItem value="PARENT">Parent / Guardian</MenuItem>
                                 <MenuItem value="SCHOOL_ADMIN">Admin</MenuItem>
                             </Select>
                         </FormControl>
+
+                        {role === 'SCHOOL_ADMIN' && (
+                            <Box sx={{ mt: 1 }}>
+                                <Typography variant="body2" color="text.secondary">
+                                    <label>
+                                        <input
+                                            type="checkbox"
+                                            checked={alsoTeaches}
+                                            onChange={(e) => setAlsoTeaches(e.target.checked)}
+                                        />{' '}
+                                        This admin also teaches classes
+                                    </label>
+                                </Typography>
+                            </Box>
+                        )}
 
                         {role !== 'LEARNER' && (
                             <TextField

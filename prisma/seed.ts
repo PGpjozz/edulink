@@ -1,10 +1,15 @@
-import 'dotenv/config';
+import { config } from "dotenv";
+import { resolve } from "path";
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import bcrypt from 'bcryptjs';
 
-const rawUrl = process.env.DATABASE_URL!;
+config({ path: resolve(process.cwd(), ".env.local") });
+config({ path: resolve(process.cwd(), ".env") });
+
+// Prefer direct Neon URL for seeding (pooled URLs can fail on long-running scripts)
+const rawUrl = process.env.DIRECT_URL ?? process.env.DATABASE_URL!;
 // Strip channel_binding which pg doesn't support
 const connectionString = rawUrl.replace(/[&?]channel_binding=[^&]*/g, '');
 

@@ -17,15 +17,26 @@ export default function DashboardPage() {
             return;
         }
 
+        if (session.user.mustChangePassword) {
+            router.push('/dashboard/change-password');
+            return;
+        }
+
         const { role } = session.user;
 
         switch (role) {
             case 'PROVIDER':
                 router.push('/dashboard/provider');
                 break;
+            case 'SCHOOL_OWNER':
+                router.push('/dashboard/school-owner');
+                break;
             case 'PRINCIPAL':
             case 'SCHOOL_ADMIN':
                 router.push('/dashboard/principal');
+                break;
+            case 'HOD':
+                router.push('/dashboard/hod');
                 break;
             case 'TEACHER':
                 router.push('/dashboard/teacher');
@@ -42,12 +53,7 @@ export default function DashboardPage() {
     }, [session, status, router]);
 
     return (
-        <Box
-            display="flex"
-            justifyContent="center"
-            alignItems="center"
-            minHeight="100vh"
-        >
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="100vh">
             <CircularProgress />
         </Box>
     );
