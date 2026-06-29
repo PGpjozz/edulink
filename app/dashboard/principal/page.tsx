@@ -679,17 +679,26 @@ export default function PrincipalDashboard() {
                                                                         data={assetChartData}
                                                                         dataKey="value"
                                                                         nameKey="name"
+                                                                        cx="50%"
+                                                                        cy="45%"
                                                                         innerRadius={55}
                                                                         outerRadius={95}
                                                                         paddingAngle={2}
-                                                                        label={(entry: any) => (entry.value > 0 ? entry.value : '')}
+                                                                        isAnimationActive={false}
                                                                     >
                                                                         {assetChartData.map((_, index) => (
                                                                             <Cell key={`cell-${index}`} fill={ASSET_COLORS[index % ASSET_COLORS.length]} />
                                                                         ))}
                                                                     </Pie>
                                                                     <RechartsTooltip formatter={(value: any, name: any) => [`${value} asset(s)`, name]} />
-                                                                    <Legend verticalAlign="bottom" height={36} />
+                                                                    <Legend
+                                                                        verticalAlign="bottom"
+                                                                        height={36}
+                                                                        formatter={(value: any) => {
+                                                                            const item = assetChartData.find((d) => d.name === value);
+                                                                            return `${value}: ${item?.value ?? 0}`;
+                                                                        }}
+                                                                    />
                                                                 </PieChart>
                                                             </ResponsiveContainer>
                                                         )}
