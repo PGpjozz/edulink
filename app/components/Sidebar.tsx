@@ -42,42 +42,84 @@ import {
     Dashboard as DashboardIcon,
     EmojiEvents as EmojiEventsIcon
 } from '@mui/icons-material';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { useThemeContext } from '@/app/theme/ThemeContext';
 import { useEffect, useState } from 'react';
 
 const DRAWER_WIDTH = 280;
 
-const NAV_ITEMS = {
+const TEACHING_NAV = [
+    { label: 'My Subjects', icon: <Book />, path: '/dashboard/teacher' },
+    { label: 'Homework', icon: <Assignment />, path: '/dashboard/teacher/homework' },
+    { label: 'Gradebook', icon: <MenuBookIcon />, path: '/dashboard/teacher/gradebook' },
+    { label: 'Behavior', icon: <EmojiEventsIcon />, path: '/dashboard/teacher/behavior' },
+    { label: 'Quizzes', icon: <QuestionAnswer />, path: '/dashboard/teacher/quizzes' },
+    { label: 'Meetings', icon: <Event />, path: '/dashboard/teacher/meetings' },
+    { label: 'AI Assistant', icon: <AutoAwesome />, path: '/dashboard/teacher/ai-assistant' },
+];
+
+const ADMIN_NAV = [
+    { label: 'Overview', icon: <Dashboard />, path: '/dashboard/principal' },
+    { label: 'Data Hub', icon: <BarChartIcon />, path: '/dashboard/principal/analytics' },
+    { label: 'Classes', icon: <Class />, path: '/dashboard/principal?tab=classes' },
+    { label: 'Users', icon: <Person />, path: '/dashboard/principal?tab=users' },
+    { label: 'Subjects', icon: <Book />, path: '/dashboard/principal?tab=subjects' },
+    { label: 'Departments', icon: <School />, path: '/dashboard/principal?tab=departments' },
+    { label: 'Admissions', icon: <AppRegistration />, path: '/dashboard/principal/admissions' },
+    { label: 'Library & Assets', icon: <Inventory />, path: '/dashboard/principal/assets' },
+    { label: 'Finance', icon: <Payments />, path: '/dashboard/principal/finance' },
+    { label: 'Subscription', icon: <ReceiptLong />, path: '/dashboard/principal/subscription' },
+    { label: 'Audit Logs', icon: <HistoryIcon />, path: '/dashboard/principal/audit-logs' },
+    { label: 'Settings', icon: <Settings />, path: '/dashboard/principal/settings' },
+];
+
+const HOD_NAV = [
+    { label: 'Department', icon: <Dashboard />, path: '/dashboard/hod' },
+    { label: 'Department Analytics', icon: <BarChartIcon />, path: '/dashboard/hod/analytics' },
+    { label: 'Behavior', icon: <EmojiEventsIcon />, path: '/dashboard/teacher/behavior' },
+    { label: 'Messages', icon: <Message />, path: '/dashboard/messages' },
+];
+
+const OWNER_NAV = [
+    { label: 'Overview', icon: <Dashboard />, path: '/dashboard/school-owner' },
+    { label: 'Invites', icon: <Person />, path: '/dashboard/school-owner/invites' },
+    { label: 'Permissions', icon: <Settings />, path: '/dashboard/school-owner/permissions' },
+    { label: 'School operations', icon: <School />, path: '/dashboard/principal' },
+    { label: 'Subscription', icon: <ReceiptLong />, path: '/dashboard/principal/subscription' },
+    { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
+    { label: 'Homework', icon: <Assignment />, path: '/dashboard/teacher/homework' },
+];
+
+const NAV_ITEMS: Record<string, { label: string; icon: React.ReactNode; path: string }[]> = {
     PROVIDER: [
         { label: 'Dashboard', icon: <Dashboard />, path: '/dashboard/provider' }
     ],
+    SCHOOL_OWNER: OWNER_NAV,
     PRINCIPAL: [
-        { label: 'Overview', icon: <Dashboard />, path: '/dashboard/principal' },
-        { label: 'Data Hub', icon: <BarChartIcon />, path: '/dashboard/principal/analytics' },
-        { label: 'Classes', icon: <Class />, path: '/dashboard/principal?tab=classes' },
-        { label: 'Users', icon: <Person />, path: '/dashboard/principal?tab=users' },
-        { label: 'Admissions', icon: <AppRegistration />, path: '/dashboard/principal/admissions' },
-        { label: 'Library & Assets', icon: <Inventory />, path: '/dashboard/principal/assets' },
-        { label: 'Finance', icon: <Payments />, path: '/dashboard/principal/finance' },
-        { label: 'Subscription', icon: <ReceiptLong />, path: '/dashboard/principal/subscription' },
-        { label: 'Messages', icon: <Message />, path: '/dashboard/messages' },
-        { label: 'Audit Logs', icon: <HistoryIcon />, path: '/dashboard/principal/audit-logs' },
-        { label: 'Settings', icon: <Settings />, path: '/dashboard/principal/settings' }
+        ...ADMIN_NAV,
+        { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
+        { label: 'Homework', icon: <Assignment />, path: '/dashboard/teacher/homework' },
+    ],
+    SCHOOL_ADMIN: [
+        ...ADMIN_NAV,
+        { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
+        { label: 'Homework', icon: <Assignment />, path: '/dashboard/teacher/homework' },
+    ],
+    HOD: [
+        ...HOD_NAV,
+        { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
+        { label: 'Homework', icon: <Assignment />, path: '/dashboard/teacher/homework' },
     ],
     TEACHER: [
-        { label: 'Subjects', icon: <Book />, path: '/dashboard/teacher' },
-        { label: 'Gradebook', icon: <MenuBookIcon />, path: '/dashboard/teacher/gradebook' },
-        { label: 'Behavior', icon: <EmojiEventsIcon />, path: '/dashboard/teacher/behavior' },
-        { label: 'Quizzes', icon: <QuestionAnswer />, path: '/dashboard/teacher/quizzes' },
-        { label: 'Meetings', icon: <Event />, path: '/dashboard/teacher/meetings' },
-        { label: 'Library', icon: <Book />, path: '/dashboard/learner/library' }, // Reuse learner library or create specific
+        ...TEACHING_NAV,
+        { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
         { label: 'Messages', icon: <Message />, path: '/dashboard/messages' },
-        { label: 'AI Assistant', icon: <AutoAwesome />, path: '/dashboard/teacher/ai-assistant' }, // Added AI Assistant
     ],
     LEARNER: [
         { label: 'My Progress', icon: <Grade />, path: '/dashboard/learner' },
+        { label: 'Homework', icon: <Assignment />, path: '/dashboard/learner/homework' },
+        { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
         { label: 'Digital Library', icon: <Book />, path: '/dashboard/learner/library' },
         { label: 'Quizzes', icon: <QuestionAnswer />, path: '/dashboard/learner/quizzes' },
         { label: 'Academic Report', icon: <Assignment />, path: '/dashboard/learner/report' },
@@ -85,12 +127,38 @@ const NAV_ITEMS = {
     ],
     PARENT: [
         { label: 'Children', icon: <Person />, path: '/dashboard/parent' },
+        { label: 'Homework', icon: <Assignment />, path: '/dashboard/parent/homework' },
+        { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
         { label: 'Meetings', icon: <Event />, path: '/dashboard/parent/meetings' },
         { label: 'Billing', icon: <Payments />, path: '/dashboard/parent/billing' },
         { label: 'Alerts', icon: <Notifications />, path: '/dashboard/parent/notifications' },
         { label: 'Messages', icon: <Message />, path: '/dashboard/messages' }
     ]
 };
+
+function getNavItems(role: string, hasTeacherProfile: boolean) {
+    const base = NAV_ITEMS[role] || [];
+    const shared = [{ label: 'Messages', icon: <Message />, path: '/dashboard/messages' }];
+
+    if ((role === 'PRINCIPAL' || role === 'SCHOOL_ADMIN' || role === 'SCHOOL_OWNER') && hasTeacherProfile) {
+        return [
+            ...base,
+            { label: '— Teaching —', icon: <Book />, path: '/dashboard/teacher' },
+            ...TEACHING_NAV.filter((i) => i.path !== '/dashboard/teacher'),
+            ...shared.filter((s) => !base.some((b) => b.path === s.path)),
+        ];
+    }
+
+    if (role === 'HOD' && hasTeacherProfile) {
+        return [
+            ...base,
+            { label: '— My classes —', icon: <Book />, path: '/dashboard/teacher' },
+            ...TEACHING_NAV.filter((i) => i.path !== '/dashboard/teacher'),
+        ];
+    }
+
+    return base;
+}
 
 interface SidebarProps {
     mobileOpen?: boolean;
@@ -100,6 +168,8 @@ interface SidebarProps {
 export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     const theme = useTheme();
     const pathname = usePathname();
+    const searchParams = useSearchParams();
+    const currentTab = searchParams.get('tab');
     const router = useRouter();
     const { data: session } = useSession();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -120,8 +190,8 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
 
     if (!session) return null;
 
-    const role = session.user.role as keyof typeof NAV_ITEMS;
-    const items = NAV_ITEMS[role] || [];
+    const role = session.user.role;
+    const items = getNavItems(role, Boolean(session.user.hasTeacherProfile));
 
     const drawerContent = (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -147,7 +217,25 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
 
             <List sx={{ flexGrow: 1 }}>
                 {items.map((item) => {
-                    const isActive = pathname === item.path;
+                    const isSection = item.label.startsWith('—');
+                    if (isSection) {
+                        return (
+                            <ListItem key={item.label} sx={{ px: 3, py: 1 }}>
+                                <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                                    {item.label.replace(/—/g, '').trim()}
+                                </Typography>
+                            </ListItem>
+                        );
+                    }
+                    const tabParam = item.path.includes('?tab=')
+                        ? item.path.split('?tab=')[1]?.split('&')[0]
+                        : null;
+                    const isPrincipalRoot = item.path === '/dashboard/principal';
+                    const isActive = tabParam
+                        ? pathname === '/dashboard/principal' && currentTab === tabParam
+                        : isPrincipalRoot
+                            ? pathname === '/dashboard/principal' && !currentTab
+                            : pathname === item.path || (item.path.includes('?') && pathname === item.path.split('?')[0] && !tabParam);
                     return (
                         <ListItem key={item.path} disablePadding sx={{ mb: 1 }}>
                             <ListItemButton

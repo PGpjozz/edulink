@@ -16,12 +16,13 @@ export const authOptions: NextAuthOptions = {
                     throw new Error("Missing credentials");
                 }
 
-                const { identifier, password } = credentials;
+                const { password } = credentials;
+                const normalizedIdentifier = credentials.identifier.trim();
 
                 const user = await prisma.user.findFirst({
-                    where: identifier.includes('@')
-                        ? { email: identifier }
-                        : { idNumber: identifier },
+                    where: normalizedIdentifier.includes('@')
+                        ? { email: { equals: normalizedIdentifier, mode: 'insensitive' } }
+                        : { idNumber: normalizedIdentifier },
                     select: {
                         id: true,
                         email: true,
@@ -31,6 +32,9 @@ export const authOptions: NextAuthOptions = {
                         role: true,
                         schoolId: true,
                         isActive: true,
+                        mustChangePassword: true,
+                        permissions: true,
+                        teacherProfile: { select: { id: true } },
                     }
                 });
 
@@ -49,17 +53,22 @@ export const authOptions: NextAuthOptions = {
                     email: user.email || '',
                     role: user.role,
                     schoolId: user.schoolId,
+                    mustChangePassword: user.mustChangePassword,
+                    hasTeacherProfile: !!user.teacherProfile,
+                    permissions: user.permissions ?? [],
                 };
             }
         })
     ],
     callbacks: {
         async jwt({ token, user }) {
-            // Initial sign in
             if (user) {
                 token.id = user.id;
                 token.role = user.role;
                 token.schoolId = user.schoolId;
+                token.mustChangePassword = user.mustChangePassword ?? false;
+                token.hasTeacherProfile = user.hasTeacherProfile ?? false;
+                token.permissions = user.permissions ?? [];
             }
             return token;
         },
@@ -68,6 +77,9 @@ export const authOptions: NextAuthOptions = {
                 session.user.id = token.id as string;
                 session.user.role = token.role as string;
                 session.user.schoolId = token.schoolId as string | null;
+                session.user.mustChangePassword = Boolean(token.mustChangePassword);
+                session.user.hasTeacherProfile = Boolean(token.hasTeacherProfile);
+                session.user.permissions = (token.permissions as string[]) ?? [];
             }
             return session;
         }

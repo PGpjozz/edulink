@@ -16,7 +16,11 @@ import {
     Tab,
     Card,
     CardContent,
-    Chip
+    Chip,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
 } from '@mui/material';
 import { Add, School as SchoolIcon } from '@mui/icons-material';
 import { motion } from 'framer-motion';
@@ -34,7 +38,12 @@ export default function ProviderDashboard() {
         principalFirstName: '',
         principalLastName: '',
         principalEmail: '',
-        principalPassword: 'principal123'
+        principalPassword: 'principal123',
+        createOwner: false,
+        ownerFirstName: '',
+        ownerLastName: '',
+        ownerEmail: '',
+        ownerPassword: '',
     });
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
@@ -45,6 +54,9 @@ export default function ProviderDashboard() {
     const [saasLoading, setSaasLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [generating, setGenerating] = useState<string | null>(null);
+    const [ownerDialog, setOwnerDialog] = useState<{ schoolId: string; schoolName: string } | null>(null);
+    const [ownerForm, setOwnerForm] = useState({ email: '', firstName: '', lastName: '', password: '' });
+    const [ownerSaving, setOwnerSaving] = useState(false);
 
     const fetchAllData = async () => {
         setSaasLoading(true);
@@ -112,16 +124,31 @@ export default function ProviderDashboard() {
             )
         },
         {
-            field: 'actions', headerName: 'Actions', width: 200,
+            field: 'actions', headerName: 'Actions', width: 280,
             renderCell: (params) => (
-                <Button
-                    size="small"
-                    variant="outlined"
-                    disabled={generating === params.row.id}
-                    onClick={() => handleGenerateBill(params.row.id)}
-                >
-                    {generating === params.row.id ? 'Processing...' : 'Issue Bill'}
-                </Button>
+                <Box display="flex" gap={1}>
+                    {!params.row.ownerId && (
+                        <Button size="small" variant="contained" onClick={() => {
+                            setOwnerDialog({ schoolId: params.row.id, schoolName: params.row.name });
+                            setOwnerForm({
+                                email: params.row.contactEmail || '',
+                                firstName: '',
+                                lastName: '',
+                                password: '',
+                            });
+                        }}>
+                            Add owner
+                        </Button>
+                    )}
+                    <Button
+                        size="small"
+                        variant="outlined"
+                        disabled={generating === params.row.id}
+                        onClick={() => handleGenerateBill(params.row.id)}
+                    >
+                        {generating === params.row.id ? 'Processing...' : 'Issue Bill'}
+                    </Button>
+                </Box>
             )
         }
     ];
@@ -153,16 +180,28 @@ export default function ProviderDashboard() {
         setMessage({ type: '', text: '' });
 
         try {
+            const payload: Record<string, unknown> = { ...formData };
+            if (!formData.createOwner) {
+                delete payload.ownerFirstName;
+                delete payload.ownerLastName;
+                delete payload.ownerEmail;
+                delete payload.ownerPassword;
+                delete payload.createOwner;
+            }
+            delete payload.createOwner;
+
             const res = await fetch('/api/provider/onboard-school', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(payload)
             });
 
             const data = await res.json();
 
             if (res.ok) {
-                setMessage({ type: 'success', text: `✅ School "${formData.schoolName}" onboarded successfully! Principal can now log in with ${formData.principalEmail}` });
+                const ownerNote = data.owner ? ` Owner: ${data.owner.email}.` : '';
+                setMessage({ type: 'success', text: `✅ School "${formData.schoolName}" onboarded successfully! Principal: ${formData.principalEmail}.${ownerNote}` });
+                fetchAllData();
                 // Reset form
                 setFormData({
                     schoolName: '',
@@ -172,7 +211,12 @@ export default function ProviderDashboard() {
                     principalFirstName: '',
                     principalLastName: '',
                     principalEmail: '',
-                    principalPassword: 'principal123'
+                    principalPassword: 'principal123',
+                    createOwner: false,
+                    ownerFirstName: '',
+                    ownerLastName: '',
+                    ownerEmail: '',
+                    ownerPassword: '',
                 });
             } else {
                 setMessage({ type: 'error', text: data.error || 'Failed to onboard school' });
@@ -305,6 +349,49 @@ export default function ProviderDashboard() {
                             </Grid>
                         </Grid>
 
+                        <Typography variant="h6" fontWeight="bold" mt={4} mb={1}>School owner (optional)</Typography>
+                        <Typography variant="body2" color="text.secondary" mb={2}>
+                            The owner manages billing, invites, and permissions. Can be the same person as the principal.
+                        </Typography>
+                        <Grid container spacing={3}>
+                            <Grid size={{ xs: 12 }}>
+                                <TextField
+                                    select
+                                    fullWidth
+                                    label="Create school owner account?"
+                                    value={formData.createOwner ? 'yes' : 'no'}
+                                    onChange={(e) => setFormData({ ...formData, createOwner: e.target.value === 'yes' })}
+                                >
+                                    <MenuItem value="no">No — assign later</MenuItem>
+                                    <MenuItem value="yes">Yes — create owner now</MenuItem>
+                                </TextField>
+                            </Grid>
+                            {formData.createOwner && (
+                                <>
+                                    <Grid size={{ xs: 12, md: 6 }}>
+                                        <TextField fullWidth label="Owner first name" value={formData.ownerFirstName}
+                                            onChange={(e) => setFormData({ ...formData, ownerFirstName: e.target.value })} />
+                                    </Grid>
+                                    <Grid size={{ xs: 12, md: 6 }}>
+                                        <TextField fullWidth label="Owner last name" value={formData.ownerLastName}
+                                            onChange={(e) => setFormData({ ...formData, ownerLastName: e.target.value })} />
+                                    </Grid>
+                                    <Grid size={{ xs: 12 }}>
+                                        <TextField fullWidth label="Owner email" type="email" required={formData.createOwner}
+                                            value={formData.ownerEmail}
+                                            onChange={(e) => setFormData({ ...formData, ownerEmail: e.target.value })} />
+                                    </Grid>
+                                    <Grid size={{ xs: 12 }}>
+                                        <TextField fullWidth label="Owner password" required={formData.createOwner}
+                                            value={formData.ownerPassword}
+                                            onChange={(e) => setFormData({ ...formData, ownerPassword: e.target.value })}
+                                            helperText="Min 8 characters"
+                                        />
+                                    </Grid>
+                                </>
+                            )}
+                        </Grid>
+
                         <Box mt={4} display="flex" justifyContent="center">
                             <Button
                                 type="submit"
@@ -375,6 +462,61 @@ export default function ProviderDashboard() {
                 onClose={() => setIsModalOpen(false)}
                 onCreated={fetchAllData}
             />
+
+            <Dialog open={!!ownerDialog} onClose={() => setOwnerDialog(null)} maxWidth="sm" fullWidth>
+                <DialogTitle>Assign school owner — {ownerDialog?.schoolName}</DialogTitle>
+                <DialogContent>
+                    <Grid container spacing={2} sx={{ mt: 0.5 }}>
+                        <Grid size={{ xs: 6 }}>
+                            <TextField fullWidth label="First name" value={ownerForm.firstName}
+                                onChange={(e) => setOwnerForm({ ...ownerForm, firstName: e.target.value })} />
+                        </Grid>
+                        <Grid size={{ xs: 6 }}>
+                            <TextField fullWidth label="Last name" value={ownerForm.lastName}
+                                onChange={(e) => setOwnerForm({ ...ownerForm, lastName: e.target.value })} />
+                        </Grid>
+                        <Grid size={{ xs: 12 }}>
+                            <TextField fullWidth label="Email" type="email" required value={ownerForm.email}
+                                onChange={(e) => setOwnerForm({ ...ownerForm, email: e.target.value })} />
+                        </Grid>
+                        <Grid size={{ xs: 12 }}>
+                            <TextField fullWidth label="Password" required value={ownerForm.password}
+                                onChange={(e) => setOwnerForm({ ...ownerForm, password: e.target.value })}
+                                helperText="Min 8 characters — share securely with the owner"
+                            />
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOwnerDialog(null)}>Cancel</Button>
+                    <Button variant="contained" disabled={ownerSaving} onClick={async () => {
+                        if (!ownerDialog) return;
+                        setOwnerSaving(true);
+                        try {
+                            const res = await fetch(`/api/provider/schools/${ownerDialog.schoolId}/owner`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(ownerForm),
+                            });
+                            const data = await res.json();
+                            if (!res.ok) {
+                                setMessage({ type: 'error', text: data.error || 'Failed to assign owner' });
+                                return;
+                            }
+                            setMessage({
+                                type: 'success',
+                                text: `School owner created: ${data.owner.email}${data.emailSent ? ' (welcome email sent)' : ''}`,
+                            });
+                            setOwnerDialog(null);
+                            fetchAllData();
+                        } finally {
+                            setOwnerSaving(false);
+                        }
+                    }}>
+                        {ownerSaving ? 'Saving…' : 'Create owner'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Container>
     );
 }

@@ -120,6 +120,13 @@ export default function AttendancePage() {
                         onChange={(e) => setDate(e.target.value)}
                         InputLabelProps={{ shrink: true }}
                     />
+                    <Button variant="outlined" onClick={() => {
+                        const all: Record<string, string> = {};
+                        learners.forEach((l) => { all[l.id] = 'PRESENT'; });
+                        setAttendance(all);
+                    }}>
+                        Mark all present
+                    </Button>
                     <Button variant="contained" onClick={handleSave} disabled={saving}>
                         {saving ? 'Saving...' : 'Save Attendance'}
                     </Button>

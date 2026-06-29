@@ -539,7 +539,7 @@ export async function GET(req: Request) {
         for (const msg of msgDefs) {
             const senderId = userEmailToId[msg.fromEmail];
             let recipientId: string | undefined;
-            if ('toIdx' in msg) {
+            if ('toIdx' in msg && typeof msg.toIdx === 'number') {
                 recipientId = parentUsers[msg.toIdx]?.userId;
             } else if ('toEmail' in msg) {
                 recipientId = userEmailToId[(msg as any).toEmail];

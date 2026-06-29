@@ -9,8 +9,10 @@ datasource db {
 // Enums
 enum UserRole {
   PROVIDER
+  SCHOOL_OWNER
   PRINCIPAL
   SCHOOL_ADMIN
+  HOD
   TEACHER
   LEARNER
   PARENT
@@ -56,6 +58,12 @@ model School {
   applications   Application[]
   assets         Asset[]
   monthlyFee     Float         @default(1000)
+  departments    Department[]
+  ownerId        String?       @unique
+  owner          User?         @relation("SchoolOwner", fields: [ownerId], references: [id], onDelete: SetNull)
+  announcements  Announcement[]
+  homework       Homework[]
+  inviteTokens   InviteToken[]
 
   @@map("schools")
 }
@@ -80,6 +88,8 @@ model User {
   
   isActive       Boolean       @default(true)
   deletedAt      DateTime?     // Soft delete
+  mustChangePassword Boolean   @default(false)
+  permissions    String[]      @default([])
 
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -99,6 +109,11 @@ model User {
   ptmBookings      PTMBooking[]
   assets           Asset[]
   assetBookings    AssetBooking[]
+  departmentsLed   Department[]  @relation("DepartmentHOD")
+  ownedSchool      School?       @relation("SchoolOwner")
+  announcementsAuthored Announcement[] @relation("AnnouncementAuthor")
+  homeworkCreated  Homework[]    @relation("HomeworkTeacher")
+  invitesSent      InviteToken[] @relation("InvitesSent")
 
   @@unique([email])
   // Learner login by ID + School? Or just ID globally? 
@@ -131,6 +146,7 @@ model LearnerProfile {
   ptmBookings     PTMBooking[]
   aiInsights      AIInsight[]
   quizAttempts    QuizAttempt[]
+  homeworkSubmissions HomeworkSubmission[]
 
   @@map("learner_profiles")
 }
@@ -141,11 +157,13 @@ model TeacherProfile {
   user           User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   qualifications String?
+  departmentId   String?
+  department     Department?   @relation("DepartmentTeachers", fields: [departmentId], references: [id])
   
   // Relations
   managedClasses Class[]       @relation("ClassTeacher")
-  assignedSubjects Subject[]   // Subjects they teach generally or specific instances?
-                               // Typically a teacher is assigned to specific Subject instances (e.g. Gr8 Math).
+  assignedSubjects Subject[]
+  classSubjects  ClassSubject[]
   
   @@map("teacher_profiles")
 }
@@ -172,6 +190,9 @@ model Class {
   teacher        TeacherProfile? @relation("ClassTeacher", fields: [teacherProfileId], references: [id])
 
   learners       LearnerProfile[]
+  classSubjects  ClassSubject[]
+  announcements  Announcement[]
+  homework       Homework[]
   
   timetable      Json?         // Simple timetable storage
 
@@ -189,6 +210,8 @@ model Subject {
   name           String        // e.g. "Mathematics"
   code           String?       // e.g. "MATH"
   grade          String        // e.g. "10"
+  departmentId   String?
+  department     Department?   @relation(fields: [departmentId], references: [id])
   
   // Teacher assigned to this specific subject for this grade
   teacherId      String?
@@ -197,11 +220,47 @@ model Subject {
   assessments    Assessment[]
   resources      Resource[]
   quizzes        Quiz[]
+  classSubjects  ClassSubject[]
+  homework       Homework[]
   
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
   @@map("subjects")
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  schoolId  String
+  school    School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  name      String
+  code      String?
+  hodUserId String?
+  hod       User?    @relation("DepartmentHOD", fields: [hodUserId], references: [id], onDelete: SetNull)
+  subjects  Subject[]
+  teachers  TeacherProfile[] @relation("DepartmentTeachers")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([schoolId, name])
+  @@map("departments")
+}
+
+model ClassSubject {
+  id               String          @id @default(uuid())
+  classId          String
+  class            Class           @relation(fields: [classId], references: [id], onDelete: Cascade)
+  subjectId        String
+  subject          Subject         @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherProfileId String?
+  teacher          TeacherProfile? @relation(fields: [teacherProfileId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([classId, subjectId])
+  @@map("class_subjects")
 }
 
 model Assessment {
@@ -272,6 +331,8 @@ model Billing {
   
   status         BillingStatus @default(ACTIVE)
   invoiceUrl     String?
+
+  payfastCheckouts PayFastCheckout[]
 
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -366,6 +427,7 @@ model FeeInvoice {
   status         InvoiceStatus @default(PENDING)
   
   payments       Payment[]
+  payfastCheckouts PayFastCheckout[]
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
 
@@ -399,6 +461,32 @@ enum PaymentStatus {
   COMPLETED
   FAILED
   REFUNDED
+}
+
+enum PayFastCheckoutType {
+  SCHOOL_SUBSCRIPTION
+  PARENT_FEE
+}
+
+model PayFastCheckout {
+  id          String              @id @default(uuid())
+  mPaymentId  String              @unique
+  type        PayFastCheckoutType
+  schoolId    String
+  userId      String
+  amount      Float
+  billingId   String?
+  billing     Billing?            @relation(fields: [billingId], references: [id])
+  invoiceId   String?
+  invoice     FeeInvoice?         @relation(fields: [invoiceId], references: [id])
+  status      PaymentStatus       @default(PENDING)
+  pfPaymentId String?
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+
+  @@index([schoolId])
+  @@index([userId])
+  @@map("payfast_checkouts")
 }
 
 model BehaviorRecord {
@@ -664,6 +752,107 @@ enum BookingStatus {
   APPROVED
   REJECTED
   RETURNED
+}
+
+enum AnnouncementAudience {
+  SCHOOL
+  GRADE
+  CLASS
+  PARENTS
+  LEARNERS
+}
+
+enum PermissionKey {
+  MANAGE_USERS
+  MANAGE_CLASSES
+  MANAGE_FINANCE
+  MANAGE_ADMISSIONS
+  MANAGE_ASSETS
+  VIEW_ANALYTICS
+  MANAGE_ANNOUNCEMENTS
+  MANAGE_HOMEWORK
+  GRADE_LEARNERS
+  VIEW_AUDIT_LOGS
+  MANAGE_DEPARTMENTS
+  MANAGE_SETTINGS
+}
+
+model Announcement {
+  id          String               @id @default(uuid())
+  schoolId    String
+  school      School               @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User                 @relation("AnnouncementAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  title       String
+  content     String
+  audience    AnnouncementAudience @default(SCHOOL)
+  grade       String?
+  classId     String?
+  class       Class?               @relation(fields: [classId], references: [id], onDelete: SetNull)
+  publishedAt DateTime             @default(now())
+  expiresAt   DateTime?
+
+  @@index([schoolId])
+  @@map("announcements")
+}
+
+model Homework {
+  id          String   @id @default(uuid())
+  schoolId    String
+  school      School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  subjectId   String?
+  subject     Subject? @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+  classId     String?
+  class       Class?   @relation(fields: [classId], references: [id], onDelete: SetNull)
+  teacherId   String
+  teacher     User     @relation("HomeworkTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  title       String
+  description String?
+  dueDate     DateTime
+  fileUrl     String?
+  submissions HomeworkSubmission[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([schoolId])
+  @@index([classId])
+  @@map("homework")
+}
+
+model HomeworkSubmission {
+  id          String         @id @default(uuid())
+  homeworkId  String
+  homework    Homework       @relation(fields: [homeworkId], references: [id], onDelete: Cascade)
+  learnerId   String
+  learner     LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  fileUrl     String?
+  note        String?
+  submittedAt DateTime       @default(now())
+  grade       Float?
+  feedback    String?
+
+  @@unique([homeworkId, learnerId])
+  @@map("homework_submissions")
+}
+
+model InviteToken {
+  id          String    @id @default(uuid())
+  email       String
+  schoolId    String
+  school      School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  role        UserRole
+  token       String    @unique
+  invitedById String
+  invitedBy   User      @relation("InvitesSent", fields: [invitedById], references: [id], onDelete: Cascade)
+  firstName   String?
+  lastName    String?
+  permissions String[]  @default([])
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([email])
+  @@map("invite_tokens")
 }
 
 

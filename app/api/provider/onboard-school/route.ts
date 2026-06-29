@@ -20,7 +20,11 @@ export async function POST(req: Request) {
             principalFirstName,
             principalLastName,
             principalEmail,
-            principalPassword
+            principalPassword,
+            ownerFirstName,
+            ownerLastName,
+            ownerEmail,
+            ownerPassword,
         } = body;
 
         if (
@@ -57,7 +61,6 @@ export async function POST(req: Request) {
 
         // Create school and principal in a transaction
         const result = await prisma.$transaction(async (tx: TxClient) => {
-            // Create School
             const school = await tx.school.create({
                 data: {
                     name: schoolName,
@@ -69,7 +72,31 @@ export async function POST(req: Request) {
                 }
             });
 
-            // Create Principal User
+            let ownerId: string | undefined;
+
+            if (ownerEmail && ownerPassword) {
+                const existingOwner = await tx.user.findUnique({ where: { email: ownerEmail } });
+                if (existingOwner) {
+                    throw new Error('OWNER_EMAIL_EXISTS');
+                }
+                const owner = await tx.user.create({
+                    data: {
+                        email: ownerEmail,
+                        password: await bcrypt.hash(ownerPassword, 10),
+                        firstName: ownerFirstName?.trim() || 'School',
+                        lastName: ownerLastName?.trim() || 'Owner',
+                        role: 'SCHOOL_OWNER',
+                        schoolId: school.id,
+                        isActive: true,
+                    },
+                });
+                ownerId = owner.id;
+                await tx.school.update({
+                    where: { id: school.id },
+                    data: { ownerId: owner.id },
+                });
+            }
+
             const principal = await tx.user.create({
                 data: {
                     email: principalEmail,
@@ -98,7 +125,7 @@ export async function POST(req: Request) {
                 }
             });
 
-            return { school, principal };
+            return { school, principal, ownerId };
         });
 
         return NextResponse.json({
@@ -107,10 +134,14 @@ export async function POST(req: Request) {
             principal: {
                 id: result.principal.id,
                 email: result.principal.email
-            }
+            },
+            ...(result.ownerId ? { owner: { id: result.ownerId, email: ownerEmail } } : {}),
         });
     } catch (error) {
         console.error('Error onboarding school:', error);
+        if (error instanceof Error && error.message === 'OWNER_EMAIL_EXISTS') {
+            return NextResponse.json({ error: 'Owner email already exists' }, { status: 400 });
+        }
         return NextResponse.json({ error: 'Failed to onboard school' }, { status: 500 });
     }
 }

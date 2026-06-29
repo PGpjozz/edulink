@@ -41,6 +41,10 @@ export default function SignIn() {
             setLoading(false);
         } else {
             const session = await getSession();
+            if (session?.user?.mustChangePassword) {
+                router.push('/dashboard/change-password');
+                return;
+            }
             if (session?.user?.role === 'PROVIDER') {
                 await signOut({ redirect: false });
                 setError('Provider accounts must sign in at the provider portal.');
@@ -116,6 +120,10 @@ export default function SignIn() {
                         {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
                     </Button>
                 </Box>
+
+                <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 2 }}>
+                    <a href="/auth/forgot-password" style={{ color: 'inherit' }}>Forgot password?</a>
+                </Typography>
 
                 <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 2 }}>
                     EduLink provider?{' '}

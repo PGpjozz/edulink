@@ -1,21 +1,29 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
+import { getStaffContext, classScopeWhere } from '@/lib/staff-context';
 
-// GET: Fetch all classes for the school
-export async function GET(req: Request) {
+export async function GET() {
     const auth = await requireAuth({ requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
 
     try {
+        const ctx = await getStaffContext(auth);
         const classes = await prisma.class.findMany({
-            where: { schoolId: auth.schoolId as string },
+            where: classScopeWhere(auth, ctx),
             include: {
                 teacher: {
                     include: { user: { select: { firstName: true, lastName: true } } }
                 },
+                classSubjects: {
+                    include: {
+                        subject: { select: { id: true, name: true, code: true } },
+                        teacher: { include: { user: { select: { firstName: true, lastName: true } } } },
+                    },
+                },
                 _count: { select: { learners: true } }
-            }
+            },
+            orderBy: [{ grade: 'asc' }, { name: 'asc' }],
         });
 
         return NextResponse.json(classes);
@@ -25,9 +33,8 @@ export async function GET(req: Request) {
     }
 }
 
-// PATCH: Assign/unassign class teacher
 export async function PATCH(req: Request) {
-    const auth = await requireAuth({ roles: ['PRINCIPAL'], requireSchoolId: true });
+    const auth = await requireAuth({ roles: ['PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
 
     try {
@@ -35,38 +42,25 @@ export async function PATCH(req: Request) {
         if (body instanceof NextResponse) return body;
         const { classId, teacherProfileId } = body;
 
-        if (!classId) {
-            return new NextResponse('Missing classId', { status: 400 });
-        }
+        if (!classId) return new NextResponse('Missing classId', { status: 400 });
 
         const existingClass = await prisma.class.findFirst({
             where: { id: classId, schoolId: auth.schoolId as string },
             select: { id: true }
         });
-
-        if (!existingClass) {
-            return new NextResponse('Class not found', { status: 404 });
-        }
+        if (!existingClass) return new NextResponse('Class not found', { status: 404 });
 
         if (teacherProfileId) {
             const teacher = await prisma.teacherProfile.findFirst({
-                where: {
-                    id: teacherProfileId,
-                    user: { schoolId: auth.schoolId as string }
-                },
+                where: { id: teacherProfileId, user: { schoolId: auth.schoolId as string } },
                 select: { id: true }
             });
-
-            if (!teacher) {
-                return new NextResponse('Invalid teacherProfileId', { status: 400 });
-            }
+            if (!teacher) return new NextResponse('Invalid teacherProfileId', { status: 400 });
         }
 
         const updated = await prisma.class.update({
             where: { id: classId },
-            data: {
-                teacherProfileId: teacherProfileId || null
-            },
+            data: { teacherProfileId: teacherProfileId || null },
             include: {
                 teacher: { include: { user: { select: { firstName: true, lastName: true } } } },
                 _count: { select: { learners: true } }
@@ -89,9 +83,8 @@ export async function PATCH(req: Request) {
     }
 }
 
-// POST: Create a new class
 export async function POST(req: Request) {
-    const auth = await requireAuth({ roles: ['PRINCIPAL'], requireSchoolId: true });
+    const auth = await requireAuth({ roles: ['PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
 
     try {
@@ -99,16 +92,10 @@ export async function POST(req: Request) {
         if (body instanceof NextResponse) return body;
         const { name, grade } = body;
 
-        if (!name || !grade) {
-            return new NextResponse('Missing required fields', { status: 400 });
-        }
+        if (!name || !grade) return new NextResponse('Missing required fields', { status: 400 });
 
         const newClass = await prisma.class.create({
-            data: {
-                name,
-                grade,
-                schoolId: auth.schoolId as string
-            }
+            data: { name, grade, schoolId: auth.schoolId as string }
         });
 
         await writeAuditLog({

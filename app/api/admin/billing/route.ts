@@ -66,7 +66,7 @@ export async function POST(req: Request) {
                 extraLearners,
                 extraAmount,
                 totalAmount,
-                status: 'ACTIVE'
+                status: 'PAST_DUE'
             }
         });
 

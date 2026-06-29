@@ -9,7 +9,7 @@ export async function GET(req: Request) {
     try {
         let users: any[] = [];
 
-        if (auth.role === 'TEACHER' || auth.role === 'PRINCIPAL' || auth.role === 'SCHOOL_ADMIN') {
+        if (['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN', 'HOD'].includes(auth.role)) {
             // Staff can message Parents
             users = await prisma.user.findMany({
                 where: {
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
             users = await prisma.user.findMany({
                 where: {
                     schoolId: auth.schoolId as string,
-                    role: { in: ['TEACHER', 'PRINCIPAL'] },
+                    role: { in: ['TEACHER', 'PRINCIPAL', 'HOD', 'SCHOOL_ADMIN'] },
                     isActive: true
                 },
                 select: {

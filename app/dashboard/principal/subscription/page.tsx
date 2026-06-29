@@ -18,9 +18,6 @@ import {
     LinearProgress
 } from '@mui/material';
 import {
-    ReceiptLong,
-    Payment as PlanIcon,
-    CheckCircle,
     Warning,
     CreditCard,
     Info,
@@ -30,6 +27,8 @@ import {
 } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { motion } from 'framer-motion';
+import PayFastRedirect from '@/app/components/PayFastRedirect';
+import { startPayFastCheckout } from '@/lib/payfast-client';
 
 const TIER_LIMITS = {
     SMALL: 100,
@@ -42,6 +41,7 @@ export default function SchoolSubscription() {
     const [loading, setLoading] = useState(true);
     const [paying, setPaying] = useState<string | null>(null);
     const [message, setMessage] = useState('');
+    const [payfast, setPayfast] = useState<{ action: string; fields: Record<string, string> } | null>(null);
 
     const fetchData = async () => {
         setLoading(true);
@@ -62,22 +62,34 @@ export default function SchoolSubscription() {
 
     const handlePay = async (billingId: string) => {
         setPaying(billingId);
+        setMessage('');
         try {
-            const res = await fetch('/api/school/subscription', {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ billingId })
-            });
-            if (res.ok) {
-                setMessage('Payment simulated successfully!');
-                fetchData();
-            }
+            const result = await startPayFastCheckout(
+                { type: 'SCHOOL_SUBSCRIPTION', billingId },
+                (data) => setPayfast({ action: data.action, fields: data.fields }),
+                async () => {
+                    const res = await fetch('/api/school/subscription', {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ billingId }),
+                    });
+                    if (res.ok) {
+                        setMessage('Payment simulated (PayFast not configured).');
+                        fetchData();
+                    }
+                }
+            );
+            if (!result.ok) setMessage(result.error || 'Payment failed');
         } catch (err) {
             console.error(err);
         } finally {
             setPaying(null);
         }
     };
+
+    if (payfast) {
+        return <PayFastRedirect action={payfast.action} fields={payfast.fields} />;
+    }
 
     if (loading) return <Box display="flex" justifyContent="center" py={10}><CircularProgress /></Box>;
 
@@ -92,7 +104,7 @@ export default function SchoolSubscription() {
             field: 'status', headerName: 'Status', width: 150,
             renderCell: (params) => (
                 <Chip
-                    label={params.value}
+                    label={params.value === 'ACTIVE' ? 'Paid' : 'Due'}
                     color={params.value === 'ACTIVE' ? 'success' : 'warning'}
                     variant="outlined"
                     size="small"

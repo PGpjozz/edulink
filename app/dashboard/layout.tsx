@@ -1,5 +1,5 @@
 'use client';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode, Suspense, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import { Box, AppBar, Toolbar, IconButton, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { Menu as MenuIcon, Brightness4, Brightness7 } from '@mui/icons-material';
@@ -64,7 +64,11 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 </Toolbar>
             </AppBar>
 
-            <Sidebar mobileOpen={mobileOpen} onClose={handleDrawerToggle} />
+            <Suspense fallback={
+                <Box sx={{ width: 280, display: { xs: 'none', md: 'block' } }} />
+            }>
+                <Sidebar mobileOpen={mobileOpen} onClose={handleDrawerToggle} />
+            </Suspense>
             <Box
                 component="main"
                 sx={{

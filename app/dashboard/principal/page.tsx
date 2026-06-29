@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Box,
     Container,
@@ -20,10 +20,15 @@ import {
     List,
     ListItem,
     ListItemText,
-    Chip
+    Chip,
+    TextField,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
 } from '@mui/material';
 import { Add as AddIcon, Refresh as RefreshIcon } from '@mui/icons-material';
-import { DataGrid, GridColDef } from '@mui/x-data-grid';
+import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import {
     ResponsiveContainer,
     PieChart,
@@ -39,6 +44,8 @@ import {
 import AddClassModal from './AddClassModal';
 import AddUserModal from './AddUserModal';
 import AssignTeacherModal from './AssignTeacherModal';
+import AssignHodModal from './AssignHodModal';
+import ClassSubjectsModal from './ClassSubjectsModal';
 
 interface ClassData {
     id: string;
@@ -130,8 +137,9 @@ type OverviewResponse = {
     };
 };
 
-export default function PrincipalDashboard() {
+function PrincipalDashboard() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [tabIndex, setTabIndex] = useState(0);
 
     // Data
@@ -154,6 +162,12 @@ export default function PrincipalDashboard() {
     const [assignInitialTeacherProfileId, setAssignInitialTeacherProfileId] = useState<string | null>(null);
     const [assignTarget, setAssignTarget] = useState<{ type: 'class' | 'subject'; id: string } | null>(null);
 
+    const [hodModalOpen, setHodModalOpen] = useState(false);
+    const [hodDepartment, setHodDepartment] = useState<{ id: string; name: string; hodUserId: string | null } | null>(null);
+
+    const [classSubjectsOpen, setClassSubjectsOpen] = useState(false);
+    const [classSubjectsTarget, setClassSubjectsTarget] = useState<ClassData | null>(null);
+
     const fetchClasses = () => {
         setLoading(true);
         fetch('/api/classes')
@@ -168,6 +182,27 @@ export default function PrincipalDashboard() {
             .then(res => res.json())
             .then(data => setUsers(data))
             .finally(() => setLoading(false));
+    };
+
+    const fetchDepartments = () => {
+        fetch('/api/departments')
+            .then((res) => res.json())
+            .then((data) => setDepartments(Array.isArray(data) ? data : []));
+    };
+
+    const fetchTeachingStaff = () => {
+        fetch('/api/users/teaching-staff')
+            .then((res) => res.json())
+            .then((data) => {
+                if (Array.isArray(data)) {
+                    setTeacherOptions(
+                        data.map((t: any) => ({
+                            teacherProfileId: t.teacherProfileId,
+                            name: t.label || `${t.firstName} ${t.lastName}`,
+                        }))
+                    );
+                }
+            });
     };
 
     const fetchSubjects = () => {
@@ -196,16 +231,42 @@ export default function PrincipalDashboard() {
         }
     };
 
+    const TAB_SLUGS = ['overview', 'classes', 'users', 'subjects', 'departments'] as const;
+
+    const goToTab = (index: number) => {
+        setTabIndex(index);
+        const slug = TAB_SLUGS[index];
+        if (slug === 'overview') {
+            router.push('/dashboard/principal');
+        } else {
+            router.push(`/dashboard/principal?tab=${slug}`);
+        }
+    };
+
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab === 'classes') setTabIndex(1);
+        else if (tab === 'users') setTabIndex(2);
+        else if (tab === 'subjects') setTabIndex(3);
+        else if (tab === 'departments') setTabIndex(4);
+        else setTabIndex(0);
+    }, [searchParams]);
+
     useEffect(() => {
         if (tabIndex === 0) fetchOverview();
-        if (tabIndex === 1) fetchClasses();
+        if (tabIndex === 1) { fetchClasses(); fetchTeachingStaff(); fetchSubjects(); }
         if (tabIndex === 2) fetchUsers();
-        if (tabIndex === 3) fetchSubjects();
+        if (tabIndex === 3) { fetchSubjects(); fetchTeachingStaff(); }
+        if (tabIndex === 4) { fetchDepartments(); fetchUsers(); }
 
         if ((tabIndex === 1 || tabIndex === 3) && users.length === 0) {
             fetchUsers();
         }
     }, [tabIndex]);
+
+    useEffect(() => {
+        fetchTeachingStaff();
+    }, []);
 
     const formatCurrency = (value: number) => {
         try {
@@ -240,12 +301,36 @@ export default function PrincipalDashboard() {
 
     const ASSET_COLORS = ['#22c55e', '#3b82f6', '#f59e0b', '#ef4444'];
 
-    const teacherOptions = users
-        .filter((u) => u.role === 'TEACHER' && !!u.teacherProfileId)
+    const [teacherOptions, setTeacherOptions] = useState<{ teacherProfileId: string; name: string }[]>([]);
+    const [departments, setDepartments] = useState<any[]>([]);
+    const [newDeptName, setNewDeptName] = useState('');
+    const [newDeptHodUserId, setNewDeptHodUserId] = useState('');
+
+    const hodCandidates = users
+        .filter((u) => ['TEACHER', 'PRINCIPAL', 'HOD', 'SCHOOL_ADMIN'].includes(u.role))
         .map((u) => ({
-            teacherProfileId: u.teacherProfileId as string,
-            name: `${u.firstName} ${u.lastName}`
+            userId: u.id,
+            name: `${u.firstName} ${u.lastName}`,
+            role: u.role,
         }));
+
+    const handleSaveHod = async (hodUserId: string | null) => {
+        if (!hodDepartment) return;
+        const res = await fetch('/api/departments', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ departmentId: hodDepartment.id, hodUserId }),
+        });
+        if (!res.ok) throw new Error(await res.text());
+        fetchDepartments();
+        fetchUsers();
+    };
+
+    const openClassSubjects = (cls: ClassData) => {
+        setClassSubjectsTarget(cls);
+        setClassSubjectsOpen(true);
+        if (subjects.length === 0) fetchSubjects();
+    };
 
     const classColumns: GridColDef[] = [
         { field: 'name', headerName: 'Class Name', flex: 1 },
@@ -264,26 +349,33 @@ export default function PrincipalDashboard() {
         {
             field: 'actions',
             headerName: 'Actions',
-            width: 260,
+            width: 340,
             renderCell: (params: any) => (
-                <Box display="flex" gap={1}>
+                <Box display="flex" gap={1} flexWrap="wrap">
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => openClassSubjects(params.row)}
+                    >
+                        Subjects
+                    </Button>
                     <Button
                         variant="outlined"
                         size="small"
                         onClick={() => {
                             setAssignTarget({ type: 'class', id: params.row.id });
                             setAssignTitle(`Assign Class Teacher: ${params.row.name}`);
-                            setAssignDescription('Set the class owner/teacher responsible for this class.');
+                            setAssignDescription('Set the form teacher responsible for this class.');
                             setAssignInitialTeacherProfileId(params.row.teacherProfileId || null);
                             setAssignOpen(true);
                         }}
                     >
-                        Assign Teacher
+                        Form teacher
                     </Button>
                     <Button
                         variant="outlined"
                         size="small"
-                        onClick={() => window.location.href = `/dashboard/principal/class/${params.row.id}/timetable`}
+                        onClick={() => router.push(`/dashboard/principal/class/${params.row.id}/timetable`)}
                     >
                         Timetable
                     </Button>
@@ -374,7 +466,7 @@ export default function PrincipalDashboard() {
                 <Tabs
                     value={tabIndex}
                     onChange={(_, v) => {
-                        setTabIndex(v);
+                        goToTab(v);
                         requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur?.());
                     }}
                     variant="fullWidth"
@@ -386,6 +478,7 @@ export default function PrincipalDashboard() {
                     <Tab label="Classes & Grades" />
                     <Tab label="Teachers & Staff" />
                     <Tab label="Subjects" />
+                    <Tab label="Departments" />
                 </Tabs>
 
                 <Box sx={{ p: 3 }}>
@@ -428,7 +521,7 @@ export default function PrincipalDashboard() {
                                                 <Alert
                                                     severity="warning"
                                                     action={
-                                                        <Button color="inherit" size="small" onClick={() => setTabIndex(1)}>
+                                                        <Button color="inherit" size="small" onClick={() => goToTab(1)}>
                                                             View classes
                                                         </Button>
                                                     }
@@ -440,7 +533,7 @@ export default function PrincipalDashboard() {
                                                 <Alert
                                                     severity="warning"
                                                     action={
-                                                        <Button color="inherit" size="small" onClick={() => setTabIndex(3)}>
+                                                        <Button color="inherit" size="small" onClick={() => goToTab(3)}>
                                                             View subjects
                                                         </Button>
                                                     }
@@ -762,6 +855,8 @@ export default function PrincipalDashboard() {
                                     columns={classColumns}
                                     loading={loading}
                                     disableRowSelectionOnClick
+                                    slots={{ toolbar: GridToolbar }}
+                                    slotProps={{ toolbar: { showQuickFilter: true } }}
                                 />
                             </Box>
                         </Box>
@@ -785,6 +880,8 @@ export default function PrincipalDashboard() {
                                     columns={userColumns}
                                     loading={loading}
                                     disableRowSelectionOnClick
+                                    slots={{ toolbar: GridToolbar }}
+                                    slotProps={{ toolbar: { showQuickFilter: true } }}
                                 />
                             </Box>
                         </Box>
@@ -794,18 +891,112 @@ export default function PrincipalDashboard() {
                         <Box>
                             <Box display="flex" justifyContent="space-between" mb={2}>
                                 <Typography variant="h6">Subjects</Typography>
-                                <Button
-                                    variant="contained"
-                                    startIcon={<AddIcon />}
-                                    onClick={() => window.location.href = '/dashboard/teacher/subjects'}
-                                >
-                                    Add Subject
-                                </Button>
                             </Box>
                             <Box sx={{ height: 400, width: '100%' }}>
                                 <DataGrid
                                     rows={subjects}
                                     columns={subjectColumns}
+                                    loading={loading}
+                                    disableRowSelectionOnClick
+                                />
+                            </Box>
+                        </Box>
+                    )}
+
+                    {tabIndex === 4 && (
+                        <Box>
+                            <Typography variant="h6" gutterBottom>Departments</Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Organize subjects and assign Heads of Department (HOD).
+                            </Typography>
+                            <Box display="flex" gap={2} mb={3} flexWrap="wrap" alignItems="center">
+                                <TextField
+                                    size="small"
+                                    label="Department name"
+                                    value={newDeptName}
+                                    onChange={(e) => setNewDeptName(e.target.value)}
+                                />
+                                <FormControl size="small" sx={{ minWidth: 220 }}>
+                                    <InputLabel>HOD (optional)</InputLabel>
+                                    <Select
+                                        value={newDeptHodUserId}
+                                        label="HOD (optional)"
+                                        onChange={(e) => setNewDeptHodUserId(e.target.value)}
+                                    >
+                                        <MenuItem value="">
+                                            <em>Assign later</em>
+                                        </MenuItem>
+                                        {hodCandidates.map((c) => (
+                                            <MenuItem key={c.userId} value={c.userId}>
+                                                {c.name}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                                <Button
+                                    variant="contained"
+                                    onClick={async () => {
+                                        if (!newDeptName.trim()) return;
+                                        const res = await fetch('/api/departments', {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                name: newDeptName.trim(),
+                                                hodUserId: newDeptHodUserId || null,
+                                            }),
+                                        });
+                                        if (!res.ok) return;
+                                        setNewDeptName('');
+                                        setNewDeptHodUserId('');
+                                        fetchDepartments();
+                                        fetchUsers();
+                                    }}
+                                >
+                                    Add department
+                                </Button>
+                            </Box>
+                            <Box sx={{ height: 360, width: '100%' }}>
+                                <DataGrid
+                                    rows={departments}
+                                    columns={[
+                                        { field: 'name', headerName: 'Name', flex: 1 },
+                                        { field: 'code', headerName: 'Code', width: 100 },
+                                        {
+                                            field: 'hod',
+                                            headerName: 'HOD',
+                                            flex: 1,
+                                            valueGetter: (_: unknown, row: any) =>
+                                                row?.hod ? `${row.hod.firstName} ${row.hod.lastName}` : 'Unassigned',
+                                        },
+                                        {
+                                            field: 'subjects',
+                                            headerName: 'Subjects',
+                                            width: 100,
+                                            valueGetter: (_: unknown, row: any) => row?._count?.subjects ?? 0,
+                                        },
+                                        {
+                                            field: 'deptActions',
+                                            headerName: 'Actions',
+                                            width: 140,
+                                            sortable: false,
+                                            renderCell: (params: any) => (
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    onClick={() => {
+                                                        setHodDepartment({
+                                                            id: params.row.id,
+                                                            name: params.row.name,
+                                                            hodUserId: params.row.hodUserId ?? params.row.hod?.id ?? null,
+                                                        });
+                                                        setHodModalOpen(true);
+                                                    }}
+                                                >
+                                                    Assign HOD
+                                                </Button>
+                                            ),
+                                        },
+                                    ]}
                                     loading={loading}
                                     disableRowSelectionOnClick
                                 />
@@ -834,6 +1025,38 @@ export default function PrincipalDashboard() {
                 initialTeacherProfileId={assignInitialTeacherProfileId}
                 onSave={handleSaveAssignment}
             />
+            <AssignHodModal
+                open={hodModalOpen}
+                onClose={() => setHodModalOpen(false)}
+                departmentName={hodDepartment?.name ?? ''}
+                candidates={hodCandidates}
+                initialHodUserId={hodDepartment?.hodUserId ?? null}
+                onSave={handleSaveHod}
+            />
+            <ClassSubjectsModal
+                open={classSubjectsOpen}
+                onClose={() => setClassSubjectsOpen(false)}
+                classInfo={classSubjectsTarget ? {
+                    id: classSubjectsTarget.id,
+                    name: classSubjectsTarget.name,
+                    grade: classSubjectsTarget.grade,
+                } : null}
+                subjects={subjects}
+                teachers={teacherOptions}
+                onUpdated={fetchClasses}
+            />
         </Container>
+    );
+}
+
+export default function PrincipalDashboardPage() {
+    return (
+        <Suspense fallback={
+            <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+                <CircularProgress />
+            </Box>
+        }>
+            <PrincipalDashboard />
+        </Suspense>
     );
 }

@@ -3,10 +3,12 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 
+const SUBSCRIPTION_ROLES = ['SCHOOL_OWNER', 'PRINCIPAL', 'SCHOOL_ADMIN'];
+
 export async function GET() {
     const session = await getServerSession(authOptions);
 
-    if (!session || (session.user.role !== 'PRINCIPAL' && session.user.role !== 'SCHOOL_ADMIN')) {
+    if (!session || !SUBSCRIPTION_ROLES.includes(session.user.role)) {
         return new NextResponse('Unauthorized', { status: 401 });
     }
 
@@ -37,7 +39,7 @@ export async function GET() {
 export async function PATCH(req: Request) {
     const session = await getServerSession(authOptions);
 
-    if (!session || (session.user.role !== 'PRINCIPAL' && session.user.role !== 'SCHOOL_ADMIN')) {
+    if (!session || !SUBSCRIPTION_ROLES.includes(session.user.role)) {
         return new NextResponse('Unauthorized', { status: 401 });
     }
 
