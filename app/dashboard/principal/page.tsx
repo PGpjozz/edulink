@@ -26,6 +26,7 @@ import {
     InputLabel,
     Select,
     MenuItem,
+    Snackbar,
 } from '@mui/material';
 import { Add as AddIcon, Refresh as RefreshIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
@@ -461,6 +462,9 @@ function PrincipalDashboard() {
         },
     ];
 
+    const [toast, setToast] = useState('');
+    const notify = (message: string) => setToast(message);
+
     const handleSaveAssignment = async (teacherProfileId: string | null) => {
         if (!assignTarget) return;
 
@@ -475,6 +479,8 @@ function PrincipalDashboard() {
                 throw new Error(text || 'Failed to assign class teacher');
             }
             fetchClasses();
+            if (tabIndex === 0) fetchOverview();
+            notify(teacherProfileId ? 'Class teacher assigned.' : 'Class teacher unassigned.');
             return;
         }
 
@@ -488,6 +494,8 @@ function PrincipalDashboard() {
             throw new Error(text || 'Failed to assign subject teacher');
         }
         fetchSubjects();
+        if (tabIndex === 0) fetchOverview();
+        notify(teacherProfileId ? 'Subject teacher assigned.' : 'Subject teacher unassigned.');
     };
 
     return (
@@ -1092,7 +1100,7 @@ function PrincipalDashboard() {
             <AddClassModal
                 open={isClassModalOpen}
                 onClose={() => setIsClassModalOpen(false)}
-                onSuccess={() => { fetchClasses(); if (tabIndex === 0) fetchOverview(); }}
+                onSuccess={() => { fetchClasses(); if (tabIndex === 0) fetchOverview(); notify('Class created.'); }}
             />
             <AddUserModal
                 open={isUserModalOpen}
@@ -1128,6 +1136,17 @@ function PrincipalDashboard() {
                 teachers={teacherOptions}
                 onUpdated={fetchClasses}
             />
+
+            <Snackbar
+                open={!!toast}
+                autoHideDuration={5000}
+                onClose={() => setToast('')}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert severity="success" variant="filled" onClose={() => setToast('')} sx={{ width: '100%' }}>
+                    {toast}
+                </Alert>
+            </Snackbar>
         </Container>
     );
 }

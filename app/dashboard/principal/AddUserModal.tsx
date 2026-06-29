@@ -17,7 +17,9 @@ import {
     Snackbar,
     InputAdornment,
     IconButton,
-    Typography
+    Typography,
+    Checkbox,
+    FormControlLabel
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 
@@ -71,6 +73,7 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
     const reset = () => {
         setFirstName(''); setLastName(''); setEmail(''); setIdNumber('');
         setGrade('8'); setLearnerProfileId(''); setPassword(''); setRole('TEACHER');
+        setAlsoTeaches(false); setShowPassword(false); setError('');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -165,16 +168,15 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
 
                         {role === 'SCHOOL_ADMIN' && (
                             <Box sx={{ mt: 1 }}>
-                                <Typography variant="body2" color="text.secondary">
-                                    <label>
-                                        <input
-                                            type="checkbox"
+                                <FormControlLabel
+                                    control={
+                                        <Checkbox
                                             checked={alsoTeaches}
                                             onChange={(e) => setAlsoTeaches(e.target.checked)}
-                                        />{' '}
-                                        This admin also teaches classes
-                                    </label>
-                                </Typography>
+                                        />
+                                    }
+                                    label="This admin also teaches classes"
+                                />
                             </Box>
                         )}
 
@@ -254,8 +256,17 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
                     </DialogContent>
                     <DialogActions sx={{ p: 3 }}>
                         <Button onClick={onClose} disabled={loading}>Cancel</Button>
-                        <Button type="submit" variant="contained" disabled={loading}>
-                            Create User
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            disabled={
+                                loading ||
+                                !firstName.trim() ||
+                                !lastName.trim() ||
+                                (role === 'LEARNER' ? !idNumber.trim() : !email.trim())
+                            }
+                        >
+                            {loading ? 'Creating…' : 'Create User'}
                         </Button>
                     </DialogActions>
                 </form>
