@@ -14,26 +14,37 @@ function LearnerReportPageInner() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const childId = searchParams.get('childId');
+    const learnerId = searchParams.get('learnerId');
 
     useEffect(() => {
-        const url = childId ? `/api/learner/report?childId=${childId}` : '/api/learner/report';
+        const params = new URLSearchParams();
+        if (childId) params.set('childId', childId);
+        if (learnerId) params.set('learnerId', learnerId);
+        const qs = params.toString();
+        const url = qs ? `/api/learner/report?${qs}` : '/api/learner/report';
+
         fetch(url)
-            .then(res => {
+            .then((res) => {
                 if (!res.ok) throw new Error('Failed to load report data');
                 return res.json();
             })
             .then(setData)
-            .catch(err => setError(err.message))
+            .catch((err) => setError(err.message))
             .finally(() => setLoading(false));
-    }, [childId]);
+    }, [childId, learnerId]);
+
+    const pdfQuery = (() => {
+        const params = new URLSearchParams();
+        if (childId) params.set('childId', childId);
+        if (learnerId) params.set('learnerId', learnerId);
+        const qs = params.toString();
+        return qs ? `?${qs}` : '';
+    })();
 
     return (
         <Container maxWidth="xl" sx={{ mt: 4, mb: 8 }}>
             <Box mb={4} display="flex" alignItems="center" gap={2} className="no-print">
-                <Button
-                    startIcon={<ArrowBack />}
-                    onClick={() => router.back()}
-                >
+                <Button startIcon={<ArrowBack />} onClick={() => router.back()}>
                     Back to Dashboard
                 </Button>
                 <Typography variant="h5" fontWeight="bold">Academic Report Card</Typography>
@@ -47,7 +58,7 @@ function LearnerReportPageInner() {
 
             {error && <Alert severity="error">{error}</Alert>}
 
-            {data && <ReportCard data={data} />}
+            {data && <ReportCard data={data} pdfQuery={pdfQuery} />}
         </Container>
     );
 }

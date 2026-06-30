@@ -12,7 +12,8 @@ import {
     Chip,
     Divider,
     CircularProgress,
-    Alert
+    Alert,
+    Grid,
 } from '@mui/material';
 import {
     AutoAwesome,
@@ -158,5 +159,3 @@ export default function AIInsightsSection({ childId }: AIInsightsSectionProps) {
         </Box>
     );
 }
-
-import { Grid } from '@mui/material';

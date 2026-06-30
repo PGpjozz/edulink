@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
+import { validateGradeScore } from '@/lib/assessment-utils';
 
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -87,7 +88,7 @@ export async function POST(req: Request) {
 
         const assessment = await prisma.assessment.findFirst({
             where: { id: assessmentId, subject: { schoolId: auth.schoolId as string } },
-            select: { id: true, subject: { select: { teacherId: true } } }
+            select: { id: true, totalMarks: true, subject: { select: { teacherId: true } } }
         });
 
         if (!assessment) {
@@ -107,6 +108,14 @@ export async function POST(req: Request) {
         const learnerIds = grades.map((g: any) => g.learnerId).filter(Boolean);
         if (learnerIds.length !== grades.length) {
             return new NextResponse('Invalid grades payload', { status: 400 });
+        }
+
+        for (const g of grades) {
+            const score = Number(g.score);
+            const validation = validateGradeScore(score, assessment.totalMarks);
+            if (!validation.valid) {
+                return NextResponse.json({ error: validation.error, learnerId: g.learnerId }, { status: 400 });
+            }
         }
 
         const validLearnerCount = await prisma.learnerProfile.count({

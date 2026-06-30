@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
+import { formatAssessmentTitle } from '@/lib/assessment-utils';
 
 export async function GET(req: Request) {
     const auth = await requireAuth({ requireSchoolId: true });
@@ -28,7 +29,7 @@ export async function GET(req: Request) {
                 subjectId,
                 subject: { schoolId: auth.schoolId as string }
             },
-            orderBy: { date: 'asc' },
+            orderBy: [{ term: 'desc' }, { date: 'desc' }],
             include: {
                 _count: { select: { grades: true } }
             }
@@ -46,17 +47,30 @@ export async function POST(req: Request) {
     if (auth instanceof NextResponse) return auth;
 
     try {
-        const body = await readJson<any>(req);
+        const body = await readJson<{
+            subjectId?: string;
+            title?: string;
+            term?: string;
+            paper?: string;
+            type?: string;
+            totalMarks?: number | string;
+            weight?: number | string;
+            date?: string;
+        }>(req);
         if (body instanceof NextResponse) return body;
-        const { subjectId, title, type, totalMarks, weight, date } = body;
+        const { subjectId, title, term, paper, type, totalMarks, weight, date } = body;
 
-        if (!subjectId || !title || !type || totalMarks === undefined || weight === undefined || !date) {
-            return new NextResponse('Missing required fields', { status: 400 });
+        if (!subjectId || !type || totalMarks === undefined || weight === undefined || !date) {
+            return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+        }
+
+        if (!term?.trim() && !title?.trim()) {
+            return NextResponse.json({ error: 'Term or title is required' }, { status: 400 });
         }
 
         const subject = await prisma.subject.findFirst({
             where: { id: subjectId, schoolId: auth.schoolId as string },
-            select: { id: true, teacherId: true }
+            select: { id: true, name: true, teacherId: true }
         });
 
         if (!subject) {
@@ -76,20 +90,30 @@ export async function POST(req: Request) {
 
         const totalMarksNum = Number(totalMarks);
         const weightNum = Number(weight);
-        if (!Number.isFinite(totalMarksNum) || !Number.isFinite(weightNum)) {
-            return new NextResponse('Invalid numeric fields', { status: 400 });
+        if (!Number.isFinite(totalMarksNum) || totalMarksNum <= 0 || !Number.isFinite(weightNum)) {
+            return NextResponse.json({ error: 'Invalid numeric fields' }, { status: 400 });
         }
 
         const dateObj = new Date(date);
         if (Number.isNaN(dateObj.getTime())) {
-            return new NextResponse('Invalid date', { status: 400 });
+            return NextResponse.json({ error: 'Invalid date' }, { status: 400 });
         }
+
+        const resolvedTitle = formatAssessmentTitle({
+            term: term?.trim(),
+            paper: paper?.trim(),
+            title: title?.trim(),
+            type,
+            subjectName: subject.name,
+        });
 
         const assessment = await prisma.assessment.create({
             data: {
                 subjectId,
-                title,
-                type, // TEST, EXAM, ASSIGNMENT
+                title: resolvedTitle,
+                term: term?.trim() || null,
+                paper: paper?.trim() || null,
+                type,
                 totalMarks: totalMarksNum,
                 weight: weightNum,
                 date: dateObj
@@ -102,7 +126,7 @@ export async function POST(req: Request) {
             action: 'CREATE_ASSESSMENT',
             entity: 'ASSESSMENT',
             entityId: assessment.id,
-            details: { subjectId, title, type }
+            details: { subjectId, title: resolvedTitle, term, paper, type }
         });
 
         return NextResponse.json(assessment);

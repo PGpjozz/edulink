@@ -114,6 +114,7 @@ model User {
   announcementsAuthored Announcement[] @relation("AnnouncementAuthor")
   homeworkCreated  Homework[]    @relation("HomeworkTeacher")
   invitesSent      InviteToken[] @relation("InvitesSent")
+  reportCommentsAuthored ReportComment[] @relation("ReportCommentTeacher")
 
   @@unique([email])
   // Learner login by ID + School? Or just ID globally? 
@@ -147,6 +148,7 @@ model LearnerProfile {
   aiInsights      AIInsight[]
   quizAttempts    QuizAttempt[]
   homeworkSubmissions HomeworkSubmission[]
+  reportComments  ReportComment[]
 
   @@map("learner_profiles")
 }
@@ -222,6 +224,7 @@ model Subject {
   quizzes        Quiz[]
   classSubjects  ClassSubject[]
   homework       Homework[]
+  reportComments ReportComment[]
   
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
@@ -268,7 +271,9 @@ model Assessment {
   subjectId      String
   subject        Subject       @relation(fields: [subjectId], references: [id])
   
-  title          String        // e.g. "Term 1 Test"
+  title          String        // Display name, auto-generated from term/paper when set
+  term           String?       // e.g. "Term 3, 2026"
+  paper          String?       // e.g. "Paper 2"
   type           String        // TEST, EXAM, ASSIGNMENT
   date           DateTime
   
@@ -611,6 +616,25 @@ model AIInsight {
   createdAt      DateTime      @default(now())
 
   @@map("ai_insights")
+}
+
+model ReportComment {
+  id         String         @id @default(uuid())
+  learnerId  String
+  learner    LearnerProfile @relation(fields: [learnerId], references: [id], onDelete: Cascade)
+  subjectId  String
+  subject    Subject        @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  teacherId  String
+  teacher    User           @relation("ReportCommentTeacher", fields: [teacherId], references: [id], onDelete: Cascade)
+  term       String
+  comment    String
+  tone       String?
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+
+  @@unique([learnerId, subjectId, term])
+  @@index([learnerId, term])
+  @@map("report_comments")
 }
 
 enum ApplicationStatus {

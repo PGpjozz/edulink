@@ -24,7 +24,8 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    Autocomplete
+    Autocomplete,
+    Alert,
 } from '@mui/material';
 import {
     Add,
@@ -49,6 +50,7 @@ export default function BehaviorLedger() {
     const [learners, setLearners] = useState<LearnerSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [submitError, setSubmitError] = useState('');
     const [formData, setFormData] = useState({
         learnerId: '',
         type: 'MERIT',
@@ -80,6 +82,11 @@ export default function BehaviorLedger() {
     }, []);
 
     const handleSubmit = async () => {
+        setSubmitError('');
+        if (!formData.learnerId || !formData.reason.trim()) {
+            setSubmitError('Please select a learner and enter a reason');
+            return;
+        }
         try {
             const res = await fetch('/api/behavior', {
                 method: 'POST',
@@ -90,9 +97,11 @@ export default function BehaviorLedger() {
                 setDialogOpen(false);
                 fetchData();
                 setFormData({ learnerId: '', type: 'MERIT', category: 'ACADEMIC', points: 1, reason: '' });
+            } else {
+                setSubmitError('Failed to save record. Please try again.');
             }
         } catch {
-            // swallow; error feedback could be added
+            setSubmitError('Failed to save record. Please try again.');
         }
     };
 
@@ -198,6 +207,7 @@ export default function BehaviorLedger() {
             <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>Record Behavioral Event</DialogTitle>
                 <DialogContent>
+                    {submitError && <Alert severity="error" sx={{ mb: 2 }}>{submitError}</Alert>}
                     <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <Autocomplete
                             options={learners}

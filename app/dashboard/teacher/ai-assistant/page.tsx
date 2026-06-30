@@ -26,20 +26,45 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AIAssistant() {
-    type Learner = { id: string; user: { firstName: string; lastName: string } };
+    type Learner = { id: string; user: { firstName: string; lastName: string }; class?: { grade?: string } };
     type SubjectSummary = { id: string; name: string; grade: string };
-    type ReportResult = { comment: string; dataPoints: { avgScore: number; attendanceRate: number; assessmentsCount: number } };
+    type ReportResult = {
+        comment: string;
+        dataPoints: {
+            avgScore: number;
+            assessmentAverage?: number;
+            quizAverage?: number;
+            attendanceRate: number;
+            assessmentsCount: number;
+            quizzesCount?: number;
+        };
+    };
 
     const [learners, setLearners] = useState<Learner[]>([]);
     const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [copied, setCopied] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const [saving, setSaving] = useState(false);
 
     // Selection state
     const [selectedLearner, setSelectedLearner] = useState('');
     const [selectedSubject, setSelectedSubject] = useState('');
     const [tone, setTone] = useState('professional');
     const [result, setResult] = useState<ReportResult | null>(null);
+
+    const selectedLearnerProfile = learners.find((l) => l.id === selectedLearner);
+    const filteredSubjects = selectedLearnerProfile?.class?.grade
+        ? subjects.filter((s) => s.grade === selectedLearnerProfile.class?.grade)
+        : subjects;
+
+    useEffect(() => {
+        if (selectedSubject && !filteredSubjects.some((s) => s.id === selectedSubject)) {
+            setSelectedSubject('');
+        }
+    }, [selectedLearner, filteredSubjects, selectedSubject]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -48,10 +73,10 @@ export default function AIAssistant() {
                     fetch('/api/school/learners'),
                     fetch('/api/subjects')
                 ]);
-                const lJson: Learner[] = await lRes.json();
-                const sJson: SubjectSummary[] = await sRes.json();
-                setLearners(lJson);
-                setSubjects(sJson);
+                const lJson: Learner[] = lRes.ok ? await lRes.json() : [];
+                const sJson: SubjectSummary[] = sRes.ok ? await sRes.json() : [];
+                setLearners(Array.isArray(lJson) ? lJson : []);
+                setSubjects(Array.isArray(sJson) ? sJson : []);
             } catch (err) {
                 console.error(err);
             } finally {
@@ -64,24 +89,66 @@ export default function AIAssistant() {
     const handleGenerate = async () => {
         setGenerating(true);
         setResult(null);
+        setError(null);
+        setCopied(false);
         try {
             const res = await fetch('/api/ai/reports', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ learnerId: selectedLearner, subjectId: selectedSubject, tone })
             });
-            const data: ReportResult = await res.json();
+            const data = await res.json();
+            if (!res.ok) {
+                setError(data.error || 'Failed to generate comment');
+                return;
+            }
+            if (!data.comment || !data.dataPoints) {
+                setError('Received an invalid response from the server');
+                return;
+            }
             setResult(data);
-        } catch (err) {
-            console.error(err);
+            setSaved(false);
+        } catch {
+            setError('Failed to generate comment. Please try again.');
         } finally {
             setGenerating(false);
         }
     };
 
-    const copyToClipboard = () => {
+    const copyToClipboard = async () => {
         if (result?.comment) {
-            navigator.clipboard.writeText(result.comment);
+            await navigator.clipboard.writeText(result.comment);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
+    const saveToReport = async () => {
+        if (!result?.comment || !selectedLearner || !selectedSubject) return;
+        setSaving(true);
+        setSaved(false);
+        try {
+            const res = await fetch('/api/report-comments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    learnerId: selectedLearner,
+                    subjectId: selectedSubject,
+                    comment: result.comment,
+                    tone,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                setError(data.error || 'Failed to save comment to report');
+                return;
+            }
+            setSaved(true);
+            setError(null);
+        } catch {
+            setError('Failed to save comment to report');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -108,7 +175,10 @@ export default function AIAssistant() {
                                 <Select
                                     value={selectedLearner}
                                     label="Select Student"
-                                    onChange={(e) => setSelectedLearner(e.target.value)}
+                                    onChange={(e) => {
+                                        setSelectedLearner(e.target.value);
+                                        setResult(null);
+                                    }}
                                 >
                                     {learners.map((l) => (
                                         <MenuItem key={l.id} value={l.id}>{l.user.firstName} {l.user.lastName}</MenuItem>
@@ -123,7 +193,7 @@ export default function AIAssistant() {
                                     label="Subject"
                                     onChange={(e) => setSelectedSubject(e.target.value)}
                                 >
-                                    {subjects.map((s) => (
+                                    {filteredSubjects.map((s) => (
                                         <MenuItem key={s.id} value={s.id}>{s.name} (Gr {s.grade})</MenuItem>
                                     ))}
                                 </Select>
@@ -152,12 +222,15 @@ export default function AIAssistant() {
                             >
                                 Generate AI Comment
                             </Button>
+                            {error && (
+                                <Alert severity="error">{error}</Alert>
+                            )}
                         </Stack>
                     </Paper>
 
                     <Alert severity="info" sx={{ mt: 3, borderRadius: 3 }}>
                         <Typography variant="caption">
-                            <strong>Note:</strong> AI comments are based on recent quiz scores and attendance records from the EduLink Data Hub.
+                            <strong>Note:</strong> Comments are generated from assessment averages, quiz results, and attendance records for the selected subject.
                         </Typography>
                     </Alert>
                 </Grid>
@@ -181,20 +254,44 @@ export default function AIAssistant() {
                                     <Divider sx={{ my: 4 }} />
 
                                     <Typography variant="subtitle2" gutterBottom>Data Insights Used:</Typography>
-                                    <Stack direction="row" spacing={2} mb={4}>
-                                        <Chip label={`Avg Score: ${Math.round(result.dataPoints.avgScore)}%`} color="success" variant="outlined" />
-                                        <Chip label={`Attendance: ${Math.round(result.dataPoints.attendanceRate)}%`} color="primary" variant="outlined" />
-                                        <Chip label={`${result.dataPoints.assessmentsCount} Tests`} variant="outlined" />
+                                    <Stack direction="row" spacing={2} mb={4} flexWrap="wrap" useFlexGap>
+                                        {(result.dataPoints.assessmentAverage ?? 0) > 0 && (
+                                            <Chip label={`Assessments: ${Math.round(result.dataPoints.assessmentAverage!)}%`} color="success" variant="outlined" />
+                                        )}
+                                        {(result.dataPoints.quizAverage ?? 0) > 0 && (
+                                            <Chip label={`Quizzes: ${Math.round(result.dataPoints.quizAverage!)}%`} color="secondary" variant="outlined" />
+                                        )}
+                                        {result.dataPoints.attendanceRate > 0 && (
+                                            <Chip label={`Attendance: ${Math.round(result.dataPoints.attendanceRate)}%`} color="primary" variant="outlined" />
+                                        )}
+                                        <Chip label={`${result.dataPoints.assessmentsCount} assessments`} variant="outlined" />
+                                        {(result.dataPoints.quizzesCount ?? 0) > 0 && (
+                                            <Chip label={`${result.dataPoints.quizzesCount} quizzes`} variant="outlined" />
+                                        )}
                                     </Stack>
 
-                                    <Stack direction="row" spacing={2}>
+                                    <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
                                         <Button variant="contained" startIcon={<ContentCopy />} onClick={copyToClipboard} sx={{ borderRadius: 2 }}>
-                                            Copy Comment
+                                            {copied ? 'Copied!' : 'Copy Comment'}
+                                        </Button>
+                                        <Button
+                                            variant="contained"
+                                            color="secondary"
+                                            disabled={saving}
+                                            onClick={saveToReport}
+                                            sx={{ borderRadius: 2 }}
+                                        >
+                                            {saving ? 'Saving…' : saved ? 'Saved to Report' : 'Save to Report'}
                                         </Button>
                                         <Button variant="outlined" startIcon={<Refresh />} onClick={handleGenerate} sx={{ borderRadius: 2 }}>
                                             Regenerate
                                         </Button>
                                     </Stack>
+                                    {saved && (
+                                        <Alert severity="success" sx={{ mt: 2 }}>
+                                            This comment will appear on the learner&apos;s term report card for this subject.
+                                        </Alert>
+                                    )}
                                 </Paper>
                             </motion.div>
                         ) : (

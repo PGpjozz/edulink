@@ -52,7 +52,7 @@ export default function SubjectHub({ subjectId, role }: SubjectHubProps) {
         try {
             const [resRes, assessRes] = await Promise.all([
                 fetch(`/api/subjects/${subjectId}/resources`),
-                fetch(`/api/subjects/${subjectId}/assessments`) // Reusing existing assessments endpoint if possible or just filter
+                fetch(`/api/assessments?subjectId=${subjectId}`)
             ]);
             setResources(await resRes.json());
             const allAssess = await assessRes.json();
