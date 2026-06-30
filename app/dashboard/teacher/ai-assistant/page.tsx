@@ -46,6 +46,8 @@ export default function AIAssistant() {
     const [generating, setGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [copied, setCopied] = useState(false);
+    const [saved, setSaved] = useState(false);
+    const [saving, setSaving] = useState(false);
 
     // Selection state
     const [selectedLearner, setSelectedLearner] = useState('');
@@ -105,6 +107,7 @@ export default function AIAssistant() {
                 return;
             }
             setResult(data);
+            setSaved(false);
         } catch {
             setError('Failed to generate comment. Please try again.');
         } finally {
@@ -117,6 +120,35 @@ export default function AIAssistant() {
             await navigator.clipboard.writeText(result.comment);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
+        }
+    };
+
+    const saveToReport = async () => {
+        if (!result?.comment || !selectedLearner || !selectedSubject) return;
+        setSaving(true);
+        setSaved(false);
+        try {
+            const res = await fetch('/api/report-comments', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    learnerId: selectedLearner,
+                    subjectId: selectedSubject,
+                    comment: result.comment,
+                    tone,
+                }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                setError(data.error || 'Failed to save comment to report');
+                return;
+            }
+            setSaved(true);
+            setError(null);
+        } catch {
+            setError('Failed to save comment to report');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -238,14 +270,28 @@ export default function AIAssistant() {
                                         )}
                                     </Stack>
 
-                                    <Stack direction="row" spacing={2}>
+                                    <Stack direction="row" spacing={2} flexWrap="wrap" useFlexGap>
                                         <Button variant="contained" startIcon={<ContentCopy />} onClick={copyToClipboard} sx={{ borderRadius: 2 }}>
                                             {copied ? 'Copied!' : 'Copy Comment'}
+                                        </Button>
+                                        <Button
+                                            variant="contained"
+                                            color="secondary"
+                                            disabled={saving}
+                                            onClick={saveToReport}
+                                            sx={{ borderRadius: 2 }}
+                                        >
+                                            {saving ? 'Saving…' : saved ? 'Saved to Report' : 'Save to Report'}
                                         </Button>
                                         <Button variant="outlined" startIcon={<Refresh />} onClick={handleGenerate} sx={{ borderRadius: 2 }}>
                                             Regenerate
                                         </Button>
                                     </Stack>
+                                    {saved && (
+                                        <Alert severity="success" sx={{ mt: 2 }}>
+                                            This comment will appear on the learner&apos;s term report card for this subject.
+                                        </Alert>
+                                    )}
                                 </Paper>
                             </motion.div>
                         ) : (

@@ -15,13 +15,14 @@ import {
     Grid,
     Stack
 } from '@mui/material';
-import { Print, Verified, School, CalendarMonth } from '@mui/icons-material';
+import { Print, Verified, School, CalendarMonth, Download } from '@mui/icons-material';
 
 type ReportSubject = {
     subjectName: string;
     subjectCode?: string;
     average: number | null;
     comment?: string;
+    isTeacherComment?: boolean;
 };
 
 type ReportCardData = {
@@ -42,6 +43,7 @@ type ReportCardData = {
 
 interface ReportCardProps {
     data: ReportCardData;
+    pdfQuery?: string;
 }
 
 const REPORT_TEXT = '#0f172a';
@@ -67,7 +69,7 @@ function achievementStyle(average: number | null) {
     return { bgcolor: 'rgba(239, 68, 68, 0.12)', color: '#b91c1c' };
 }
 
-export default function ReportCard({ data }: ReportCardProps) {
+export default function ReportCard({ data, pdfQuery = '' }: ReportCardProps) {
     if (!data) return null;
 
     const termLabel = data.term ?? 'Current Term';
@@ -186,6 +188,11 @@ export default function ReportCard({ data }: ReportCardProps) {
                                 </TableCell>
                                 <TableCell sx={{ fontStyle: 'italic', color: REPORT_MUTED, fontSize: '0.95rem', maxWidth: 360 }}>
                                     {sub.comment || 'No comment provided.'}
+                                    {sub.isTeacherComment && (
+                                        <Typography variant="caption" display="block" sx={{ color: '#2563eb', mt: 0.5, fontStyle: 'normal' }}>
+                                            Teacher-approved comment
+                                        </Typography>
+                                    )}
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -208,15 +215,25 @@ export default function ReportCard({ data }: ReportCardProps) {
                 </Box>
             </Box>
 
-            <Box mt={8} display="flex" justifyContent="center" className="no-print" sx={{ position: 'relative', zIndex: 2 }}>
+            <Box mt={8} display="flex" justifyContent="center" gap={2} flexWrap="wrap" className="no-print" sx={{ position: 'relative', zIndex: 2 }}>
                 <Button
                     variant="contained"
                     size="large"
+                    startIcon={<Download />}
+                    href={`/api/learner/report/pdf${pdfQuery}`}
+                    component="a"
+                    sx={{ borderRadius: 3, px: 4, py: 1.5, fontWeight: 'bold', boxShadow: '0 10px 20px rgba(37, 99, 235, 0.2)' }}
+                >
+                    Download PDF
+                </Button>
+                <Button
+                    variant="outlined"
+                    size="large"
                     startIcon={<Print />}
                     onClick={() => window.print()}
-                    sx={{ borderRadius: 3, px: 6, py: 1.5, fontWeight: 'bold', boxShadow: '0 10px 20px rgba(37, 99, 235, 0.2)' }}
+                    sx={{ borderRadius: 3, px: 4, py: 1.5, fontWeight: 'bold' }}
                 >
-                    Print / Save as PDF
+                    Print
                 </Button>
             </Box>
 

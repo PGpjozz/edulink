@@ -5,6 +5,7 @@ import {
     buildLearnerReportData,
     resolveLearnerProfileForReport,
 } from '@/lib/report-service';
+import { generateReportPdf, reportPdfFilename } from '@/lib/report-pdf';
 import { getCurrentTermLabel } from '@/lib/report-generation';
 
 async function authorizeProfileAccess(auth: AuthContext, profileId: string) {
@@ -28,10 +29,6 @@ export async function GET(req: Request) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    if ((auth.role === 'PRINCIPAL' || auth.role === 'SCHOOL_ADMIN' || auth.role === 'SCHOOL_OWNER' || auth.role === 'TEACHER' || auth.role === 'HOD') && !learnerProfileId && !childId) {
-        return NextResponse.json({ error: 'learnerId or childId required' }, { status: 400 });
-    }
-
     try {
         const profileId = await resolveLearnerProfileForReport(auth, {
             childUserId: childId,
@@ -51,9 +48,18 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: 'Learner not found' }, { status: 404 });
         }
 
-        return NextResponse.json(data);
+        const pdf = await generateReportPdf(data);
+        const filename = reportPdfFilename(data);
+
+        return new NextResponse(new Uint8Array(pdf), {
+            headers: {
+                'Content-Type': 'application/pdf',
+                'Content-Disposition': `attachment; filename="${filename}"`,
+                'Cache-Control': 'no-store',
+            },
+        });
     } catch (error) {
-        console.error('Learner report error:', error);
+        console.error('Report PDF error:', error);
         return new NextResponse('Internal Error', { status: 500 });
     }
 }

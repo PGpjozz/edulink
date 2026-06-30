@@ -223,7 +223,7 @@ export default function TeacherDashboard() {
                     <Typography variant="h5" fontWeight="bold" gutterBottom>
                         {selectedClass?.name} - Weekly Schedule
                     </Typography>
-                    <TimetableView timetable={selectedClass?.timetable} />
+                    <TimetableView timetable={selectedClass?.timetable as Record<string, { period?: number; p?: number; subject?: string; subjectName?: string }[]> | null | undefined} />
                     <Box mt={2} display="flex" justifyContent="flex-end">
                         <Button onClick={() => setTimetableOpen(false)}>Close</Button>
                     </Box>
