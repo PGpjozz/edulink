@@ -23,6 +23,8 @@ export async function GET(req: Request) {
                 role: true,
                 isActive: true,
                 permissions: true,
+                staffTitle: true,
+                employeeNumber: true,
                 teacherProfile: { select: { id: true } }
             },
             orderBy: { role: 'asc' }
@@ -48,13 +50,17 @@ export async function POST(req: Request) {
     try {
         const body = await readJson<any>(req);
         if (body instanceof NextResponse) return body;
-        const { firstName, lastName, email, role, idNumber, password: rawPassword, grade, learnerProfileId, departmentId, alsoTeaches } = body;
+        const {
+            firstName, lastName, email, role, idNumber, password: rawPassword, grade,
+            learnerProfileId, departmentId, alsoTeaches,
+            employeeNumber, staffTitle, gender,
+        } = body;
 
         if (!firstName || !lastName || !role) {
             return new NextResponse('Missing required fields', { status: 400 });
         }
 
-        const allowedRoles = ['TEACHER', 'LEARNER', 'SCHOOL_ADMIN', 'PRINCIPAL', 'PARENT', 'HOD'];
+        const allowedRoles = ['TEACHER', 'LEARNER', 'SCHOOL_ADMIN', 'PRINCIPAL', 'PARENT', 'HOD', 'STAFF'];
         if (!allowedRoles.includes(role)) {
             return new NextResponse('Invalid role', { status: 400 });
         }
@@ -101,6 +107,9 @@ export async function POST(req: Request) {
                 schoolId: auth.schoolId as string,
                 isActive: true,
                 mustChangePassword: usesDefaultPassword,
+                gender: gender || undefined,
+                employeeNumber: employeeNumber || undefined,
+                staffTitle: role === 'STAFF' ? (staffTitle || undefined) : undefined,
                 ...(role === 'LEARNER' && {
                     learnerProfile: { create: { grade: grade as string } }
                 }),

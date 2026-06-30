@@ -53,6 +53,9 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
     const [successInfo, setSuccessInfo] = useState('');
     const [alsoTeaches, setAlsoTeaches] = useState(false);
     const [learners, setLearners] = useState<LearnerOption[]>([]);
+    const [employeeNumber, setEmployeeNumber] = useState('');
+    const [staffTitle, setStaffTitle] = useState('');
+    const [gender, setGender] = useState('');
 
     useEffect(() => {
         if (open && role === 'PARENT') {
@@ -74,6 +77,7 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
         setFirstName(''); setLastName(''); setEmail(''); setIdNumber('');
         setGrade('8'); setLearnerProfileId(''); setPassword(''); setRole('TEACHER');
         setAlsoTeaches(false); setShowPassword(false); setError('');
+        setEmployeeNumber(''); setStaffTitle(''); setGender('');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -97,6 +101,9 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
                     grade: role === 'LEARNER' ? grade : undefined,
                     learnerProfileId: role === 'PARENT' && learnerProfileId ? learnerProfileId : undefined,
                     alsoTeaches: role === 'SCHOOL_ADMIN' ? alsoTeaches : undefined,
+                    employeeNumber: role !== 'LEARNER' && role !== 'PARENT' ? (employeeNumber || undefined) : undefined,
+                    staffTitle: role === 'STAFF' ? (staffTitle || undefined) : undefined,
+                    gender: gender || undefined,
                 }),
             });
 
@@ -163,8 +170,44 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
                                 <MenuItem value="LEARNER">Learner</MenuItem>
                                 <MenuItem value="PARENT">Parent / Guardian</MenuItem>
                                 <MenuItem value="SCHOOL_ADMIN">Admin</MenuItem>
+                                <MenuItem value="STAFF">Support / Non-teaching staff</MenuItem>
                             </Select>
                         </FormControl>
+
+                        {role === 'STAFF' && (
+                            <TextField
+                                margin="dense"
+                                label="Job title"
+                                fullWidth
+                                value={staffTitle}
+                                onChange={(e) => setStaffTitle(e.target.value)}
+                                placeholder="e.g. Librarian, Security Officer, School Nurse"
+                                helperText="Describes the non-teaching role (admin, ICT, support, security, etc.)"
+                            />
+                        )}
+
+                        {role !== 'LEARNER' && role !== 'PARENT' && (
+                            <TextField
+                                margin="dense"
+                                label="Employee number"
+                                fullWidth
+                                value={employeeNumber}
+                                onChange={(e) => setEmployeeNumber(e.target.value)}
+                                placeholder="e.g. EMP001"
+                            />
+                        )}
+
+                        {(role === 'LEARNER' || role === 'STAFF') && (
+                            <FormControl fullWidth margin="dense">
+                                <InputLabel>Gender (optional)</InputLabel>
+                                <Select value={gender} label="Gender (optional)" onChange={(e) => setGender(e.target.value)}>
+                                    <MenuItem value=""><em>Not specified</em></MenuItem>
+                                    <MenuItem value="Male">Male</MenuItem>
+                                    <MenuItem value="Female">Female</MenuItem>
+                                    <MenuItem value="Other">Other</MenuItem>
+                                </Select>
+                            </FormControl>
+                        )}
 
                         {role === 'SCHOOL_ADMIN' && (
                             <Box sx={{ mt: 1 }}>

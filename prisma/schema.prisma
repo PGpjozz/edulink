@@ -16,6 +16,7 @@ enum UserRole {
   TEACHER
   LEARNER
   PARENT
+  STAFF // Non-teaching staff (admin, ICT, support, security, maintenance, etc.)
 }
 
 enum BillingTier {
@@ -43,6 +44,13 @@ model School {
   contactEmail   String?
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
+
+  // Registration / official metadata (e.g. South African public schools)
+  emisNumber     String?       // Education Management Information System number
+  district       String?
+  province       String?
+  country        String?       @default("South Africa")
+  schoolType     String?       // e.g. "Public Secondary School"
 
   // Settings
   gradesOffered  String[]      // e.g. ["8", "9", "10", "11", "12"]
@@ -83,8 +91,11 @@ model User {
   
   firstName      String
   lastName       String
-  idNumber       String?       // For learners login
+  idNumber       String?       // For learners login (admission number) / national ID
   phoneNumber    String?
+  gender         String?       // e.g. "Male", "Female", "Other"
+  employeeNumber String?       // Staff/employee number (e.g. EMP001)
+  staffTitle     String?       // Free-text job title for non-teaching STAFF (e.g. "Security Officer")
   
   isActive       Boolean       @default(true)
   deletedAt      DateTime?     // Soft delete

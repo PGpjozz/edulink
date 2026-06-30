@@ -133,6 +133,11 @@ const NAV_ITEMS: Record<string, { label: string; icon: React.ReactNode; path: st
         { label: 'Billing', icon: <Payments />, path: '/dashboard/parent/billing' },
         { label: 'Alerts', icon: <Notifications />, path: '/dashboard/parent/notifications' },
         { label: 'Messages', icon: <Message />, path: '/dashboard/messages' }
+    ],
+    STAFF: [
+        { label: 'My Workspace', icon: <Dashboard />, path: '/dashboard/staff' },
+        { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
+        { label: 'Messages', icon: <Message />, path: '/dashboard/messages' }
     ]
 };
 
