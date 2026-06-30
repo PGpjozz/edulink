@@ -70,7 +70,15 @@ export async function GET(req: Request) {
             }
         });
 
-        const reportData = subjects.map(sub => {
+        const seenCodes = new Set<string>();
+        const uniqueSubjects = subjects.filter(sub => {
+            const key = sub.code || sub.name;
+            if (seenCodes.has(key)) return false;
+            seenCodes.add(key);
+            return true;
+        });
+
+        const reportData = uniqueSubjects.map(sub => {
             const grades = sub.assessments.flatMap(a => a.grades).map(g => {
                 const assessment = sub.assessments.find(as => as.id === g.assessmentId);
                 return assessment ? (g.score / assessment.totalMarks) * 100 : 0;

@@ -11,16 +11,36 @@ export async function GET(req: Request) {
     const subjectId = searchParams.get('subjectId');
 
     try {
+        const where: {
+            subjectId?: string;
+            isPublished?: boolean;
+            subject: { schoolId: string; teacherId?: string; grade?: string };
+        } = {
+            subject: {
+                schoolId: session.user.schoolId as string,
+                teacherId: session.user.role === 'TEACHER' ? session.user.id : undefined
+            }
+        };
+
+        if (subjectId) {
+            where.subjectId = subjectId;
+        }
+
+        if (session.user.role === 'LEARNER') {
+            where.isPublished = true;
+            const learnerProfile = await prisma.learnerProfile.findUnique({
+                where: { userId: session.user.id },
+                include: { class: true }
+            });
+            if (learnerProfile?.class?.grade) {
+                where.subject.grade = learnerProfile.class.grade;
+            }
+        }
+
         const quizzes = await prisma.quiz.findMany({
-            where: {
-                subjectId: subjectId || undefined,
-                subject: {
-                    schoolId: session.user.schoolId as string,
-                    // If teacher, they might only see their subjects
-                    teacherId: session.user.role === 'TEACHER' ? session.user.id : undefined
-                }
-            },
+            where,
             include: {
+                subject: { select: { name: true, grade: true } },
                 _count: { select: { questions: true, attempts: true } }
             },
             orderBy: { createdAt: 'desc' }

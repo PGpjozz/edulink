@@ -14,12 +14,9 @@ import {
     FormControl,
     Stack,
     LinearProgress,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
     CircularProgress,
-    Paper
+    Paper,
+    Alert
 } from '@mui/material';
 import {
     AccessTime,
@@ -60,17 +57,23 @@ export default function QuizTaking() {
     const [answers, setAnswers] = useState<{ [key: string]: string }>({});
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [submitting, setSubmitting] = useState(false);
-    const [result, setResult] = useState<any>(null);
+    const [result, setResult] = useState<{ scorePercentage: number } | null>(null);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         const fetchQuiz = async () => {
             try {
                 const res = await fetch(`/api/school/quizzes/${id}`);
                 const data = await res.json();
+                if (!res.ok) {
+                    setError(data.error || 'Quiz not available.');
+                    return;
+                }
                 setQuiz(data);
                 if (data.timeLimit) setTimeLeft(data.timeLimit * 60);
             } catch (err) {
                 console.error(err);
+                setError('Failed to load quiz.');
             } finally {
                 setLoading(false);
             }
@@ -97,6 +100,7 @@ export default function QuizTaking() {
 
     const handleSubmit = async () => {
         setSubmitting(true);
+        setError('');
         try {
             const res = await fetch(`/api/school/quizzes/${id}`, {
                 method: 'POST',
@@ -104,16 +108,36 @@ export default function QuizTaking() {
                 body: JSON.stringify({ answers })
             });
             const data = await res.json();
+            if (!res.ok) {
+                setError(data.error || 'Failed to submit quiz. Please try again.');
+                return;
+            }
+            if (typeof data.scorePercentage !== 'number' || Number.isNaN(data.scorePercentage)) {
+                setError('Quiz submitted but score could not be calculated.');
+                return;
+            }
             setResult(data);
         } catch (err) {
             console.error(err);
+            setError('Failed to submit quiz. Please check your connection and try again.');
         } finally {
             setSubmitting(false);
         }
     };
 
     if (loading) return <Box display="flex" justifyContent="center" py={10}><CircularProgress /></Box>;
-    if (!quiz || !quiz.questions || quiz.questions.length === 0) return <Box p={4}><Typography>Quiz not found or has no questions.</Typography></Box>;
+    if (!quiz || !quiz.questions || quiz.questions.length === 0) {
+        return (
+            <Container maxWidth="sm" sx={{ mt: 8 }}>
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                    {error || 'Quiz not found or has no questions.'}
+                </Alert>
+                <Button variant="contained" onClick={() => router.push('/dashboard/learner/quizzes')}>
+                    Back to Quizzes
+                </Button>
+            </Container>
+        );
+    }
 
     if (result) return (
         <Container maxWidth="sm" sx={{ mt: 10 }}>
@@ -145,6 +169,11 @@ export default function QuizTaking() {
 
     return (
         <Container maxWidth="md" sx={{ mt: 4, mb: 10 }}>
+            {error && (
+                <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError('')}>
+                    {error}
+                </Alert>
+            )}
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
                 <Box>
                     <Typography variant="h5" fontWeight="bold">{quiz.title}</Typography>

@@ -23,11 +23,32 @@ export async function GET(
 
         if (!quiz) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 });
 
-        // If Learner, hide "isCorrect" to prevent cheating via dev tools
         if (session.user.role === 'LEARNER') {
+            if (!quiz.isPublished) {
+                return NextResponse.json({ error: 'Quiz not available' }, { status: 403 });
+            }
+
+            const learnerProfile = await prisma.learnerProfile.findUnique({
+                where: { userId: session.user.id },
+                include: { class: true }
+            });
+
+            if (!learnerProfile?.class) {
+                return NextResponse.json({ error: 'Learner profile not found' }, { status: 404 });
+            }
+
+            const quizSubject = await prisma.subject.findUnique({
+                where: { id: quiz.subjectId },
+                select: { grade: true, schoolId: true }
+            });
+
+            if (!quizSubject || quizSubject.schoolId !== session.user.schoolId || quizSubject.grade !== learnerProfile.class.grade) {
+                return NextResponse.json({ error: 'Quiz not available for your grade' }, { status: 403 });
+            }
+
             quiz.questions.forEach(q => {
                 q.options.forEach(o => {
-                    delete (o as any).isCorrect;
+                    delete (o as { isCorrect?: boolean }).isCorrect;
                 });
             });
         }
@@ -58,6 +79,28 @@ export async function POST(
 
         if (!quiz) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 });
 
+        if (!quiz.isPublished) {
+            return NextResponse.json({ error: 'Quiz not available' }, { status: 403 });
+        }
+
+        const learnerProfile = await prisma.learnerProfile.findUnique({
+            where: { userId: session.user.id },
+            include: { class: true }
+        });
+
+        if (!learnerProfile) {
+            return NextResponse.json({ error: 'Learner profile not found' }, { status: 404 });
+        }
+
+        const quizSubject = await prisma.subject.findUnique({
+            where: { id: quiz.subjectId },
+            select: { grade: true, schoolId: true }
+        });
+
+        if (!quizSubject || quizSubject.schoolId !== session.user.schoolId || quizSubject.grade !== learnerProfile.class?.grade) {
+            return NextResponse.json({ error: 'Quiz not available for your grade' }, { status: 403 });
+        }
+
         // 1. Calculate Score
         let totalPoints = 0;
         let earnedPoints = 0;
@@ -87,9 +130,7 @@ export async function POST(
         const attempt = await prisma.quizAttempt.create({
             data: {
                 quizId: quiz.id,
-                learnerId: session.user.id, // This should match a LearnerProfile ID. 
-                // WAIT: User.id != LearnerProfile.id. 
-                // I need to find the LearnerProfile for this user first.
+                learnerId: learnerProfile.id,
                 score: scorePercentage,
                 completedAt: new Date(),
                 answers: {

@@ -361,42 +361,44 @@ export async function GET(req: Request) {
         ];
 
         const createdQuizzes: { quizId: string; grade: string; questions: { id: string; options: { id: string; isCorrect: boolean }[] }[] }[] = [];
-        for (const qd of quizDefs) {
-            const subj = allSubjects.find(s => s.name === qd.subjectName && s.grade === '10');
-            if (!subj) continue;
-            let quiz = await prisma.quiz.findFirst({ where: { subjectId: subj.id, title: qd.title } });
-            if (!quiz) {
-                quiz = await prisma.quiz.create({
-                    data: {
-                        subjectId: subj.id, title: qd.title, description: qd.description,
-                        timeLimit: qd.timeLimit, isPublished: true,
-                        questions: {
-                            create: qd.questions.map(q => ({
-                                text: q.text, points: q.points,
-                                options: { create: q.options.map(o => ({ text: o.text, isCorrect: o.correct })) }
-                            }))
-                        }
-                    },
+        for (const cls of classes) {
+            for (const qd of quizDefs) {
+                const subj = allSubjects.find(s => s.name === qd.subjectName && s.grade === cls.grade);
+                if (!subj) continue;
+                let quiz = await prisma.quiz.findFirst({ where: { subjectId: subj.id, title: qd.title } });
+                if (!quiz) {
+                    quiz = await prisma.quiz.create({
+                        data: {
+                            subjectId: subj.id, title: qd.title, description: qd.description,
+                            timeLimit: qd.timeLimit, isPublished: true,
+                            questions: {
+                                create: qd.questions.map(q => ({
+                                    text: q.text, points: q.points,
+                                    options: { create: q.options.map(o => ({ text: o.text, isCorrect: o.correct })) }
+                                }))
+                            }
+                        },
+                        include: { questions: { include: { options: true } } }
+                    });
+                }
+                const fullQuiz = await prisma.quiz.findFirst({
+                    where: { id: quiz.id },
                     include: { questions: { include: { options: true } } }
                 });
-            }
-            const fullQuiz = await prisma.quiz.findFirst({
-                where: { id: quiz.id },
-                include: { questions: { include: { options: true } } }
-            });
-            if (fullQuiz) {
-                createdQuizzes.push({
-                    quizId: quiz.id, grade: '10',
-                    questions: fullQuiz.questions.map(q => ({ id: q.id, options: q.options.map(o => ({ id: o.id, isCorrect: o.isCorrect })) }))
-                });
+                if (fullQuiz) {
+                    createdQuizzes.push({
+                        quizId: quiz.id, grade: cls.grade,
+                        questions: fullQuiz.questions.map(q => ({ id: q.id, options: q.options.map(o => ({ id: o.id, isCorrect: o.isCorrect })) }))
+                    });
+                }
             }
         }
         counts.quizzes = createdQuizzes.length;
 
-        // Quiz attempts by grade 10 learners
-        const gr10Learners = learnerProfiles.filter(lp => lp.grade === '10');
+        // Quiz attempts by learners in matching grades
         for (const quiz of createdQuizzes) {
-            for (const lp of gr10Learners) {
+            const gradeLearners = learnerProfiles.filter(lp => lp.grade === quiz.grade);
+            for (const lp of gradeLearners) {
                 const exists = await prisma.quizAttempt.findFirst({ where: { quizId: quiz.quizId, learnerId: lp.id } });
                 if (!exists) {
                     const answers: { questionId: string; selectedOptionId: string }[] = [];
