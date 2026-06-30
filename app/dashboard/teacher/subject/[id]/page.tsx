@@ -14,33 +14,55 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { useRouter, useParams } from 'next/navigation';
 import AddAssessmentModal from './AddAssessmentModal';
 import SubjectHub from '@/app/components/SubjectHub';
-
+import { formatAssessmentShortLabel } from '@/lib/assessment-utils';
 
 interface AssessmentData {
     id: string;
     title: string;
+    term?: string | null;
+    paper?: string | null;
     type: string;
     date: string;
     totalMarks: number;
     weight: number;
+    _count?: { grades: number };
 }
 
 const baseColumns: GridColDef[] = [
-    { field: 'title', headerName: 'Title', flex: 1 },
     {
-        field: 'type', headerName: 'Type', width: 130,
+        field: 'label',
+        headerName: 'Assessment',
+        flex: 1.2,
+        valueGetter: (_value, row: AssessmentData) =>
+            formatAssessmentShortLabel({
+                term: row.term,
+                paper: row.paper,
+                title: row.title,
+                type: row.type,
+            }),
+    },
+    { field: 'term', headerName: 'Term', width: 130 },
+    { field: 'paper', headerName: 'Paper', width: 110 },
+    {
+        field: 'type', headerName: 'Type', width: 120,
         renderCell: (params) => (
             <Chip label={params.value} size="small" variant="outlined" />
         )
     },
     {
-        field: 'date', headerName: 'Date', width: 150,
+        field: 'date', headerName: 'Date', width: 120,
         valueFormatter: (value) => new Date(value).toLocaleDateString()
     },
-    { field: 'totalMarks', headerName: 'Total Marks', width: 110 },
+    { field: 'totalMarks', headerName: 'Out of', width: 90 },
     {
-        field: 'weight', headerName: 'Weight', width: 100,
+        field: 'weight', headerName: 'Weight', width: 90,
         valueFormatter: (value) => `${value}%`
+    },
+    {
+        field: 'graded',
+        headerName: 'Marked',
+        width: 90,
+        valueGetter: (_value, row: AssessmentData) => row._count?.grades ?? 0,
     },
 ];
 
@@ -52,28 +74,37 @@ export default function SubjectDetail() {
     const columns: GridColDef[] = [
         ...baseColumns,
         {
-            field: 'actions', headerName: 'Actions', flex: 1,
+            field: 'actions', headerName: 'Actions', flex: 0.8,
             renderCell: (params) => (
                 <Button
                     variant="contained"
                     size="small"
                     onClick={() => router.push(`/dashboard/teacher/subject/${subjectId}/assessment/${params.row.id}`)}
                 >
-                    Grade
+                    Enter marks
                 </Button>
             )
         }
     ];
 
     const [assessments, setAssessments] = useState<AssessmentData[]>([]);
+    const [subjectName, setSubjectName] = useState('');
     const [loading, setLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     const fetchAssessments = useCallback(() => {
         Promise.resolve().then(() => setLoading(true));
-        fetch(`/api/assessments?subjectId=${subjectId}`)
-            .then(res => res.json())
-            .then(data => setAssessments(data))
+        Promise.all([
+            fetch(`/api/assessments?subjectId=${subjectId}`).then((res) => res.json()),
+            fetch('/api/subjects').then((res) => (res.ok ? res.json() : [])),
+        ])
+            .then(([assessmentData, subjects]) => {
+                setAssessments(Array.isArray(assessmentData) ? assessmentData : []);
+                const subject = Array.isArray(subjects)
+                    ? subjects.find((s: { id: string }) => s.id === subjectId)
+                    : null;
+                setSubjectName(subject?.name ?? '');
+            })
             .catch(console.error)
             .finally(() => setLoading(false));
     }, [subjectId]);
@@ -100,7 +131,7 @@ export default function SubjectDetail() {
                         Subject Management
                     </Typography>
                     <Typography color="text.secondary">
-                        Manage assessments and grades
+                        Create paper-based assessments and enter marks after marking scripts
                     </Typography>
                 </Box>
                 <Button
@@ -135,6 +166,7 @@ export default function SubjectDetail() {
                 onClose={() => setIsModalOpen(false)}
                 onSuccess={fetchAssessments}
                 subjectId={subjectId}
+                subjectName={subjectName}
             />
         </Container>
     );

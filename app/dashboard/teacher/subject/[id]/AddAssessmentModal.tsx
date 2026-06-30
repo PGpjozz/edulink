@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
     Dialog,
     DialogTitle,
@@ -13,24 +13,57 @@ import {
     Select,
     MenuItem,
     Alert,
-    Box
+    Box,
+    Typography,
+    Autocomplete,
 } from '@mui/material';
+import { getCurrentTermLabel } from '@/lib/report-generation';
+import { formatAssessmentTitle, getTermOptions } from '@/lib/assessment-utils';
 
 interface AddAssessmentModalProps {
     open: boolean;
     onClose: () => void;
     onSuccess: () => void;
     subjectId: string;
+    subjectName?: string;
 }
 
-export default function AddAssessmentModal({ open, onClose, onSuccess, subjectId }: AddAssessmentModalProps) {
+const PAPER_SUGGESTIONS = [
+    'Paper 1',
+    'Paper 2',
+    'Paper 3',
+    'Test 1',
+    'Test 2',
+    'Assignment 1',
+    'Assignment 2',
+    'Practical',
+];
+
+export default function AddAssessmentModal({
+    open,
+    onClose,
+    onSuccess,
+    subjectId,
+    subjectName = '',
+}: AddAssessmentModalProps) {
+    const [term, setTerm] = useState(getCurrentTermLabel());
+    const [paper, setPaper] = useState('');
     const [title, setTitle] = useState('');
-    const [type, setType] = useState('TEST');
-    const [totalMarks, setTotalMarks] = useState('');
-    const [weight, setWeight] = useState('');
+    const [type, setType] = useState('EXAM');
+    const [totalMarks, setTotalMarks] = useState('100');
+    const [weight, setWeight] = useState('25');
     const [date, setDate] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+
+    const termOptions = useMemo(() => getTermOptions(), []);
+    const previewTitle = formatAssessmentTitle({
+        term,
+        paper,
+        title,
+        type,
+        subjectName,
+    });
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -43,26 +76,30 @@ export default function AddAssessmentModal({ open, onClose, onSuccess, subjectId
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     subjectId,
-                    title,
+                    term,
+                    paper: paper || undefined,
+                    title: title || undefined,
                     type,
                     totalMarks,
                     weight,
-                    date
+                    date,
                 }),
             });
 
-            if (!res.ok) throw new Error('Failed to create assessment');
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Failed to create assessment');
 
             onSuccess();
             onClose();
-            // Reset
+            setTerm(getCurrentTermLabel());
+            setPaper('');
             setTitle('');
-            setType('TEST');
-            setTotalMarks('');
-            setWeight('');
+            setType('EXAM');
+            setTotalMarks('100');
+            setWeight('25');
             setDate('');
-        } catch {
-            setError('Error creating assessment.');
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Error creating assessment.');
         } finally {
             setLoading(false);
         }
@@ -75,23 +112,38 @@ export default function AddAssessmentModal({ open, onClose, onSuccess, subjectId
                 <DialogContent>
                     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-                    <TextField
-                        autoFocus
-                        margin="dense"
-                        label="Title (e.g. Term 1 Test)"
-                        fullWidth
-                        required
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
+                    <FormControl fullWidth margin="dense" required>
+                        <InputLabel>Term</InputLabel>
+                        <Select value={term} label="Term" onChange={(e) => setTerm(e.target.value)}>
+                            {termOptions.map((option) => (
+                                <MenuItem key={option} value={option}>
+                                    {option}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
+                    <Autocomplete
+                        freeSolo
+                        options={PAPER_SUGGESTIONS}
+                        value={paper}
+                        onChange={(_e, value) => setPaper(value ?? '')}
+                        onInputChange={(_e, value) => setPaper(value)}
+                        renderInput={(params) => (
+                            <TextField
+                                {...params}
+                                margin="dense"
+                                label="Paper / assessment name"
+                                placeholder="e.g. Paper 2"
+                                helperText="For paper exams: Paper 1, Paper 2, etc."
+                            />
+                        )}
+                        sx={{ mt: 1 }}
                     />
 
-                    <FormControl fullWidth margin="dense" sx={{ mt: 2 }}>
+                    <FormControl fullWidth margin="dense" sx={{ mt: 1 }}>
                         <InputLabel>Type</InputLabel>
-                        <Select
-                            value={type}
-                            label="Type"
-                            onChange={(e) => setType(e.target.value)}
-                        >
+                        <Select value={type} label="Type" onChange={(e) => setType(e.target.value)}>
                             <MenuItem value="TEST">Test</MenuItem>
                             <MenuItem value="EXAM">Exam</MenuItem>
                             <MenuItem value="ASSIGNMENT">Assignment</MenuItem>
@@ -101,12 +153,13 @@ export default function AddAssessmentModal({ open, onClose, onSuccess, subjectId
                     <Box display="flex" gap={2} mt={1}>
                         <TextField
                             margin="dense"
-                            label="Total Marks"
+                            label="Total marks"
                             type="number"
                             fullWidth
                             required
                             value={totalMarks}
                             onChange={(e) => setTotalMarks(e.target.value)}
+                            helperText="Paper is out of this many marks"
                         />
                         <TextField
                             margin="dense"
@@ -128,12 +181,29 @@ export default function AddAssessmentModal({ open, onClose, onSuccess, subjectId
                         InputLabelProps={{ shrink: true }}
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
-                        sx={{ mt: 2 }}
+                        sx={{ mt: 1 }}
                     />
 
+                    <TextField
+                        margin="dense"
+                        label="Custom title (optional)"
+                        fullWidth
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        helperText="Leave blank to auto-generate from term and paper"
+                        sx={{ mt: 1 }}
+                    />
+
+                    <Alert severity="info" sx={{ mt: 2 }}>
+                        <Typography variant="body2">
+                            <strong>Preview:</strong> {previewTitle}
+                        </Typography>
+                    </Alert>
                 </DialogContent>
                 <DialogActions sx={{ p: 3 }}>
-                    <Button onClick={onClose} disabled={loading}>Cancel</Button>
+                    <Button onClick={onClose} disabled={loading}>
+                        Cancel
+                    </Button>
                     <Button type="submit" variant="contained" disabled={loading}>
                         Create
                     </Button>

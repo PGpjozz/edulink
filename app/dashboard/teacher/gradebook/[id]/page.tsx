@@ -20,14 +20,22 @@ import {
 } from '@mui/material';
 import { ArrowBack, FileDownload, Refresh } from '@mui/icons-material';
 import { useRouter, useParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { formatAssessmentShortLabel } from '@/lib/assessment-utils';
 
 export default function MasterGradebook() {
     const router = useRouter();
     const params = useParams();
     const subjectId = params.id as string;
 
-    type Assessment = { id: string; title: string; type: string; weight: number; totalMarks: number };
+    type Assessment = {
+        id: string;
+        title: string;
+        term?: string | null;
+        paper?: string | null;
+        type: string;
+        weight: number;
+        totalMarks: number;
+    };
     type Learner = { id: string; user: { firstName: string; lastName: string } };
     type Grade = { learnerId: string; assessmentId: string; score: number };
     type GradebookData = { assessments: Assessment[]; learners: Learner[]; grades: Grade[] };
@@ -60,7 +68,7 @@ export default function MasterGradebook() {
         if (!data) return;
 
         let csv = 'Learner,';
-        csv += data.assessments.map((a) => `"${a.title}"`).join(',') + '\n';
+        csv += data.assessments.map((a) => `"${formatAssessmentShortLabel(a)}"`).join(',') + '\n';
 
         data.learners.forEach((l) => {
             csv += `"${l.user.firstName} ${l.user.lastName}",`;
@@ -79,7 +87,7 @@ export default function MasterGradebook() {
     if (!data) return <Alert severity="error">Failed to load data.</Alert>;
 
     return (
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }} component={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
             <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
                 <Box>
                     <Button startIcon={<ArrowBack />} onClick={() => router.back()} sx={{ mb: 1 }}>Back</Button>
@@ -101,7 +109,9 @@ export default function MasterGradebook() {
                                 <TableCell key={a.id} align="center" sx={{ fontWeight: 'bold', minWidth: 100 }}>
                                     <Tooltip title={`${a.type} (${a.weight}%)`}>
                                         <Box>
-                                            <Typography variant="body2" fontWeight="bold">{a.title}</Typography>
+                                            <Typography variant="body2" fontWeight="bold">
+                                                {formatAssessmentShortLabel(a)}
+                                            </Typography>
                                             <Typography variant="caption" color="text.secondary">Max: {a.totalMarks}</Typography>
                                         </Box>
                                     </Tooltip>

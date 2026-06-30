@@ -230,12 +230,14 @@ export async function GET(req: Request) {
 
         // ─── ASSESSMENTS + GRADES ─────────────────────────────────────
         const assessmentDefs = [
-            { title: 'Term 1 Test', type: 'TEST', weight: 15, totalMarks: 50, dAgo: 75 },
-            { title: 'Term 1 Exam', type: 'EXAM', weight: 25, totalMarks: 100, dAgo: 55 },
-            { title: 'Assignment 1', type: 'ASSIGNMENT', weight: 10, totalMarks: 20, dAgo: 65 },
-            { title: 'Term 2 Test', type: 'TEST', weight: 15, totalMarks: 50, dAgo: 35 },
-            { title: 'Term 2 Exam', type: 'EXAM', weight: 25, totalMarks: 100, dAgo: 15 },
-            { title: 'Assignment 2', type: 'ASSIGNMENT', weight: 10, totalMarks: 20, dAgo: 25 },
+            { term: 'Term 1, 2026', paper: 'Test', title: 'Term 1 Test', type: 'TEST', weight: 15, totalMarks: 50, dAgo: 75 },
+            { term: 'Term 1, 2026', paper: 'Exam', title: 'Term 1 Exam', type: 'EXAM', weight: 25, totalMarks: 100, dAgo: 55 },
+            { term: 'Term 1, 2026', paper: 'Assignment 1', title: 'Assignment 1', type: 'ASSIGNMENT', weight: 10, totalMarks: 20, dAgo: 65 },
+            { term: 'Term 2, 2026', paper: 'Test', title: 'Term 2 Test', type: 'TEST', weight: 15, totalMarks: 50, dAgo: 35 },
+            { term: 'Term 2, 2026', paper: 'Exam', title: 'Term 2 Exam', type: 'EXAM', weight: 25, totalMarks: 100, dAgo: 15 },
+            { term: 'Term 2, 2026', paper: 'Assignment 2', title: 'Assignment 2', type: 'ASSIGNMENT', weight: 10, totalMarks: 20, dAgo: 25 },
+            { term: 'Term 3, 2026', paper: 'Paper 1', title: 'Term 3 Paper 1', type: 'EXAM', weight: 25, totalMarks: 100, dAgo: 5 },
+            { term: 'Term 3, 2026', paper: 'Paper 2', title: 'Term 3 Paper 2', type: 'EXAM', weight: 25, totalMarks: 100, dAgo: 2 },
         ];
         for (const sub of allSubjects) {
             const gradeLearners = learnerProfiles.filter(lp => lp.grade === sub.grade);
@@ -243,7 +245,21 @@ export async function GET(req: Request) {
                 let assessment = await prisma.assessment.findFirst({ where: { subjectId: sub.id, title: ad.title } });
                 if (!assessment) {
                     assessment = await prisma.assessment.create({
-                        data: { subjectId: sub.id, title: ad.title, type: ad.type, date: daysAgo(ad.dAgo), totalMarks: ad.totalMarks, weight: ad.weight }
+                        data: {
+                            subjectId: sub.id,
+                            title: ad.title,
+                            term: ad.term,
+                            paper: ad.paper,
+                            type: ad.type,
+                            date: daysAgo(ad.dAgo),
+                            totalMarks: ad.totalMarks,
+                            weight: ad.weight,
+                        }
+                    });
+                } else {
+                    assessment = await prisma.assessment.update({
+                        where: { id: assessment.id },
+                        data: { term: ad.term, paper: ad.paper },
                     });
                 }
                 for (const lp of gradeLearners) {

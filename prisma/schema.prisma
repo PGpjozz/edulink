@@ -271,7 +271,9 @@ model Assessment {
   subjectId      String
   subject        Subject       @relation(fields: [subjectId], references: [id])
   
-  title          String        // e.g. "Term 1 Test"
+  title          String        // Display name, auto-generated from term/paper when set
+  term           String?       // e.g. "Term 3, 2026"
+  paper          String?       // e.g. "Paper 2"
   type           String        // TEST, EXAM, ASSIGNMENT
   date           DateTime
   
