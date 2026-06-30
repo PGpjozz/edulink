@@ -1,8 +1,9 @@
 'use client';
 import { ReactNode, Suspense, useEffect, useState } from 'react';
-import { usePathname } from 'next/navigation';
-import { Box, AppBar, Toolbar, IconButton, Typography, useMediaQuery, useTheme } from '@mui/material';
+import { usePathname, useRouter } from 'next/navigation';
+import { Box, AppBar, Toolbar, IconButton, Typography, useMediaQuery, useTheme, CircularProgress } from '@mui/material';
 import { Menu as MenuIcon, Brightness4, Brightness7 } from '@mui/icons-material';
+import { useSession } from 'next-auth/react';
 import { useThemeContext } from '@/app/theme/ThemeContext';
 import Sidebar from '@/app/components/Sidebar';
 
@@ -12,6 +13,17 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     const [mobileOpen, setMobileOpen] = useState(false);
     const { mode, toggleTheme } = useThemeContext();
     const pathname = usePathname();
+    const router = useRouter();
+    // Gate dashboard content on a confirmed session so child pages only mount
+    // (and fire their data fetches) once the auth cookie is established. This
+    // avoids the post-login flash where requests 401 and pages render empty.
+    const { status } = useSession();
+
+    useEffect(() => {
+        if (status === 'unauthenticated') {
+            router.replace('/auth/signin');
+        }
+    }, [status, router]);
 
     useEffect(() => {
         setMobileOpen(false);
@@ -69,17 +81,23 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             }>
                 <Sidebar mobileOpen={mobileOpen} onClose={handleDrawerToggle} />
             </Suspense>
-            <Box
-                component="main"
-                sx={{
-                    flexGrow: 1,
-                    p: 3,
-                    mt: { xs: 8, md: 0 }, // Offset for AppBar on mobile
-                    width: { md: `calc(100% - 280px)` },
-                }}
-            >
-                {children}
-            </Box>
+                <Box
+                    component="main"
+                    sx={{
+                        flexGrow: 1,
+                        p: 3,
+                        mt: { xs: 8, md: 0 }, // Offset for AppBar on mobile
+                        width: { md: `calc(100% - 280px)` },
+                    }}
+                >
+                    {status === 'authenticated' ? (
+                        children
+                    ) : (
+                        <Box display="flex" justifyContent="center" alignItems="center" minHeight="60vh">
+                            <CircularProgress />
+                        </Box>
+                    )}
+                </Box>
         </Box>
     );
 }
