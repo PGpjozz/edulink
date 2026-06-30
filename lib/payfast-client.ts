@@ -20,7 +20,7 @@ export async function startPayFastCheckout(
     });
     const data = await res.json();
 
-    if (res.status === 503 && data.useSimulate && onSimulate) {
+    if (res.status === 503 && data.useSimulate && onSimulate && process.env.NODE_ENV !== 'production') {
         await onSimulate();
         return { ok: true, simulated: true };
     }

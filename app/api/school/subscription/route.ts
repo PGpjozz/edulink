@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { isPaymentSimulationAllowed } from '@/lib/env';
 
 const SUBSCRIPTION_ROLES = ['SCHOOL_OWNER', 'PRINCIPAL', 'SCHOOL_ADMIN'];
 
@@ -41,6 +42,13 @@ export async function PATCH(req: Request) {
 
     if (!session || !SUBSCRIPTION_ROLES.includes(session.user.role)) {
         return new NextResponse('Unauthorized', { status: 401 });
+    }
+
+    if (!isPaymentSimulationAllowed()) {
+        return NextResponse.json(
+            { error: 'Manual payment marking is disabled. Configure PayFast for production billing.' },
+            { status: 403 }
+        );
     }
 
     try {

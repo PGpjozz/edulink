@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { guardDevRoute } from '@/lib/dev-routes';
 
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
-    if (searchParams.get('secret') !== 'edulink-setup-2026') {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const blocked = guardDevRoute('edulink-setup-2026', searchParams.get('secret'));
+    if (blocked) return blocked;
 
     try {
         const hash = await bcrypt.hash('provider123', 10);

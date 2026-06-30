@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# EduLink
 
-## Getting Started
+School management platform for South African schools — learners, teachers, parents, billing, and academics in one place.
 
-First, run the development server:
+## Production readiness checklist
+
+Before onboarding a real school:
+
+- [ ] Set `NODE_ENV=production`
+- [ ] Set `NEXTAUTH_SECRET` (32+ random characters)
+- [ ] Configure Neon PostgreSQL (`DATABASE_URL` + `DIRECT_URL`)
+- [ ] Configure Resend (`RESEND_API_KEY`, `EMAIL_FROM`) for invites and password reset
+- [ ] Configure PayFast (`PAYFAST_*` vars, `PAYFAST_SANDBOX=false`)
+- [ ] Do **not** set `ENABLE_DEV_ROUTES` in production
+- [ ] Run `npx prisma migrate deploy` (or `db push` for first deploy)
+- [ ] Remove or rotate any demo seed credentials
+
+## Local development
 
 ```bash
+cp env.example .env.local
+# Fill in DATABASE_URL, DIRECT_URL, NEXTAUTH_SECRET
+
+npm install
+npx prisma db push
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Demo data (development only)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Start dev server, then:
+curl "http://localhost:3000/api/seed?secret=edulink-seed-2026"
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Learner login: ID `0801015001085` / `password123` (dev seed only).
 
-## Learn More
+### Provider bootstrap (development only)
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+curl "http://localhost:3000/api/setup?secret=edulink-setup-2026"
+# provider@edulink.com / provider123
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Environment variables
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `NEXTAUTH_SECRET` | Production | Session signing secret (min 32 chars) |
+| `NEXTAUTH_URL` | Yes | App URL, e.g. `https://app.edulink.co.za` |
+| `DATABASE_URL` | Yes | Pooled PostgreSQL connection (Neon) |
+| `DIRECT_URL` | Yes | Direct PostgreSQL URL for Prisma CLI |
+| `RESEND_API_KEY` | Production | Email delivery |
+| `EMAIL_FROM` | Production | Sender address |
+| `PAYFAST_MERCHANT_ID` | Production | PayFast merchant ID |
+| `PAYFAST_MERCHANT_KEY` | Production | PayFast merchant key |
+| `PAYFAST_PASSPHRASE` | Production | PayFast passphrase |
+| `PAYFAST_SANDBOX` | No | `true` for sandbox (default) |
+| `ENABLE_DEV_ROUTES` | No | Never set in production; enables setup/seed routes |
+| `ALLOW_PAYMENT_SIMULATION` | No | Set `false` to disable even in dev |
 
-## Deploy on Vercel
+## Scripts
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run lint` | ESLint |
+| `npm test` | Smoke tests (SA ID, password policy, env) |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## School onboarding flow
+
+1. **Provider** creates school via Provider Dashboard (`/dashboard/provider`)
+2. **Principal** signs in and configures classes, subjects, users
+3. **School owner** invites staff via `/dashboard/school-owner/invites`
+4. **Principal** adds learners (SA ID validated) and links parents
+5. **PayFast** handles subscription and parent fee payments
+
+## Privacy (POPIA)
+
+Privacy policy: `/privacy`. Staff must accept on invite. Schools are responsible parties for learner data.
+
+## Architecture
+
+- **Next.js 16** App Router, **React 19**, **MUI 7**
+- **NextAuth** credentials (email or SA ID number)
+- **Prisma 7** + PostgreSQL (Neon serverless or local pg)
+- **PayFast** for payments
+- **Resend** for transactional email
+
+## Roles
+
+`PROVIDER` → `SCHOOL_OWNER` → `PRINCIPAL` / `SCHOOL_ADMIN` / `HOD` / `TEACHER` → `LEARNER` / `PARENT`
+
+Each school is isolated by `schoolId` on all API routes.

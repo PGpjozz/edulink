@@ -90,6 +90,8 @@ model User {
   deletedAt      DateTime?     // Soft delete
   mustChangePassword Boolean   @default(false)
   permissions    String[]      @default([])
+  privacyConsentAt DateTime?
+  privacyConsentVersion String?
 
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt

@@ -69,14 +69,15 @@ export default function SubjectHub({ subjectId, role }: SubjectHubProps) {
     }, [subjectId]);
 
     const handleUploadResource = async () => {
+        if (!newTitle.trim() || !newFileUrl.trim()) return;
         setUploading(true);
         try {
             const res = await fetch(`/api/subjects/${subjectId}/resources`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    title: newTitle,
-                    fileUrl: newFileUrl || 'https://example.com/mock-file.pdf',
+                    title: newTitle.trim(),
+                    fileUrl: newFileUrl.trim(),
                     fileType: 'PDF'
                 })
             });

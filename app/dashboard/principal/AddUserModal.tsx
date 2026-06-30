@@ -78,7 +78,12 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
         setLoading(true);
         setError('');
 
-        const finalPassword = password.trim() || 'password123';
+        const finalPassword = password.trim();
+        if (!finalPassword) {
+            setError('Password is required');
+            setLoading(false);
+            return;
+        }
 
         try {
             const res = await fetch('/api/users', {
@@ -238,8 +243,8 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
                             type={showPassword ? 'text' : 'password'}
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Leave blank to use: password123"
-                            helperText="The user must change this after first login."
+                            placeholder="Minimum 8 characters"
+                            helperText="The user must change this password after first login."
                             InputProps={{
                                 endAdornment: (
                                     <InputAdornment position="end">

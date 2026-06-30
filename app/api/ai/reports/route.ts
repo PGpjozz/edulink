@@ -5,7 +5,8 @@ import { prisma } from '@/lib/prisma';
 
 export async function POST(req: Request) {
     const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== 'staff' && session.user.role !== 'principal')) {
+    const allowedRoles = ['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN', 'HOD'];
+    if (!session || !allowedRoles.includes(session.user.role)) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 

@@ -18,7 +18,7 @@ interface TimetableSlot {
 }
 
 interface TimetableViewProps {
-    timetable: Record<string, unknown> | null | undefined;
+    timetable: unknown;
 }
 
 function normalizeSlot(raw: Record<string, unknown>): TimetableSlot | null {
@@ -32,7 +32,10 @@ function normalizeSlot(raw: Record<string, unknown>): TimetableSlot | null {
     };
 }
 
-function normalizeTimetable(timetable: Record<string, unknown>): Record<string, TimetableSlot[]> {
+function normalizeTimetable(timetable: Record<string, unknown> | unknown[]): Record<string, TimetableSlot[]> {
+    if (Array.isArray(timetable)) {
+        return {};
+    }
     const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
     const normalized: Record<string, TimetableSlot[]> = {};
 
@@ -48,7 +51,9 @@ function normalizeTimetable(timetable: Record<string, unknown>): Record<string, 
 }
 
 export default function TimetableView({ timetable }: TimetableViewProps) {
-    const normalized = timetable ? normalizeTimetable(timetable as Record<string, unknown>) : null;
+    const normalized = timetable && typeof timetable === 'object' && !Array.isArray(timetable)
+        ? normalizeTimetable(timetable as Record<string, unknown>)
+        : null;
 
     if (!normalized || Object.keys(normalized).length === 0) {
         return (

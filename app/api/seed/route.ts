@@ -7,6 +7,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
+import { guardDevRoute } from '@/lib/dev-routes';
 
 const rand = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 const ref = () => `REF-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
@@ -15,9 +16,8 @@ const daysFromNow = (n: number) => { const d = new Date(); d.setDate(d.getDate()
 
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
-    if (searchParams.get('secret') !== 'edulink-seed-2026') {
-        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
-    }
+    const blocked = guardDevRoute('edulink-seed-2026', searchParams.get('secret'));
+    if (blocked) return blocked;
 
     try {
         // ─── SCHOOL ───────────────────────────────────────────────────
@@ -125,7 +125,7 @@ export async function GET(req: Request) {
 
         // ─── LEARNERS ────────────────────────────────────────────────
         const learnerDefs = [
-            { firstName: 'Ayanda', lastName: 'Nkosi', idNumber: '0801015001083', grade: '8', cIdx: 0 },
+            { firstName: 'Ayanda', lastName: 'Nkosi', idNumber: '0801015001085', grade: '8', cIdx: 0 },
             { firstName: 'Ruan', lastName: 'Vermeulen', idNumber: '0804025002082', grade: '8', cIdx: 0 },
             { firstName: 'Keamogetse', lastName: 'Sithole', idNumber: '0802015003081', grade: '8', cIdx: 0 },
             { firstName: 'Mia', lastName: 'Erasmus', idNumber: '0803025004080', grade: '8', cIdx: 0 },
@@ -613,7 +613,7 @@ export async function GET(req: Request) {
                 principal: 'principal@westview.edu.za / password123',
                 teacher_example: 'jvanzyl@westview.edu.za / password123',
                 parent_example: 'mnkosi@parent.co.za / password123',
-                learner_example: 'ID: 0801015001083 / password123',
+                learner_example: 'ID: 0801015001085 / password123',
             }
         });
 

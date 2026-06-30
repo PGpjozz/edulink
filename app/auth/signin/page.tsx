@@ -123,6 +123,8 @@ export default function SignIn() {
 
                 <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 2 }}>
                     <a href="/auth/forgot-password" style={{ color: 'inherit' }}>Forgot password?</a>
+                    {' · '}
+                    <a href="/privacy" style={{ color: 'inherit' }}>Privacy Policy</a>
                 </Typography>
 
                 <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 2 }}>

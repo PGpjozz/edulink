@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { readJson } from '@/lib/api-auth';
+import { PRIVACY_POLICY_VERSION } from '@/lib/env';
 
 export async function GET(req: Request, { params }: { params: Promise<{ token: string }> }) {
     const { token } = await params;
@@ -27,8 +28,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ token: s
 
 export async function POST(req: Request, { params }: { params: Promise<{ token: string }> }) {
     const { token } = await params;
-    const body = await readJson<{ password?: string; firstName?: string; lastName?: string }>(req);
+    const body = await readJson<{ password?: string; firstName?: string; lastName?: string; privacyConsent?: boolean }>(req);
     if (body instanceof NextResponse) return body;
+
+    if (!body.privacyConsent) {
+        return NextResponse.json({ error: 'You must accept the privacy policy to continue' }, { status: 400 });
+    }
 
     if (!body.password || body.password.length < 8) {
         return NextResponse.json({ error: 'Password must be at least 8 characters' }, { status: 400 });
@@ -55,6 +60,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
                 permissions: invite.permissions,
                 isActive: true,
                 mustChangePassword: false,
+                privacyConsentAt: new Date(),
+                privacyConsentVersion: PRIVACY_POLICY_VERSION,
                 ...(['TEACHER', 'HOD', 'PRINCIPAL'].includes(invite.role)
                     ? { teacherProfile: { create: {} } }
                     : {}),

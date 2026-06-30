@@ -10,6 +10,7 @@ import {
     PAYFAST_PROCESS_URL,
 } from '@/lib/payfast';
 import { canManageSchool } from '@/lib/permissions';
+import { isPaymentSimulationAllowed } from '@/lib/env';
 
 type CheckoutBody = {
     type?: 'SCHOOL_SUBSCRIPTION' | 'PARENT_FEE';
@@ -19,7 +20,13 @@ type CheckoutBody = {
 
 export async function POST(req: Request) {
     if (!isPayFastConfigured()) {
-        return NextResponse.json({ error: 'PayFast is not configured', useSimulate: true }, { status: 503 });
+        return NextResponse.json(
+            {
+                error: 'PayFast is not configured',
+                ...(isPaymentSimulationAllowed() ? { useSimulate: true } : {}),
+            },
+            { status: 503 }
+        );
     }
 
     const auth = await requireAuth({ requireSchoolId: true });

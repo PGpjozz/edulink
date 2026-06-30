@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 import bcrypt from 'bcryptjs';
+import { validateSaId, normalizeSaId } from '@/lib/sa-id';
+import { validatePassword, generateTemporaryPassword } from '@/lib/password';
+import { isProduction } from '@/lib/env';
 
 // GET: Fetch users (Teachers, Learners, Admins)
 export async function GET(req: Request) {
@@ -71,6 +74,22 @@ export async function POST(req: Request) {
             return new NextResponse('grade is required for learners', { status: 400 });
         }
 
+        if (role === 'LEARNER') {
+            const idCheck = validateSaId(idNumber);
+            if (!idCheck.valid) {
+                return new NextResponse(idCheck.error || 'Invalid SA ID number', { status: 400 });
+            }
+
+            const normalizedId = normalizeSaId(idNumber);
+            const existingLearner = await prisma.user.findFirst({
+                where: { idNumber: normalizedId },
+                select: { id: true, schoolId: true }
+            });
+            if (existingLearner) {
+                return new NextResponse('A user with this ID number already exists', { status: 409 });
+            }
+        }
+
         // Validate learnerProfileId for PARENT linking
         let linkedLearnerProfile: { id: string } | null = null;
         if (role === 'PARENT' && learnerProfileId) {
@@ -83,8 +102,23 @@ export async function POST(req: Request) {
             }
         }
 
-        const usesDefaultPassword = !rawPassword;
-        const hashedPassword = await bcrypt.hash(rawPassword || 'password123', 10);
+        let plainPassword = rawPassword?.trim();
+        let usesDefaultPassword = false;
+
+        if (!plainPassword) {
+            if (isProduction()) {
+                return new NextResponse('Password is required when creating users in production', { status: 400 });
+            }
+            plainPassword = generateTemporaryPassword();
+            usesDefaultPassword = true;
+        } else {
+            const passwordError = validatePassword(plainPassword);
+            if (passwordError) {
+                return new NextResponse(passwordError, { status: 400 });
+            }
+        }
+
+        const hashedPassword = await bcrypt.hash(plainPassword, 10);
         const needsTeacherProfile =
             role === 'TEACHER' ||
             role === 'HOD' ||
@@ -95,12 +129,12 @@ export async function POST(req: Request) {
                 firstName,
                 lastName,
                 email,
-                idNumber,
+                idNumber: role === 'LEARNER' ? normalizeSaId(idNumber) : idNumber,
                 password: hashedPassword,
                 role: role as any,
                 schoolId: auth.schoolId as string,
                 isActive: true,
-                mustChangePassword: usesDefaultPassword,
+                mustChangePassword: usesDefaultPassword || role === 'LEARNER',
                 ...(role === 'LEARNER' && {
                     learnerProfile: { create: { grade: grade as string } }
                 }),
@@ -145,7 +179,8 @@ export async function POST(req: Request) {
             firstName: user.firstName,
             lastName: user.lastName,
             email: user.email,
-            role: user.role
+            role: user.role,
+            ...(usesDefaultPassword && !isProduction() ? { temporaryPassword: plainPassword } : {}),
         });
     } catch (error) {
         console.error('Error creating user:', error);

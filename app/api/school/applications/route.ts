@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 import bcrypt from 'bcryptjs';
+import { generateTemporaryPassword } from '@/lib/password';
 
 export async function GET(req: Request) {
     const auth = await requireAuth({ roles: ['PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
@@ -49,7 +50,8 @@ export async function PATCH(req: Request) {
 
         // If approved, create the user and learner profile
         if (status === 'APPROVED' && application.status !== 'APPROVED') {
-            const hashedPassword = await bcrypt.hash('password123', 10);
+            const tempPassword = generateTemporaryPassword();
+            const hashedPassword = await bcrypt.hash(tempPassword, 10);
             const newUser = await prisma.user.create({
                 data: {
                     schoolId: application.schoolId,
@@ -57,9 +59,9 @@ export async function PATCH(req: Request) {
                     firstName: application.firstName,
                     lastName: application.lastName,
                     role: 'LEARNER',
-                    // Default password or invite flow - here we'll just create a dummy
                     password: hashedPassword,
                     isActive: true,
+                    mustChangePassword: true,
                     learnerProfile: {
                         create: {
                             grade: application.grade

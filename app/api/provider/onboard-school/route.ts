@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson } from '@/lib/api-auth';
 import bcrypt from 'bcryptjs';
+import { validatePassword } from '@/lib/password';
 
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -54,6 +55,18 @@ export async function POST(req: Request) {
 
         if (existingUser) {
             return NextResponse.json({ error: 'Principal email already exists' }, { status: 400 });
+        }
+
+        const principalPasswordError = validatePassword(principalPassword);
+        if (principalPasswordError) {
+            return NextResponse.json({ error: principalPasswordError }, { status: 400 });
+        }
+
+        if (ownerPassword) {
+            const ownerPasswordError = validatePassword(ownerPassword);
+            if (ownerPasswordError) {
+                return NextResponse.json({ error: ownerPasswordError }, { status: 400 });
+            }
         }
 
         // Hash principal password

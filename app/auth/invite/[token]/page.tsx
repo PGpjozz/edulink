@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import {
-    Container, Typography, Box, Paper, TextField, Button, Alert, Stack,
+    Container, Typography, Box, Paper, TextField, Button, Alert, Stack, FormControlLabel, Checkbox,
 } from '@mui/material';
 
 export default function AcceptInvitePage() {
@@ -21,6 +21,7 @@ export default function AcceptInvitePage() {
     const [confirm, setConfirm] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [privacyConsent, setPrivacyConsent] = useState(false);
 
     useEffect(() => {
         fetch(`/api/invites/${token}`)
@@ -48,12 +49,16 @@ export default function AcceptInvitePage() {
             setError('Password must be at least 8 characters');
             return;
         }
+        if (!privacyConsent) {
+            setError('You must accept the privacy policy');
+            return;
+        }
         setLoading(true);
         setError('');
         const res = await fetch(`/api/invites/${token}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ password }),
+            body: JSON.stringify({ password, privacyConsent: true }),
         });
         const data = await res.json();
         setLoading(false);
@@ -102,7 +107,22 @@ export default function AcceptInvitePage() {
                                 value={confirm}
                                 onChange={(e) => setConfirm(e.target.value)}
                             />
-                            <Button type="submit" variant="contained" fullWidth disabled={loading}>
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={privacyConsent}
+                                        onChange={(e) => setPrivacyConsent(e.target.checked)}
+                                        required
+                                    />
+                                }
+                                label={
+                                    <Typography variant="body2">
+                                        I agree to the{' '}
+                                        <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy (POPIA)</a>
+                                    </Typography>
+                                }
+                            />
+                            <Button type="submit" variant="contained" fullWidth disabled={loading || !privacyConsent}>
                                 {loading ? 'Creating account…' : 'Accept invite & sign in'}
                             </Button>
                         </Stack>

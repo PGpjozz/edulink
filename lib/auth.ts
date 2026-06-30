@@ -2,6 +2,7 @@ import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
+import { getNextAuthSecret } from "./env";
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -35,11 +36,16 @@ export const authOptions: NextAuthOptions = {
                         mustChangePassword: true,
                         permissions: true,
                         teacherProfile: { select: { id: true } },
+                        school: { select: { isActive: true, name: true } },
                     }
                 });
 
                 if (!user || !user.isActive || !user.password) {
                     throw new Error("Invalid credentials");
+                }
+
+                if (user.schoolId && user.school && !user.school.isActive) {
+                    throw new Error("School account is inactive. Contact your administrator.");
                 }
 
                 const passwordMatch = await bcrypt.compare(password, user.password);
@@ -91,5 +97,5 @@ export const authOptions: NextAuthOptions = {
     session: {
         strategy: "jwt",
     },
-    secret: process.env.NEXTAUTH_SECRET || 'fallback-secret-for-development-change-in-production',
+    secret: getNextAuthSecret(),
 };
