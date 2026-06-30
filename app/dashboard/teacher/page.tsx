@@ -11,12 +11,19 @@ import {
     Button,
     Chip,
     Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    List,
+    ListItem,
+    ListItemText,
     CircularProgress
 } from '@mui/material';
 import {
     Assignment as AssignmentIcon,
     EventAvailable,
-    Schedule
+    Schedule,
+    Groups
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import TimetableView from '@/app/components/TimetableView';
@@ -25,56 +32,115 @@ import TeacherTodayPanel from '@/app/components/TeacherTodayPanel';
 type ClassInfo = { id: string; name: string; grade: string; _count?: { learners?: number }; timetable?: unknown };
 type SubjectSummary = { id: string; name: string; grade: string; code?: string; _count?: { assessments?: number } };
 
+type RosterLearner = { id: string; firstName: string; lastName: string; idNumber?: string; email?: string };
+
 function ClassesSection({ onViewSchedule }: { onViewSchedule: (cls: ClassInfo) => void }) {
     const [classes, setClasses] = useState<ClassInfo[]>([]);
+    const [rosterClass, setRosterClass] = useState<ClassInfo | null>(null);
+    const [roster, setRoster] = useState<RosterLearner[]>([]);
+    const [rosterLoading, setRosterLoading] = useState(false);
     const router = useRouter();
 
     useEffect(() => {
         fetch('/api/classes')
             .then(res => res.json())
-            .then(data => setClasses(data))
+            .then(data => setClasses(Array.isArray(data) ? data : []))
             .catch(err => console.error(err));
     }, []);
 
+    const openRoster = (cls: ClassInfo) => {
+        setRosterClass(cls);
+        setRoster([]);
+        setRosterLoading(true);
+        fetch(`/api/classes/${cls.id}/learners`)
+            .then(res => (res.ok ? res.json() : []))
+            .then(data => setRoster(Array.isArray(data) ? data : []))
+            .catch(() => setRoster([]))
+            .finally(() => setRosterLoading(false));
+    };
+
     return (
-        <Grid container spacing={3}>
-            {classes.map((cls) => (
-                <Grid size={{ xs: 12, md: 4 }} key={cls.id}>
-                    <Card>
-                        <CardContent>
-                            <Typography variant="h6" fontWeight="bold">{cls.name}</Typography>
-                            <Typography color="text.secondary">Grade {cls.grade}</Typography>
-                            <Typography variant="body2" sx={{ mt: 1 }}>{cls._count?.learners || 0} Learners</Typography>
-                        </CardContent>
-                        <Box p={2} pt={0} display="flex" gap={1}>
-                            <Button
-                                variant="contained"
-                                fullWidth
-                                size="small"
-                                startIcon={<EventAvailable />}
-                                onClick={() => router.push(`/dashboard/teacher/class/${cls.id}/attendance`)}
-                            >
-                                Attendance
-                            </Button>
-                            <Button
-                                variant="outlined"
-                                fullWidth
-                                size="small"
-                                startIcon={<Schedule />}
-                                onClick={() => onViewSchedule(cls)}
-                            >
-                                Schedule
-                            </Button>
-                        </Box>
-                    </Card>
-                </Grid>
-            ))}
-            {classes.length === 0 && (
-                <Grid size={{ xs: 12 }}>
-                    <Typography color="text.secondary">No classes found.</Typography>
-                </Grid>
-            )}
-        </Grid>
+        <>
+            <Grid container spacing={3}>
+                {classes.map((cls) => (
+                    <Grid size={{ xs: 12, md: 4 }} key={cls.id}>
+                        <Card>
+                            <CardContent>
+                                <Typography variant="h6" fontWeight="bold">{cls.name}</Typography>
+                                <Typography color="text.secondary">Grade {cls.grade}</Typography>
+                                <Typography variant="body2" sx={{ mt: 1 }}>{cls._count?.learners || 0} Learners</Typography>
+                            </CardContent>
+                            <Box p={2} pt={0} display="flex" flexDirection="column" gap={1}>
+                                <Button
+                                    variant="outlined"
+                                    fullWidth
+                                    size="small"
+                                    startIcon={<Groups />}
+                                    onClick={() => openRoster(cls)}
+                                >
+                                    View Learners
+                                </Button>
+                                <Box display="flex" gap={1}>
+                                    <Button
+                                        variant="contained"
+                                        fullWidth
+                                        size="small"
+                                        startIcon={<EventAvailable />}
+                                        onClick={() => router.push(`/dashboard/teacher/class/${cls.id}/attendance`)}
+                                    >
+                                        Attendance
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        fullWidth
+                                        size="small"
+                                        startIcon={<Schedule />}
+                                        onClick={() => onViewSchedule(cls)}
+                                    >
+                                        Schedule
+                                    </Button>
+                                </Box>
+                            </Box>
+                        </Card>
+                    </Grid>
+                ))}
+                {classes.length === 0 && (
+                    <Grid size={{ xs: 12 }}>
+                        <Typography color="text.secondary">No classes found.</Typography>
+                    </Grid>
+                )}
+            </Grid>
+
+            <Dialog open={!!rosterClass} onClose={() => setRosterClass(null)} maxWidth="xs" fullWidth>
+                <DialogTitle>
+                    {rosterClass?.name} learners
+                    <Typography variant="body2" color="text.secondary">
+                        Grade {rosterClass?.grade} · {roster.length} learner{roster.length === 1 ? '' : 's'}
+                    </Typography>
+                </DialogTitle>
+                <DialogContent dividers>
+                    {rosterLoading ? (
+                        <Box display="flex" justifyContent="center" py={3}><CircularProgress /></Box>
+                    ) : roster.length === 0 ? (
+                        <Typography color="text.secondary">No learners enrolled in this class yet.</Typography>
+                    ) : (
+                        <List dense>
+                            {roster.map((l, i) => (
+                                <ListItem key={l.id} disableGutters>
+                                    <ListItemText
+                                        primary={`${i + 1}. ${l.firstName} ${l.lastName}`}
+                                        secondary={l.idNumber || l.email || ''}
+                                    />
+                                </ListItem>
+                            ))}
+                        </List>
+                    )}
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setRosterClass(null)}>Close</Button>
+                </DialogActions>
+            </Dialog>
+        </>
     );
 }
 

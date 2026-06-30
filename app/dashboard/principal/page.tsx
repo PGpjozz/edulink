@@ -49,6 +49,7 @@ import AddUserModal from './AddUserModal';
 import AssignTeacherModal from './AssignTeacherModal';
 import AssignHodModal from './AssignHodModal';
 import ClassSubjectsModal from './ClassSubjectsModal';
+import ManageClassLearnersModal from './ManageClassLearnersModal';
 
 interface ClassData {
     id: string;
@@ -176,6 +177,8 @@ function PrincipalDashboard() {
 
     const [classSubjectsOpen, setClassSubjectsOpen] = useState(false);
     const [classSubjectsTarget, setClassSubjectsTarget] = useState<ClassData | null>(null);
+    const [manageLearnersOpen, setManageLearnersOpen] = useState(false);
+    const [manageLearnersTarget, setManageLearnersTarget] = useState<ClassData | null>(null);
 
     const fetchClasses = () => {
         setLoading(true);
@@ -355,6 +358,11 @@ function PrincipalDashboard() {
         if (subjects.length === 0) fetchSubjects();
     };
 
+    const openManageLearners = (cls: ClassData) => {
+        setManageLearnersTarget(cls);
+        setManageLearnersOpen(true);
+    };
+
     const classColumns: GridColDef[] = [
         { field: 'name', headerName: 'Class Name', flex: 1 },
         { field: 'grade', headerName: 'Grade', width: 100 },
@@ -372,9 +380,16 @@ function PrincipalDashboard() {
         {
             field: 'actions',
             headerName: 'Actions',
-            width: 340,
+            width: 430,
             renderCell: (params: any) => (
                 <Box display="flex" gap={1} flexWrap="wrap">
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => openManageLearners(params.row)}
+                    >
+                        Learners
+                    </Button>
                     <Button
                         variant="outlined"
                         size="small"
@@ -1151,6 +1166,17 @@ function PrincipalDashboard() {
                 subjects={subjects}
                 teachers={teacherOptions}
                 onUpdated={fetchClasses}
+                onNotify={notify}
+            />
+            <ManageClassLearnersModal
+                open={manageLearnersOpen}
+                onClose={() => setManageLearnersOpen(false)}
+                classInfo={manageLearnersTarget ? {
+                    id: manageLearnersTarget.id,
+                    name: manageLearnersTarget.name,
+                    grade: manageLearnersTarget.grade,
+                } : null}
+                onUpdated={() => { fetchClasses(); if (tabIndex === 0) fetchOverview(); }}
                 onNotify={notify}
             />
 
