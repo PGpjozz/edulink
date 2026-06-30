@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 import { canManageAnnouncements } from '@/lib/permissions';
+import { createNotifications, getAnnouncementRecipientIds } from '@/lib/notifications';
 import { Prisma, type AnnouncementAudience } from '@prisma/client';
 
 async function audienceWhere(auth: { userId: string; role: string; schoolId: string | null }): Promise<Prisma.AnnouncementWhereInput | null> {
@@ -130,6 +131,25 @@ export async function POST(req: Request) {
         entityId: item.id,
         details: { title: item.title, audience },
     });
+
+    const recipientIds = (await getAnnouncementRecipientIds(
+        auth.schoolId!,
+        audience,
+        body.grade,
+        body.classId,
+    )).filter((id) => id !== auth.userId);
+
+    if (recipientIds.length > 0) {
+        await createNotifications(
+            recipientIds.map((userId) => ({
+                userId,
+                title: 'New announcement',
+                message: item.title,
+                type: 'SYSTEM' as const,
+                link: '/dashboard/announcements',
+            })),
+        );
+    }
 
     return NextResponse.json(item);
 }

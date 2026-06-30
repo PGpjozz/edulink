@@ -61,6 +61,8 @@ export default function ParentNotifications() {
 
     useEffect(() => {
         fetchNotifications();
+        const interval = setInterval(fetchNotifications, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     const markAsRead = async (id: string) => {
@@ -71,6 +73,19 @@ export default function ParentNotifications() {
                 body: JSON.stringify({ id, isRead: true })
             });
             setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const markAllAsRead = async () => {
+        try {
+            await fetch('/api/notifications', {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ markAllRead: true })
+            });
+            setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
         } catch (err) {
             console.error(err);
         }
@@ -106,7 +121,7 @@ export default function ParentNotifications() {
                     <Button
                         size="small"
                         variant="outlined"
-                        onClick={() => notifications.filter(n => !n.isRead).forEach(n => markAsRead(n.id))}
+                        onClick={markAllAsRead}
                     >
                         Mark all as read
                     </Button>

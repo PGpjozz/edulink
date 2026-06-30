@@ -99,11 +99,13 @@ const NAV_ITEMS: Record<string, { label: string; icon: React.ReactNode; path: st
     PRINCIPAL: [
         ...ADMIN_NAV,
         { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
+        { label: 'Messages', icon: <Message />, path: '/dashboard/messages' },
         { label: 'Homework', icon: <Assignment />, path: '/dashboard/teacher/homework' },
     ],
     SCHOOL_ADMIN: [
         ...ADMIN_NAV,
         { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
+        { label: 'Messages', icon: <Message />, path: '/dashboard/messages' },
         { label: 'Homework', icon: <Assignment />, path: '/dashboard/teacher/homework' },
     ],
     HOD: [
@@ -123,7 +125,6 @@ const NAV_ITEMS: Record<string, { label: string; icon: React.ReactNode; path: st
         { label: 'Digital Library', icon: <Book />, path: '/dashboard/learner/library' },
         { label: 'Quizzes', icon: <QuestionAnswer />, path: '/dashboard/learner/quizzes' },
         { label: 'Academic Report', icon: <Assignment />, path: '/dashboard/learner/report' },
-        { label: 'Messages', icon: <Message />, path: '/dashboard/messages' }
     ],
     PARENT: [
         { label: 'Children', icon: <Person />, path: '/dashboard/parent' },
@@ -175,6 +176,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const { mode, toggleTheme, logoUrl } = useThemeContext();
     const [unreadCount, setUnreadCount] = useState(0);
+    const [unreadMessages, setUnreadMessages] = useState(0);
 
     useEffect(() => {
         if (session?.user?.role === 'PARENT') {
@@ -185,6 +187,19 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                     setUnreadCount(unread);
                 })
                 .catch(err => console.error('Failed to fetch unread count', err));
+        }
+    }, [session]);
+
+    useEffect(() => {
+        const role = session?.user?.role;
+        const messagingRoles = ['PARENT', 'TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN'];
+        if (role && messagingRoles.includes(role)) {
+            fetch('/api/messages?unreadOnly=true')
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) setUnreadMessages(data.length);
+                })
+                .catch(() => {});
         }
     }, [session]);
 
@@ -257,6 +272,10 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                                 <ListItemIcon sx={{ color: isActive ? 'inherit' : 'gray' }}>
                                     {item.label === 'Alerts' && unreadCount > 0 ? (
                                         <Badge badgeContent={unreadCount} color="error">
+                                            {item.icon}
+                                        </Badge>
+                                    ) : item.label === 'Messages' && unreadMessages > 0 ? (
+                                        <Badge badgeContent={unreadMessages} color="error">
                                             {item.icon}
                                         </Badge>
                                     ) : (

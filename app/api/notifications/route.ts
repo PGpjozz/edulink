@@ -10,7 +10,7 @@ export async function GET() {
         const notifications = await prisma.notification.findMany({
             where: { userId: auth.userId },
             orderBy: { createdAt: 'desc' },
-            take: 50
+            take: 50,
         });
 
         return NextResponse.json(notifications);
@@ -25,8 +25,17 @@ export async function PATCH(req: Request) {
     if (auth instanceof NextResponse) return auth;
 
     try {
-        const body = await readJson<{ id?: string; isRead?: boolean }>(req);
+        const body = await readJson<{ id?: string; isRead?: boolean; markAllRead?: boolean }>(req);
         if (body instanceof NextResponse) return body;
+
+        if (body.markAllRead === true) {
+            const result = await prisma.notification.updateMany({
+                where: { userId: auth.userId, isRead: false },
+                data: { isRead: true },
+            });
+            return NextResponse.json({ updated: result.count });
+        }
+
         const { id, isRead } = body;
 
         if (!id || typeof isRead !== 'boolean') {
@@ -35,7 +44,7 @@ export async function PATCH(req: Request) {
 
         const existing = await prisma.notification.findFirst({
             where: { id, userId: auth.userId },
-            select: { id: true }
+            select: { id: true },
         });
 
         if (!existing) {
@@ -44,7 +53,7 @@ export async function PATCH(req: Request) {
 
         const updated = await prisma.notification.update({
             where: { id },
-            data: { isRead }
+            data: { isRead },
         });
 
         return NextResponse.json(updated);

@@ -1,17 +1,28 @@
 import { PrismaClient } from '@prisma/client';
 import { PrismaNeon } from '@prisma/adapter-neon';
+import { PrismaPg } from '@prisma/adapter-pg';
 import { neonConfig } from '@neondatabase/serverless';
+import { Pool } from 'pg';
 import ws from 'ws';
 
-// Required for PrismaNeon in Node.js (Next.js API routes)
 neonConfig.webSocketConstructor = ws;
+
+function isNeonUrl(connectionString: string): boolean {
+    return connectionString.includes('neon.tech') || connectionString.includes('neon.database');
+}
 
 const prismaClientSingleton = (connectionString: string) => {
     if (!connectionString) {
         throw new Error('DATABASE_URL is not set');
     }
 
-    const adapter = new PrismaNeon({ connectionString });
+    if (isNeonUrl(connectionString)) {
+        const adapter = new PrismaNeon({ connectionString });
+        return new PrismaClient({ adapter });
+    }
+
+    const pool = new Pool({ connectionString });
+    const adapter = new PrismaPg(pool);
     return new PrismaClient({ adapter });
 };
 
@@ -24,7 +35,6 @@ const globalForPrisma = globalThis as unknown as {
 
 const connectionString = process.env.DATABASE_URL;
 
-// Dev hot-reload can change DATABASE_URL without restarting; drop stale client.
 if (
     process.env.NODE_ENV !== 'production' &&
     globalForPrisma.prisma &&
