@@ -23,6 +23,7 @@
     "@prisma/adapter-neon": "^7.4.2",
     "@prisma/adapter-pg": "^7.2.0",
     "@prisma/client": "^7.2.0",
+    "@vercel/blob": "^2.5.0",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.24.10",

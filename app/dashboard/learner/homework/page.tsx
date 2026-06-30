@@ -5,6 +5,7 @@ import {
     Container, Typography, Box, Paper, Button, Stack, Chip, Dialog,
     DialogTitle, DialogContent, DialogActions, TextField, Alert,
 } from '@mui/material';
+import FileUpload from '@/app/components/FileUpload';
 
 type HomeworkItem = {
     id: string;
@@ -100,15 +101,10 @@ export default function LearnerHomeworkPage() {
                         onChange={(e) => setNote(e.target.value)}
                         sx={{ mt: 1 }}
                     />
-                    <TextField
-                        label="Attachment link (optional)"
-                        placeholder="Google Drive, OneDrive, etc."
-                        fullWidth
-                        value={fileUrl}
-                        onChange={(e) => setFileUrl(e.target.value)}
-                        sx={{ mt: 2 }}
-                        helperText="Paste a share link if your work is in a file"
-                    />
+                    <Box sx={{ mt: 2 }}>
+                        <Typography variant="body2" color="text.secondary">Attachment (optional)</Typography>
+                        <FileUpload label="Upload your work" onUploaded={(f) => setFileUrl(f ? f.url : '')} />
+                    </Box>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => setSelected(null)}>Cancel</Button>

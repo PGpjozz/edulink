@@ -7,6 +7,7 @@ import {
     InputLabel, Select, MenuItem, Alert, Table, TableHead, TableRow, TableCell, TableBody,
     Link as MuiLink,
 } from '@mui/material';
+import FileUpload from '@/app/components/FileUpload';
 
 type HomeworkItem = {
     id: string;
@@ -44,6 +45,7 @@ export default function TeacherHomeworkPage() {
     const [dueDate, setDueDate] = useState('');
     const [classId, setClassId] = useState('');
     const [subjectId, setSubjectId] = useState('');
+    const [fileUrl, setFileUrl] = useState<string | null>(null);
     const [error, setError] = useState('');
     const [saveMsg, setSaveMsg] = useState('');
 
@@ -111,6 +113,7 @@ export default function TeacherHomeworkPage() {
                 title, description, dueDate,
                 classId: classId || undefined,
                 subjectId: subjectId || undefined,
+                fileUrl: fileUrl || undefined,
             }),
         });
         const data = await res.json();
@@ -122,6 +125,7 @@ export default function TeacherHomeworkPage() {
         setTitle('');
         setDescription('');
         setDueDate('');
+        setFileUrl(null);
         load();
     };
 
@@ -263,6 +267,10 @@ export default function TeacherHomeworkPage() {
                                 {subjects.map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
                             </Select>
                         </FormControl>
+                        <Box>
+                            <Typography variant="body2" color="text.secondary">Attachment (optional)</Typography>
+                            <FileUpload label="Attach file" onUploaded={(f) => setFileUrl(f ? f.url : null)} />
+                        </Box>
                     </Stack>
                 </DialogContent>
                 <DialogActions>

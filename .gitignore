@@ -43,3 +43,6 @@ next-env.d.ts
 /app/generated/prisma
 
 .vercel
+
+# local file uploads (dev fallback)
+/.uploads
