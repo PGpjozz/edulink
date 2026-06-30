@@ -2,8 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import {
-    Box, Container, Typography, Grid, Card, CardContent, Chip, CircularProgress, Alert,
+    Box, Container, Typography, Grid, Card, CardContent, Chip, CircularProgress, Alert, Button,
 } from '@mui/material';
+import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 
 type Department = {
     id: string;
@@ -16,6 +18,8 @@ type Department = {
 type Subject = { id: string; name: string; grade: string; code?: string };
 
 export default function HodDashboard() {
+    const router = useRouter();
+    const { data: session } = useSession();
     const [departments, setDepartments] = useState<Department[]>([]);
     const [subjects, setSubjects] = useState<Subject[]>([]);
     const [loading, setLoading] = useState(true);
@@ -44,16 +48,28 @@ export default function HodDashboard() {
 
     return (
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-                Department overview
-            </Typography>
-            <Typography color="text.secondary" sx={{ mb: 4 }}>
-                Monitor your department&apos;s subjects, staff, and learner performance.
-            </Typography>
+            <Box display="flex" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2} mb={4}>
+                <Box>
+                    <Typography variant="h4" fontWeight="bold" gutterBottom>
+                        Department overview
+                    </Typography>
+                    <Typography color="text.secondary">
+                        Monitor your department&apos;s subjects, staff, and learner performance.
+                    </Typography>
+                </Box>
+                {session?.user?.hasTeacherProfile && (
+                    <Button variant="contained" onClick={() => router.push('/dashboard/teacher')}>
+                        Go to my classroom
+                    </Button>
+                )}
+            </Box>
 
             {!myDept && (
-                <Alert severity="info">
+                <Alert severity="info" sx={{ mb: 3 }}>
                     No department is assigned to you yet. Ask your principal to assign you as HOD in Departments.
+                    {session?.user?.hasTeacherProfile && (
+                        <> You can still access your classes from <strong>My Classroom</strong> in the sidebar.</>
+                    )}
                 </Alert>
             )}
 
@@ -105,7 +121,7 @@ export default function HodDashboard() {
                 ))}
                 {subjects.length === 0 && (
                     <Grid size={{ xs: 12 }}>
-                        <Typography color="text.secondary">No subjects in your scope yet.</Typography>
+                        <Typography color="text.secondary">No subjects in your department scope yet.</Typography>
                     </Grid>
                 )}
             </Grid>

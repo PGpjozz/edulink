@@ -123,6 +123,43 @@ export async function GET(req: Request) {
         }
         counts.subjects = subjectDefs.length;
 
+        // ─── DEPARTMENTS & HOD ───────────────────────────────────────
+        const deptDefs = [
+            { name: 'Mathematics', code: 'MATH', hodIdx: 0 },
+            { name: 'Languages', code: 'LANG', hodIdx: 1 },
+            { name: 'Sciences', code: 'SCI', hodIdx: 2 },
+            { name: 'Commerce', code: 'COM', hodIdx: 3 },
+        ];
+        const subjectDeptMap: Record<string, string> = {
+            Mathematics: 'Mathematics',
+            'English Home Language': 'Languages',
+            'Physical Sciences': 'Sciences',
+            Accounting: 'Commerce',
+            'Life Orientation': 'Languages',
+        };
+        for (const d of deptDefs) {
+            const hodUser = teacherUsers[d.hodIdx];
+            await prisma.user.update({ where: { id: hodUser.userId }, data: { role: 'HOD' } });
+            const dept = await prisma.department.upsert({
+                where: { schoolId_name: { schoolId, name: d.name } },
+                update: { hodUserId: hodUser.userId, code: d.code },
+                create: { schoolId, name: d.name, code: d.code, hodUserId: hodUser.userId },
+            });
+            await prisma.teacherProfile.update({
+                where: { userId: hodUser.userId },
+                data: { departmentId: dept.id },
+            });
+            for (const [subName, deptName] of Object.entries(subjectDeptMap)) {
+                if (deptName === d.name) {
+                    await prisma.subject.updateMany({
+                        where: { schoolId, name: subName },
+                        data: { departmentId: dept.id },
+                    });
+                }
+            }
+        }
+        counts.departments = deptDefs.length;
+
         // ─── LEARNERS ────────────────────────────────────────────────
         const learnerDefs = [
             { firstName: 'Ayanda', lastName: 'Nkosi', idNumber: '0801015001083', grade: '8', cIdx: 0 },

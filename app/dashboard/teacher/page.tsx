@@ -19,6 +19,7 @@ import {
     Schedule
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import TimetableView from '@/app/components/TimetableView';
 import TeacherTodayPanel from '@/app/components/TeacherTodayPanel';
 
@@ -80,20 +81,34 @@ function ClassesSection({ onViewSchedule }: { onViewSchedule: (cls: ClassInfo) =
 
 export default function TeacherDashboard() {
     const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
+    const [departmentName, setDepartmentName] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [timetableOpen, setTimetableOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
     const router = useRouter();
+    const { data: session } = useSession();
 
     useEffect(() => {
-        fetch('/api/subjects')
-            .then(res => res.json())
-            .then(data => {
-                setSubjects(data);
-                setLoading(false);
-            })
-            .catch(err => setLoading(false));
-    }, []);
+        const requests: Promise<void>[] = [
+            fetch('/api/subjects')
+                .then(res => res.json())
+                .then(data => setSubjects(data))
+                .catch(() => {}),
+        ];
+
+        if (session?.user?.role === 'HOD') {
+            requests.push(
+                fetch('/api/departments')
+                    .then(res => res.json())
+                    .then((depts: { name: string }[]) => {
+                        if (Array.isArray(depts) && depts[0]) setDepartmentName(depts[0].name);
+                    })
+                    .catch(() => {}),
+            );
+        }
+
+        Promise.all(requests).finally(() => setLoading(false));
+    }, [session?.user?.role]);
 
     const handleViewSchedule = (cls: ClassInfo) => {
         setSelectedClass(cls);
@@ -102,10 +117,22 @@ export default function TeacherDashboard() {
 
     return (
         <Container maxWidth="xl" sx={{ mt: 4 }}>
-            <Box mb={4}>
-                <Typography variant="h4" fontWeight="bold">
-                    My Classroom
-                </Typography>
+            <Box mb={4} display="flex" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2}>
+                <Box>
+                    <Typography variant="h4" fontWeight="bold">
+                        My Classroom
+                    </Typography>
+                    {session?.user?.role === 'HOD' && departmentName && (
+                        <Typography color="text.secondary" sx={{ mt: 0.5 }}>
+                            Head of Department — {departmentName}
+                        </Typography>
+                    )}
+                </Box>
+                {session?.user?.role === 'HOD' && (
+                    <Button variant="outlined" onClick={() => router.push('/dashboard/hod')}>
+                        Department overview
+                    </Button>
+                )}
             </Box>
 
             <TeacherTodayPanel />

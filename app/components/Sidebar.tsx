@@ -152,9 +152,12 @@ function getNavItems(role: string, hasTeacherProfile: boolean) {
 
     if (role === 'HOD' && hasTeacherProfile) {
         return [
-            ...base,
-            { label: '— My classes —', icon: <Book />, path: '/dashboard/teacher' },
+            { label: 'My Classroom', icon: <Dashboard />, path: '/dashboard/teacher' },
             ...TEACHING_NAV.filter((i) => i.path !== '/dashboard/teacher'),
+            { label: '— Department —', icon: <School />, path: '/dashboard/hod' },
+            ...HOD_NAV.filter((i) => i.path !== '/dashboard/hod'),
+            { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
+            ...shared.filter((s) => !base.some((b) => b.path === s.path)),
         ];
     }
 

@@ -7,8 +7,13 @@ export async function GET() {
     if (auth instanceof NextResponse) return auth;
 
     try {
+        const where: { schoolId: string; hodUserId?: string } = { schoolId: auth.schoolId! };
+        if (auth.role === 'HOD') {
+            where.hodUserId = auth.userId;
+        }
+
         const departments = await prisma.department.findMany({
-            where: { schoolId: auth.schoolId! },
+            where,
             include: {
                 hod: { select: { id: true, firstName: true, lastName: true, email: true } },
                 _count: { select: { subjects: true, teachers: true } },

@@ -36,7 +36,11 @@ export default function DashboardPage() {
                 router.push('/dashboard/principal');
                 break;
             case 'HOD':
-                router.push('/dashboard/hod');
+                router.push(
+                    session.user.hasTeacherProfile
+                        ? '/dashboard/teacher'
+                        : '/dashboard/hod'
+                );
                 break;
             case 'TEACHER':
                 router.push('/dashboard/teacher');
