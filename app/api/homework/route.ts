@@ -12,7 +12,13 @@ const createHomeworkSchema = z.object({
     dueDate: z.string().datetime().or(z.string().refine((s) => !Number.isNaN(Date.parse(s)), 'Invalid date')),
     subjectId: z.string().min(1).optional(),
     classId: z.string().min(1).optional(),
-    fileUrl: z.string().url().optional(),
+    // Accept absolute URLs (Vercel Blob) or root-relative paths (local /api/files/... uploads).
+    fileUrl: z
+        .string()
+        .trim()
+        .max(2000)
+        .refine((v) => /^https?:\/\//.test(v) || v.startsWith('/'), 'Invalid file URL')
+        .optional(),
 });
 
 export async function GET(req: Request) {
