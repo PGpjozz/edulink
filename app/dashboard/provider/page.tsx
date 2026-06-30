@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import { Add, School as SchoolIcon } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import SystemStatusPanel from '@/app/components/SystemStatusPanel';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { useEffect } from 'react';
 import AddSchoolModal from '@/app/admin/dashboard/AddSchoolModal';
@@ -245,6 +246,8 @@ export default function ProviderDashboard() {
                 <Typography variant="h3" fontWeight="bold">EduLink Provider Portal</Typography>
                 <Typography color="text.secondary" variant="h6">Manage your SaaS platform</Typography>
             </Box>
+
+            <SystemStatusPanel />
 
             <Paper sx={{ mb: 4, borderRadius: 3 }}>
                 <Tabs
