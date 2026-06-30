@@ -1,116 +1,129 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth } from '@/lib/api-auth';
+import {
+    buildSubjectReportComment,
+    calculateAttendanceRate,
+    calculateSubjectAverage,
+    getCurrentTermLabel,
+} from '@/lib/report-generation';
+
+async function resolveLearnerProfile(auth: { userId: string; role: string; schoolId: string | null }, childUserId?: string | null) {
+    let learnerUserId = auth.userId;
+
+    if (auth.role === 'PARENT') {
+        if (!childUserId) return null;
+        const parentProfile = await prisma.parentProfile.findUnique({
+            where: { userId: auth.userId },
+            select: { learnerIds: true },
+        });
+        const candidate = await prisma.learnerProfile.findUnique({
+            where: { userId: childUserId },
+            select: { id: true },
+        });
+        if (!candidate || !parentProfile?.learnerIds.includes(candidate.id)) {
+            return null;
+        }
+        learnerUserId = childUserId;
+    } else if (auth.role !== 'LEARNER') {
+        return null;
+    }
+
+    return prisma.learnerProfile.findUnique({
+        where: { userId: learnerUserId },
+        include: {
+            class: true,
+            user: { select: { firstName: true, lastName: true } },
+        },
+    });
+}
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user.schoolId) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(req.url);
-    let learnerUserId = session.user.id;
-
-    if (session.user.role === 'PARENT') {
-        const childId = searchParams.get('childId');
-        if (!childId) return new NextResponse('Child ID required', { status: 400 });
-        learnerUserId = childId;
-    }
+    const childId = searchParams.get('childId');
 
     try {
-        // PARENT: verify they are linked to this child
-        if (session.user.role === 'PARENT') {
-            const parentProfile = await prisma.parentProfile.findUnique({
-                where: { userId: session.user.id },
-                select: { learnerIds: true }
-            });
-            const lp = await prisma.learnerProfile.findUnique({
-                where: { userId: learnerUserId },
-                select: { id: true }
-            });
-            if (!lp || !parentProfile?.learnerIds.includes(lp.id)) {
-                return new NextResponse('Forbidden', { status: 403 });
-            }
+        const learnerProfile = await resolveLearnerProfile(auth, childId);
+        if (!learnerProfile?.class) {
+            return NextResponse.json({ error: 'Learner not found' }, { status: 404 });
         }
 
-        const [learnerProfile, school] = await Promise.all([
-            prisma.learnerProfile.findUnique({
-                where: { userId: learnerUserId },
-                include: {
-                    class: true,
-                    user: { select: { firstName: true, lastName: true } }
-                }
-            }),
-            prisma.school.findUnique({
-                where: { id: session.user.schoolId as string },
-                select: { name: true }
-            })
-        ]);
-
-        if (!learnerProfile || !learnerProfile.class) {
-            return new NextResponse('Learner not found', { status: 404 });
-        }
-
-        // 1. Get Subjects and Grades
-        const subjects = await prisma.subject.findMany({
-            where: {
-                grade: learnerProfile.class.grade,
-                schoolId: session.user.schoolId
-            },
-            include: {
-                assessments: {
-                    include: {
-                        grades: {
-                            where: { learnerId: learnerProfile.id }
-                        }
-                    }
-                }
-            }
+        const school = await prisma.school.findUnique({
+            where: { id: auth.schoolId! },
+            select: { name: true },
         });
 
-        const reportData = subjects.map(sub => {
-            const grades = sub.assessments.flatMap(a => a.grades).map(g => {
-                const assessment = sub.assessments.find(as => as.id === g.assessmentId);
-                return assessment ? (g.score / assessment.totalMarks) * 100 : 0;
-            });
-            const average = grades.length > 0 ? grades.reduce((a: number, b: number) => a + b, 0) / grades.length : null;
+        const [subjects, attendance] = await Promise.all([
+            prisma.subject.findMany({
+                where: {
+                    grade: learnerProfile.class.grade,
+                    schoolId: auth.schoolId!,
+                },
+                include: {
+                    assessments: {
+                        include: {
+                            grades: {
+                                where: { learnerId: learnerProfile.id },
+                            },
+                        },
+                    },
+                },
+                orderBy: { name: 'asc' },
+            }),
+            prisma.attendance.findMany({
+                where: { learnerId: learnerProfile.id },
+            }),
+        ]);
+
+        const attendanceRate = calculateAttendanceRate(attendance);
+
+        const reportData = subjects.map((sub) => {
+            const grades = sub.assessments.flatMap((a) =>
+                a.grades.map((g) => ({ score: g.score, assessment: { totalMarks: a.totalMarks } })),
+            );
+            const average = calculateSubjectAverage(grades);
+            const rounded = average !== null ? Math.round(average) : null;
 
             return {
                 subjectName: sub.name,
                 subjectCode: sub.code || '',
-                average: average ? Math.round(average) : null,
-                comment: average && average >= 50 ? 'Satisfactory achievement' : 'Needs improvement'
+                average: rounded,
+                comment: buildSubjectReportComment({
+                    firstName: learnerProfile.user.firstName,
+                    subjectName: sub.name,
+                    average: rounded,
+                    tone: 'professional',
+                    attendanceRate,
+                    assessmentCount: grades.length,
+                }),
             };
         });
 
-        // 2. Get Attendance Stats
-        const attendance = await prisma.attendance.findMany({
-            where: { learnerId: learnerProfile.id }
-        });
-
-        const totalDays = attendance.length;
-        const presentDays = attendance.filter(a => a.status === 'PRESENT' || a.status === 'LATE').length;
-        const attendanceRate = totalDays > 0 ? (presentDays / totalDays) * 100 : 100;
+        const gradedSubjects = reportData.filter((r) => r.average !== null);
+        const overallAverage = gradedSubjects.length > 0
+            ? Math.round(gradedSubjects.reduce((a, b) => a + (b.average ?? 0), 0) / gradedSubjects.length)
+            : 0;
 
         return NextResponse.json({
             learner: {
                 name: `${learnerProfile.user.firstName} ${learnerProfile.user.lastName}`,
                 grade: learnerProfile.class.grade,
                 className: learnerProfile.class.name,
-                schoolName: school?.name ?? 'School'
+                schoolName: school?.name ?? 'School',
             },
+            term: getCurrentTermLabel(),
+            issuedAt: new Date().toISOString(),
             subjects: reportData,
             stats: {
-                attendanceRate: Math.round(attendanceRate),
-                overallAverage: reportData.filter(r => r.average !== null).length > 0
-                    ? Math.round(reportData.filter(r => r.average !== null).reduce((a: number, b) => a + (b.average || 0), 0) / reportData.filter(r => r.average !== null).length)
-                    : 0
-            }
+                attendanceRate: attendanceRate !== null ? Math.round(attendanceRate) : null,
+                overallAverage,
+            },
         });
-
     } catch (error) {
+        console.error('Learner report error:', error);
         return new NextResponse('Internal Error', { status: 500 });
     }
 }

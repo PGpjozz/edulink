@@ -26,9 +26,19 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function AIAssistant() {
-    type Learner = { id: string; user: { firstName: string; lastName: string } };
+    type Learner = { id: string; user: { firstName: string; lastName: string }; class?: { grade?: string } };
     type SubjectSummary = { id: string; name: string; grade: string };
-    type ReportResult = { comment: string; dataPoints: { avgScore: number; attendanceRate: number; assessmentsCount: number } };
+    type ReportResult = {
+        comment: string;
+        dataPoints: {
+            avgScore: number;
+            assessmentAverage?: number;
+            quizAverage?: number;
+            attendanceRate: number;
+            assessmentsCount: number;
+            quizzesCount?: number;
+        };
+    };
 
     const [learners, setLearners] = useState<Learner[]>([]);
     const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
@@ -43,6 +53,17 @@ export default function AIAssistant() {
     const [tone, setTone] = useState('professional');
     const [result, setResult] = useState<ReportResult | null>(null);
 
+    const selectedLearnerProfile = learners.find((l) => l.id === selectedLearner);
+    const filteredSubjects = selectedLearnerProfile?.class?.grade
+        ? subjects.filter((s) => s.grade === selectedLearnerProfile.class?.grade)
+        : subjects;
+
+    useEffect(() => {
+        if (selectedSubject && !filteredSubjects.some((s) => s.id === selectedSubject)) {
+            setSelectedSubject('');
+        }
+    }, [selectedLearner, filteredSubjects, selectedSubject]);
+
     useEffect(() => {
         const fetchData = async () => {
             try {
@@ -50,10 +71,10 @@ export default function AIAssistant() {
                     fetch('/api/school/learners'),
                     fetch('/api/subjects')
                 ]);
-                const lJson: Learner[] = await lRes.json();
-                const sJson: SubjectSummary[] = await sRes.json();
-                setLearners(lJson);
-                setSubjects(sJson);
+                const lJson: Learner[] = lRes.ok ? await lRes.json() : [];
+                const sJson: SubjectSummary[] = sRes.ok ? await sRes.json() : [];
+                setLearners(Array.isArray(lJson) ? lJson : []);
+                setSubjects(Array.isArray(sJson) ? sJson : []);
             } catch (err) {
                 console.error(err);
             } finally {
@@ -122,7 +143,10 @@ export default function AIAssistant() {
                                 <Select
                                     value={selectedLearner}
                                     label="Select Student"
-                                    onChange={(e) => setSelectedLearner(e.target.value)}
+                                    onChange={(e) => {
+                                        setSelectedLearner(e.target.value);
+                                        setResult(null);
+                                    }}
                                 >
                                     {learners.map((l) => (
                                         <MenuItem key={l.id} value={l.id}>{l.user.firstName} {l.user.lastName}</MenuItem>
@@ -137,7 +161,7 @@ export default function AIAssistant() {
                                     label="Subject"
                                     onChange={(e) => setSelectedSubject(e.target.value)}
                                 >
-                                    {subjects.map((s) => (
+                                    {filteredSubjects.map((s) => (
                                         <MenuItem key={s.id} value={s.id}>{s.name} (Gr {s.grade})</MenuItem>
                                     ))}
                                 </Select>
@@ -174,7 +198,7 @@ export default function AIAssistant() {
 
                     <Alert severity="info" sx={{ mt: 3, borderRadius: 3 }}>
                         <Typography variant="caption">
-                            <strong>Note:</strong> AI comments are based on recent quiz scores and attendance records from the EduLink Data Hub.
+                            <strong>Note:</strong> Comments are generated from assessment averages, quiz results, and attendance records for the selected subject.
                         </Typography>
                     </Alert>
                 </Grid>
@@ -199,13 +223,19 @@ export default function AIAssistant() {
 
                                     <Typography variant="subtitle2" gutterBottom>Data Insights Used:</Typography>
                                     <Stack direction="row" spacing={2} mb={4} flexWrap="wrap" useFlexGap>
-                                        {result.dataPoints.avgScore > 0 && (
-                                            <Chip label={`Avg Score: ${Math.round(result.dataPoints.avgScore)}%`} color="success" variant="outlined" />
+                                        {(result.dataPoints.assessmentAverage ?? 0) > 0 && (
+                                            <Chip label={`Assessments: ${Math.round(result.dataPoints.assessmentAverage!)}%`} color="success" variant="outlined" />
+                                        )}
+                                        {(result.dataPoints.quizAverage ?? 0) > 0 && (
+                                            <Chip label={`Quizzes: ${Math.round(result.dataPoints.quizAverage!)}%`} color="secondary" variant="outlined" />
                                         )}
                                         {result.dataPoints.attendanceRate > 0 && (
                                             <Chip label={`Attendance: ${Math.round(result.dataPoints.attendanceRate)}%`} color="primary" variant="outlined" />
                                         )}
-                                        <Chip label={`${result.dataPoints.assessmentsCount} Quizzes`} variant="outlined" />
+                                        <Chip label={`${result.dataPoints.assessmentsCount} assessments`} variant="outlined" />
+                                        {(result.dataPoints.quizzesCount ?? 0) > 0 && (
+                                            <Chip label={`${result.dataPoints.quizzesCount} quizzes`} variant="outlined" />
+                                        )}
                                     </Stack>
 
                                     <Stack direction="row" spacing={2}>

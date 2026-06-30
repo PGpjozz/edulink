@@ -253,7 +253,7 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
 
             {tabValue === 3 && (
                 <Box component={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                    <AIInsightsSection childId={childId || (data.learner.id as string)} />
+                    <AIInsightsSection childId={childId} />
                 </Box>
             )}
 
