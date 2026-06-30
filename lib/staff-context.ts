@@ -215,5 +215,38 @@ export async function getLearnersForSubject(auth: AuthContext, subjectId: string
             user: { select: { firstName: true, lastName: true, idNumber: true, email: true } },
         },
         orderBy: { user: { lastName: 'asc' } },
+    }).then(async (learners) => {
+        if (learners.length > 0) return learners;
+
+        // Fallback: learners in the teacher's form class for this subject grade
+        if (ctx.formClassIds.length > 0) {
+            return prisma.learnerProfile.findMany({
+                where: {
+                    grade: subject.grade,
+                    classId: { in: ctx.formClassIds },
+                    user: { schoolId: auth.schoolId! },
+                },
+                include: {
+                    user: { select: { firstName: true, lastName: true, idNumber: true, email: true } },
+                },
+                orderBy: { user: { lastName: 'asc' } },
+            });
+        }
+
+        // Last resort: all learners in grade (school admins / HOD only)
+        if (canManageSchool(auth.role) || auth.role === 'HOD') {
+            return prisma.learnerProfile.findMany({
+                where: {
+                    grade: subject.grade,
+                    user: { schoolId: auth.schoolId! },
+                },
+                include: {
+                    user: { select: { firstName: true, lastName: true, idNumber: true, email: true } },
+                },
+                orderBy: { user: { lastName: 'asc' } },
+            });
+        }
+
+        return learners;
     });
 }

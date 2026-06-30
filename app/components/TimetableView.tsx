@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, Paper, Typography, Grid, Chip } from '@mui/material';
+import { Box, Paper, Typography } from '@mui/material';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 const PERIODS = [
@@ -11,8 +11,24 @@ const PERIODS = [
     { num: 5, time: '12:30 - 13:30' }
 ];
 
+type TimetableSlot = {
+    period?: number;
+    p?: number;
+    subject?: string;
+    subjectName?: string;
+    time?: string;
+};
+
 interface TimetableViewProps {
-    timetable: any; // { Monday: [{ period: 1, subjectName: '...' }] }
+    timetable?: Record<string, TimetableSlot[]> | null;
+}
+
+function getPeriod(slot: TimetableSlot) {
+    return slot.period ?? slot.p;
+}
+
+function getSubjectName(slot: TimetableSlot) {
+    return slot.subjectName ?? slot.subject ?? '';
 }
 
 export default function TimetableView({ timetable }: TimetableViewProps) {
@@ -27,7 +43,6 @@ export default function TimetableView({ timetable }: TimetableViewProps) {
     return (
         <Paper sx={{ overflowX: 'auto', p: 3, borderRadius: 2 }}>
             <Box sx={{ minWidth: 800 }}>
-                {/* Header */}
                 <Box display="flex" borderBottom={1} borderColor="divider" pb={2} mb={2}>
                     <Box width={100} fontWeight="bold" color="text.secondary">Time</Box>
                     {DAYS.map(day => (
@@ -37,7 +52,6 @@ export default function TimetableView({ timetable }: TimetableViewProps) {
                     ))}
                 </Box>
 
-                {/* Rows */}
                 {PERIODS.map((period) => (
                     <Box key={period.num} display="flex" mb={1} alignItems="stretch">
                         <Box width={100} display="flex" flexDirection="column" justifyContent="center">
@@ -45,7 +59,8 @@ export default function TimetableView({ timetable }: TimetableViewProps) {
                             <Typography variant="caption" color="text.secondary">{period.time}</Typography>
                         </Box>
                         {DAYS.map(day => {
-                            const slot = timetable[day]?.find((s: any) => s.period === period.num);
+                            const slot = timetable[day]?.find((s) => getPeriod(s) === period.num);
+                            const subjectName = slot ? getSubjectName(slot) : '';
                             return (
                                 <Box key={day} flex={1} px={0.5}>
                                     <Paper
@@ -57,12 +72,12 @@ export default function TimetableView({ timetable }: TimetableViewProps) {
                                             display: 'flex',
                                             alignItems: 'center',
                                             justifyContent: 'center',
-                                            bgcolor: slot ? 'primary.50' : 'transparent',
-                                            borderColor: slot ? 'primary.main' : 'divider'
+                                            bgcolor: subjectName ? 'primary.50' : 'transparent',
+                                            borderColor: subjectName ? 'primary.main' : 'divider'
                                         }}
                                     >
-                                        <Typography variant="body2" fontWeight={slot ? 'bold' : 'normal'} textAlign="center">
-                                            {slot ? slot.subjectName : '-'}
+                                        <Typography variant="body2" fontWeight={subjectName ? 'bold' : 'normal'} textAlign="center">
+                                            {subjectName || '-'}
                                         </Typography>
                                     </Paper>
                                 </Box>

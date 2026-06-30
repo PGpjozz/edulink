@@ -19,15 +19,13 @@ import {
     List,
     ListItem,
     ListItemText,
-    ListItemIcon
+    TextField,
+    Alert,
 } from '@mui/material';
 import {
     Event,
     Schedule,
-    Person,
-    CheckCircle,
-    RadioButtonUnchecked,
-    Block
+    Add,
 } from '@mui/icons-material';
 
 interface PTMSchedulerProps {
@@ -40,13 +38,20 @@ export default function PTMScheduler({ role }: PTMSchedulerProps) {
     const [bookingSession, setBookingSession] = useState<any>(null);
     const [selectedSlot, setSelectedSlot] = useState<any>(null);
     const [isBooking, setIsBooking] = useState(false);
+    const [createOpen, setCreateOpen] = useState(false);
+    const [createError, setCreateError] = useState('');
+    const [creating, setCreating] = useState(false);
+    const [sessionDate, setSessionDate] = useState('');
+    const [startTime, setStartTime] = useState('09:00');
+    const [endTime, setEndTime] = useState('14:00');
+    const [slotDuration, setSlotDuration] = useState(15);
 
     const fetchSessions = async () => {
         setLoading(true);
         try {
             const res = await fetch('/api/school/ptm');
             const data = await res.json();
-            setSessions(data);
+            setSessions(Array.isArray(data) ? data : []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -107,15 +112,70 @@ export default function PTMScheduler({ role }: PTMSchedulerProps) {
         }
     };
 
+    const handleCreateSession = async () => {
+        if (!sessionDate) {
+            setCreateError('Please select a date');
+            return;
+        }
+        setCreating(true);
+        setCreateError('');
+        try {
+            const date = new Date(sessionDate);
+            const [startH, startM] = startTime.split(':').map(Number);
+            const [endH, endM] = endTime.split(':').map(Number);
+            const start = new Date(date);
+            start.setHours(startH, startM, 0, 0);
+            const end = new Date(date);
+            end.setHours(endH, endM, 0, 0);
+
+            const res = await fetch('/api/school/ptm', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    date: sessionDate,
+                    startTime: start.toISOString(),
+                    endTime: end.toISOString(),
+                    slotDuration,
+                }),
+            });
+            if (!res.ok) {
+                setCreateError('Failed to create session');
+                return;
+            }
+            setCreateOpen(false);
+            setSessionDate('');
+            fetchSessions();
+        } catch {
+            setCreateError('Failed to create session');
+        } finally {
+            setCreating(false);
+        }
+    };
+
     if (loading) return <CircularProgress />;
+
+    const visibleSessions = sessions;
 
     return (
         <Box>
-            <Typography variant="h5" fontWeight="bold" gutterBottom>Parent-Teacher Meetings</Typography>
-            <Typography color="text.secondary" mb={4}>Book your 1:1 meeting slots with subject teachers.</Typography>
+            <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={4}>
+                <Box>
+                    <Typography variant="h5" fontWeight="bold" gutterBottom>Parent-Teacher Meetings</Typography>
+                    <Typography color="text.secondary">
+                        {role === 'TEACHER'
+                            ? 'Manage your meeting availability and view parent bookings.'
+                            : 'Book your 1:1 meeting slots with subject teachers.'}
+                    </Typography>
+                </Box>
+                {role === 'TEACHER' && (
+                    <Button variant="contained" startIcon={<Add />} onClick={() => setCreateOpen(true)}>
+                        New Session
+                    </Button>
+                )}
+            </Box>
 
             <Grid container spacing={3}>
-                {sessions.map((session: any) => (
+                {visibleSessions.map((session: any) => (
                     <Grid size={{ xs: 12, md: 6 }} key={session.id}>
                         <Card sx={{ height: '100%', borderRadius: 3 }}>
                             <CardContent>
@@ -174,7 +234,37 @@ export default function PTMScheduler({ role }: PTMSchedulerProps) {
                         </Card>
                     </Grid>
                 ))}
+                {visibleSessions.length === 0 && (
+                    <Grid size={{ xs: 12 }}>
+                        <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3 }}>
+                            <Typography color="text.secondary">
+                                {role === 'TEACHER' ? 'No meeting sessions yet. Create one to get started.' : 'No meeting sessions available.'}
+                            </Typography>
+                        </Paper>
+                    </Grid>
+                )}
             </Grid>
+
+            {role === 'TEACHER' && (
+                <Dialog open={createOpen} onClose={() => setCreateOpen(false)} maxWidth="sm" fullWidth>
+                    <DialogTitle>Schedule PTM Session</DialogTitle>
+                    <DialogContent>
+                        {createError && <Alert severity="error" sx={{ mb: 2 }}>{createError}</Alert>}
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                            <TextField label="Date" type="date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} InputLabelProps={{ shrink: true }} fullWidth />
+                            <TextField label="Start time" type="time" value={startTime} onChange={(e) => setStartTime(e.target.value)} InputLabelProps={{ shrink: true }} fullWidth />
+                            <TextField label="End time" type="time" value={endTime} onChange={(e) => setEndTime(e.target.value)} InputLabelProps={{ shrink: true }} fullWidth />
+                            <TextField label="Slot duration (minutes)" type="number" value={slotDuration} onChange={(e) => setSlotDuration(Number(e.target.value))} fullWidth />
+                        </Box>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setCreateOpen(false)} disabled={creating}>Cancel</Button>
+                        <Button variant="contained" onClick={handleCreateSession} disabled={creating}>
+                            {creating ? 'Creating…' : 'Create Session'}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            )}
 
             {/* Booking Dialog */}
             <Dialog open={!!bookingSession} onClose={() => setBookingSession(null)} fullWidth maxWidth="sm">

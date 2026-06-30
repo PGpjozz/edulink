@@ -49,10 +49,45 @@ export default function TeacherGradebook() {
         fetchGradebookData();
     }, []);
 
-    const exportToCSV = (subject: SubjectSummary) => {
-        // Logic to export subject grades to CSV (Placeholder for now)
-        console.log(`Exporting CSV for ${subject.name}`);
-        alert(`Exporting grades for ${subject.name} to CSV...`);
+    const [exportingId, setExportingId] = useState<string | null>(null);
+
+    const exportToCSV = async (subject: SubjectSummary) => {
+        setExportingId(subject.id);
+        try {
+            const res = await fetch(`/api/subjects/${subject.id}/grades`);
+            if (!res.ok) throw new Error('Failed to fetch grades');
+            const data = await res.json();
+
+            const assessments: { id: string; title: string }[] = data.assessments ?? [];
+            const learners: { id: string; user: { firstName: string; lastName: string } }[] = data.learners ?? [];
+            const grades: { learnerId: string; assessmentId: string; score: number }[] = data.grades ?? [];
+
+            const getGrade = (learnerId: string, assessmentId: string) => {
+                const grade = grades.find((g) => g.learnerId === learnerId && g.assessmentId === assessmentId);
+                return grade ? grade.score : '-';
+            };
+
+            let csv = 'Learner,';
+            csv += assessments.map((a) => `"${a.title}"`).join(',') + '\n';
+
+            learners.forEach((l) => {
+                csv += `"${l.user.firstName} ${l.user.lastName}",`;
+                csv += assessments.map((a) => getGrade(l.id, a.id)).join(',') + '\n';
+            });
+
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `${subject.name}_Grade${subject.grade}.csv`;
+            link.click();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('CSV export failed:', err);
+            alert(`Failed to export grades for ${subject.name}. Please try again.`);
+        } finally {
+            setExportingId(null);
+        }
     };
 
     return (
@@ -116,14 +151,17 @@ export default function TeacherGradebook() {
                                             Open Grades
                                         </Button>
                                         <Tooltip title="Export CSV">
-                                            <IconButton
-                                                size="small"
-                                                color="primary"
-                                                sx={{ border: '1px solid', borderColor: 'divider' }}
-                                                onClick={() => exportToCSV(subject)}
-                                            >
-                                                <FileDownload fontSize="small" />
-                                            </IconButton>
+                                            <span>
+                                                <IconButton
+                                                    size="small"
+                                                    color="primary"
+                                                    disabled={exportingId === subject.id}
+                                                    sx={{ border: '1px solid', borderColor: 'divider' }}
+                                                    onClick={() => exportToCSV(subject)}
+                                                >
+                                                    <FileDownload fontSize="small" />
+                                                </IconButton>
+                                            </span>
                                         </Tooltip>
                                     </Box>
                                 </CardContent>

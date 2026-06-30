@@ -5,7 +5,7 @@ import {
     Container, Typography, Box, Paper, Button, Stack, Chip, Dialog,
     DialogTitle, DialogContent, DialogActions, TextField, FormControl,
     InputLabel, Select, MenuItem, Alert, Table, TableHead, TableRow, TableCell, TableBody,
-    Link as MuiLink,
+    Link as MuiLink, CircularProgress, Skeleton,
 } from '@mui/material';
 
 type HomeworkItem = {
@@ -32,7 +32,7 @@ type Submission = {
 export default function TeacherHomeworkPage() {
     const [items, setItems] = useState<HomeworkItem[]>([]);
     const [classes, setClasses] = useState<{ id: string; name: string }[]>([]);
-    const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
+    const [subjects, setSubjects] = useState<{ id: string; name: string; grade?: string }[]>([]);
     const [open, setOpen] = useState(false);
     const [reviewId, setReviewId] = useState<string | null>(null);
     const [reviewTitle, setReviewTitle] = useState('');
@@ -46,16 +46,21 @@ export default function TeacherHomeworkPage() {
     const [subjectId, setSubjectId] = useState('');
     const [error, setError] = useState('');
     const [saveMsg, setSaveMsg] = useState('');
+    const [loading, setLoading] = useState(true);
+    const [creating, setCreating] = useState(false);
 
     const load = () => {
-        fetch('/api/homework').then((r) => r.json()).then((d) => setItems(Array.isArray(d) ? d : []));
+        fetch('/api/homework')
+            .then((r) => (r.ok ? r.json() : []))
+            .then((d) => setItems(Array.isArray(d) ? d : []))
+            .finally(() => setLoading(false));
     };
 
     useEffect(() => {
         load();
         Promise.all([
-            fetch('/api/classes').then((r) => r.json()),
-            fetch('/api/subjects').then((r) => r.json()),
+            fetch('/api/classes').then((r) => (r.ok ? r.json() : [])),
+            fetch('/api/subjects').then((r) => (r.ok ? r.json() : [])),
         ]).then(([c, s]) => {
             setClasses(Array.isArray(c) ? c : []);
             setSubjects(Array.isArray(s) ? s : []);
@@ -104,16 +109,29 @@ export default function TeacherHomeworkPage() {
 
     const handleCreate = async () => {
         setError('');
+        if (!title.trim()) {
+            setError('Please enter a title');
+            return;
+        }
+        if (!dueDate) {
+            setError('Please select a due date');
+            return;
+        }
+
+        setCreating(true);
         const res = await fetch('/api/homework', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                title, description, dueDate,
+                title: title.trim(),
+                description: description.trim() || undefined,
+                dueDate: `${dueDate}T23:59:00`,
                 classId: classId || undefined,
                 subjectId: subjectId || undefined,
             }),
         });
         const data = await res.json();
+        setCreating(false);
         if (!res.ok) {
             setError(data.error || 'Failed to create');
             return;
@@ -122,6 +140,8 @@ export default function TeacherHomeworkPage() {
         setTitle('');
         setDescription('');
         setDueDate('');
+        setClassId('');
+        setSubjectId('');
         load();
     };
 
@@ -133,7 +153,12 @@ export default function TeacherHomeworkPage() {
             </Box>
 
             <Stack spacing={2}>
-                {items.map((h) => (
+                {loading ? (
+                    <>
+                        <Skeleton variant="rounded" height={100} />
+                        <Skeleton variant="rounded" height={100} />
+                    </>
+                ) : items.map((h) => (
                     <Paper
                         key={h.id}
                         variant="outlined"
@@ -160,7 +185,7 @@ export default function TeacherHomeworkPage() {
                         </Box>
                     </Paper>
                 ))}
-                {items.length === 0 && (
+                {!loading && items.length === 0 && (
                     <Typography color="text.secondary">No homework assigned yet.</Typography>
                 )}
             </Stack>
@@ -248,7 +273,7 @@ export default function TeacherHomeworkPage() {
                     <Stack spacing={2} sx={{ mt: 1 }}>
                         <TextField label="Title" required value={title} onChange={(e) => setTitle(e.target.value)} fullWidth />
                         <TextField label="Instructions" multiline minRows={3} value={description} onChange={(e) => setDescription(e.target.value)} fullWidth />
-                        <TextField label="Due date" type="datetime-local" required value={dueDate} onChange={(e) => setDueDate(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
+                        <TextField label="Due date" type="date" required value={dueDate} onChange={(e) => setDueDate(e.target.value)} fullWidth InputLabelProps={{ shrink: true }} />
                         <FormControl fullWidth>
                             <InputLabel>Class (optional)</InputLabel>
                             <Select value={classId} label="Class (optional)" onChange={(e) => setClassId(e.target.value)}>
@@ -260,14 +285,16 @@ export default function TeacherHomeworkPage() {
                             <InputLabel>Subject (optional)</InputLabel>
                             <Select value={subjectId} label="Subject (optional)" onChange={(e) => setSubjectId(e.target.value)}>
                                 <MenuItem value="">—</MenuItem>
-                                {subjects.map((s) => <MenuItem key={s.id} value={s.id}>{s.name}</MenuItem>)}
+                                {subjects.map((s) => <MenuItem key={s.id} value={s.id}>{s.name}{s.grade ? ` (Grade ${s.grade})` : ''}</MenuItem>)}
                             </Select>
                         </FormControl>
                     </Stack>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpen(false)}>Cancel</Button>
-                    <Button variant="contained" onClick={handleCreate}>Create</Button>
+                    <Button onClick={() => setOpen(false)} disabled={creating}>Cancel</Button>
+                    <Button variant="contained" onClick={handleCreate} disabled={creating}>
+                        {creating ? 'Creating…' : 'Create'}
+                    </Button>
                 </DialogActions>
             </Dialog>
         </Container>

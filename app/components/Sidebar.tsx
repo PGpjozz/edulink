@@ -67,6 +67,7 @@ const ADMIN_NAV = [
     { label: 'Subjects', icon: <Book />, path: '/dashboard/principal?tab=subjects' },
     { label: 'Departments', icon: <School />, path: '/dashboard/principal?tab=departments' },
     { label: 'Admissions', icon: <AppRegistration />, path: '/dashboard/principal/admissions' },
+    { label: 'Term Reports', icon: <Assignment />, path: '/dashboard/principal/reports' },
     { label: 'Library & Assets', icon: <Inventory />, path: '/dashboard/principal/assets' },
     { label: 'Finance', icon: <Payments />, path: '/dashboard/principal/finance' },
     { label: 'Subscription', icon: <ReceiptLong />, path: '/dashboard/principal/subscription' },
