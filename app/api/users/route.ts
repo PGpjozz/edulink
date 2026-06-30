@@ -109,7 +109,7 @@ export async function POST(req: Request) {
                 mustChangePassword: usesDefaultPassword,
                 gender: gender || undefined,
                 employeeNumber: employeeNumber || undefined,
-                staffTitle: role === 'STAFF' ? (staffTitle || undefined) : undefined,
+                staffTitle: staffTitle || undefined,
                 ...(role === 'LEARNER' && {
                     learnerProfile: { create: { grade: grade as string } }
                 }),

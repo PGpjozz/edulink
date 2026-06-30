@@ -68,6 +68,8 @@ interface UserData {
     role: string;
     isActive: boolean;
     teacherProfileId?: string | null;
+    staffTitle?: string | null;
+    employeeNumber?: string | null;
 }
 
 interface SubjectData {
@@ -450,6 +452,14 @@ function PrincipalDashboard() {
             renderCell: (params: any) => (
                 <Chip size="small" variant="outlined" label={params.value} />
             )
+        },
+        {
+            field: 'staffTitle', headerName: 'Title / Emp No', flex: 1,
+            valueGetter: (_value: any, row: any) => {
+                const title = row?.staffTitle || '';
+                const emp = row?.employeeNumber ? ` (${row.employeeNumber})` : '';
+                return title ? `${title}${emp}` : (row?.employeeNumber || '—');
+            }
         },
         {
             field: 'isActive', headerName: 'Status', width: 120,
