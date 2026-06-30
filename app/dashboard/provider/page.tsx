@@ -24,6 +24,7 @@ import {
 } from '@mui/material';
 import { Add, School as SchoolIcon } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import SystemStatusPanel from '@/app/components/SystemStatusPanel';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { useEffect } from 'react';
 import AddSchoolModal from '@/app/admin/dashboard/AddSchoolModal';
@@ -35,6 +36,11 @@ export default function ProviderDashboard() {
         tier: 'SMALL',
         monthlyFee: '1000',
         contactEmail: '',
+        emisNumber: '',
+        district: '',
+        province: '',
+        country: 'South Africa',
+        schoolType: '',
         principalFirstName: '',
         principalLastName: '',
         principalEmail: '',
@@ -208,6 +214,11 @@ export default function ProviderDashboard() {
                     tier: 'SMALL',
                     monthlyFee: '1000',
                     contactEmail: '',
+                    emisNumber: '',
+                    district: '',
+                    province: '',
+                    country: 'South Africa',
+                    schoolType: '',
                     principalFirstName: '',
                     principalLastName: '',
                     principalEmail: '',
@@ -235,6 +246,8 @@ export default function ProviderDashboard() {
                 <Typography variant="h3" fontWeight="bold">EduLink Provider Portal</Typography>
                 <Typography color="text.secondary" variant="h6">Manage your SaaS platform</Typography>
             </Box>
+
+            <SystemStatusPanel />
 
             <Paper sx={{ mb: 4, borderRadius: 3 }}>
                 <Tabs
@@ -303,6 +316,47 @@ export default function ProviderDashboard() {
                                     required
                                     value={formData.contactEmail}
                                     onChange={(e) => setFormData({ ...formData, contactEmail: e.target.value })}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="EMIS Number"
+                                    value={formData.emisNumber}
+                                    onChange={(e) => setFormData({ ...formData, emisNumber: e.target.value })}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 6 }}>
+                                <TextField
+                                    fullWidth
+                                    label="School Type"
+                                    placeholder="e.g. Public Secondary School"
+                                    value={formData.schoolType}
+                                    onChange={(e) => setFormData({ ...formData, schoolType: e.target.value })}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 4 }}>
+                                <TextField
+                                    fullWidth
+                                    label="District"
+                                    value={formData.district}
+                                    onChange={(e) => setFormData({ ...formData, district: e.target.value })}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 4 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Province"
+                                    value={formData.province}
+                                    onChange={(e) => setFormData({ ...formData, province: e.target.value })}
+                                />
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 4 }}>
+                                <TextField
+                                    fullWidth
+                                    label="Country"
+                                    value={formData.country}
+                                    onChange={(e) => setFormData({ ...formData, country: e.target.value })}
                                 />
                             </Grid>
                         </Grid>

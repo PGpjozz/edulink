@@ -15,27 +15,35 @@ type HomeworkItem = {
 type ClassItem = { id: string; name: string };
 
 export default function TeacherTodayPanel() {
-    const [homework, setHomework] = useState<HomeworkItem[]>([]);
     const [classes, setClasses] = useState<ClassItem[]>([]);
+    const [dueSoon, setDueSoon] = useState<HomeworkItem[]>([]);
+    const [needsGrading, setNeedsGrading] = useState<HomeworkItem[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         Promise.all([
-            fetch('/api/homework').then((r) => r.json()),
-            fetch('/api/classes').then((r) => r.json()),
+            fetch('/api/homework').then((r) => (r.ok ? r.json() : [])),
+            fetch('/api/classes').then((r) => (r.ok ? r.json() : [])),
         ]).then(([hw, cls]) => {
-            setHomework(Array.isArray(hw) ? hw : []);
+            const homework: HomeworkItem[] = Array.isArray(hw) ? hw : [];
             setClasses(Array.isArray(cls) ? cls : []);
+
+            // Derive time-based values here (in an effect) to keep render pure.
+            const now = Date.now();
+            const weekMs = 7 * 24 * 60 * 60 * 1000;
+            setDueSoon(
+                homework.filter((h) => {
+                    const due = new Date(h.dueDate).getTime();
+                    return due >= now && due <= now + weekMs;
+                })
+            );
+            setNeedsGrading(homework.filter((h) => (h._count?.submissions ?? 0) > 0));
+        }).catch(() => {
+            setClasses([]);
+            setDueSoon([]);
+            setNeedsGrading([]);
         }).finally(() => setLoading(false));
     }, []);
-
-    const now = Date.now();
-    const weekMs = 7 * 24 * 60 * 60 * 1000;
-    const dueSoon = homework.filter((h) => {
-        const due = new Date(h.dueDate).getTime();
-        return due >= now && due <= now + weekMs;
-    });
-    const needsGrading = homework.filter((h) => (h._count?.submissions ?? 0) > 0);
 
     if (loading) {
         return <Skeleton variant="rounded" height={120} sx={{ mb: 3 }} />;

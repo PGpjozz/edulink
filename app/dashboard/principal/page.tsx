@@ -26,8 +26,9 @@ import {
     InputLabel,
     Select,
     MenuItem,
+    Snackbar,
 } from '@mui/material';
-import { Add as AddIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { Add as AddIcon, Refresh as RefreshIcon, UploadFile as UploadFileIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import {
     ResponsiveContainer,
@@ -39,6 +40,8 @@ import {
     XAxis,
     YAxis,
     CartesianGrid,
+    Legend,
+    LabelList,
     Tooltip as RechartsTooltip
 } from 'recharts';
 import AddClassModal from './AddClassModal';
@@ -46,6 +49,8 @@ import AddUserModal from './AddUserModal';
 import AssignTeacherModal from './AssignTeacherModal';
 import AssignHodModal from './AssignHodModal';
 import ClassSubjectsModal from './ClassSubjectsModal';
+import ManageClassLearnersModal from './ManageClassLearnersModal';
+import BulkImportModal from './BulkImportModal';
 
 interface ClassData {
     id: string;
@@ -65,6 +70,8 @@ interface UserData {
     role: string;
     isActive: boolean;
     teacherProfileId?: string | null;
+    staffTitle?: string | null;
+    employeeNumber?: string | null;
 }
 
 interface SubjectData {
@@ -78,6 +85,10 @@ interface SubjectData {
 
 type OverviewResponse = {
     lastUpdated: string;
+    school?: {
+        name: string;
+        tier: string | null;
+    };
     kpis: {
         learners: number;
         teachers: number;
@@ -155,6 +166,7 @@ function PrincipalDashboard() {
     // Modals
     const [isClassModalOpen, setIsClassModalOpen] = useState(false);
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+    const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
     const [assignOpen, setAssignOpen] = useState(false);
     const [assignTitle, setAssignTitle] = useState('');
@@ -167,6 +179,8 @@ function PrincipalDashboard() {
 
     const [classSubjectsOpen, setClassSubjectsOpen] = useState(false);
     const [classSubjectsTarget, setClassSubjectsTarget] = useState<ClassData | null>(null);
+    const [manageLearnersOpen, setManageLearnersOpen] = useState(false);
+    const [manageLearnersTarget, setManageLearnersTarget] = useState<ClassData | null>(null);
 
     const fetchClasses = () => {
         setLoading(true);
@@ -276,6 +290,19 @@ function PrincipalDashboard() {
         }
     };
 
+    const formatCompactCurrency = (value: number) => {
+        try {
+            return new Intl.NumberFormat('en-ZA', {
+                style: 'currency',
+                currency: 'ZAR',
+                notation: 'compact',
+                maximumFractionDigits: 1
+            }).format(value);
+        } catch {
+            return `R ${Number(value || 0).toFixed(0)}`;
+        }
+    };
+
     const getInvoiceChipColor = (status: string) => {
         if (status === 'PAID') return 'success';
         if (status === 'OVERDUE') return 'error';
@@ -324,6 +351,7 @@ function PrincipalDashboard() {
         if (!res.ok) throw new Error(await res.text());
         fetchDepartments();
         fetchUsers();
+        notify(hodUserId ? 'Head of Department assigned.' : 'Head of Department unassigned.');
     };
 
     const openClassSubjects = (cls: ClassData) => {
@@ -332,11 +360,16 @@ function PrincipalDashboard() {
         if (subjects.length === 0) fetchSubjects();
     };
 
+    const openManageLearners = (cls: ClassData) => {
+        setManageLearnersTarget(cls);
+        setManageLearnersOpen(true);
+    };
+
     const classColumns: GridColDef[] = [
         { field: 'name', headerName: 'Class Name', flex: 1 },
         { field: 'grade', headerName: 'Grade', width: 100 },
         {
-            field: 'learners', headerName: 'Learners', width: 100,
+            field: 'learners', headerName: 'Learners', width: 130, type: 'number', align: 'left', headerAlign: 'left',
             valueGetter: (_value: any, row: any) => row?._count?.learners || 0
         },
         {
@@ -349,9 +382,16 @@ function PrincipalDashboard() {
         {
             field: 'actions',
             headerName: 'Actions',
-            width: 340,
+            width: 430,
             renderCell: (params: any) => (
                 <Box display="flex" gap={1} flexWrap="wrap">
+                    <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={() => openManageLearners(params.row)}
+                    >
+                        Learners
+                    </Button>
                     <Button
                         variant="outlined"
                         size="small"
@@ -423,9 +463,35 @@ function PrincipalDashboard() {
             field: 'email', headerName: 'Email / ID', flex: 1.5,
             valueGetter: (_value: any, row: any) => row?.email || row?.idNumber || '-'
         },
-        { field: 'role', headerName: 'Role', width: 120 },
-        { field: 'isActive', headerName: 'Status', width: 100, type: 'boolean' },
+        {
+            field: 'role', headerName: 'Role', width: 150,
+            valueGetter: (_value: any, row: any) => (row?.role ? String(row.role).replace(/_/g, ' ') : ''),
+            renderCell: (params: any) => (
+                <Chip size="small" variant="outlined" label={params.value} />
+            )
+        },
+        {
+            field: 'staffTitle', headerName: 'Title / Emp No', flex: 1,
+            valueGetter: (_value: any, row: any) => {
+                const title = row?.staffTitle || '';
+                const emp = row?.employeeNumber ? ` (${row.employeeNumber})` : '';
+                return title ? `${title}${emp}` : (row?.employeeNumber || '—');
+            }
+        },
+        {
+            field: 'isActive', headerName: 'Status', width: 120,
+            renderCell: (params: any) => (
+                <Chip
+                    size="small"
+                    label={params.row?.isActive ? 'Active' : 'Inactive'}
+                    color={params.row?.isActive ? 'success' : 'default'}
+                />
+            )
+        },
     ];
+
+    const [toast, setToast] = useState<{ msg: string; severity: 'success' | 'error' } | null>(null);
+    const notify = (msg: string, severity: 'success' | 'error' = 'success') => setToast({ msg, severity });
 
     const handleSaveAssignment = async (teacherProfileId: string | null) => {
         if (!assignTarget) return;
@@ -441,6 +507,8 @@ function PrincipalDashboard() {
                 throw new Error(text || 'Failed to assign class teacher');
             }
             fetchClasses();
+            if (tabIndex === 0) fetchOverview();
+            notify(teacherProfileId ? 'Class teacher assigned.' : 'Class teacher unassigned.');
             return;
         }
 
@@ -454,13 +522,32 @@ function PrincipalDashboard() {
             throw new Error(text || 'Failed to assign subject teacher');
         }
         fetchSubjects();
+        if (tabIndex === 0) fetchOverview();
+        notify(teacherProfileId ? 'Subject teacher assigned.' : 'Subject teacher unassigned.');
     };
 
     return (
         <Container maxWidth="xl" sx={{ mt: 4 }}>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-                School Management
-            </Typography>
+            <Box
+                display="flex"
+                alignItems={{ xs: 'flex-start', sm: 'center' }}
+                justifyContent="space-between"
+                flexDirection={{ xs: 'column', sm: 'row' }}
+                gap={1}
+                mb={2}
+            >
+                <Box>
+                    <Typography variant="h4" fontWeight="bold">
+                        {overview?.school?.name || 'School Management'}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Principal dashboard
+                    </Typography>
+                </Box>
+                {overview?.school?.tier && (
+                    <Chip label={`${overview.school.tier} plan`} color="primary" variant="outlined" />
+                )}
+            </Box>
 
             <Paper sx={{ width: '100%', mb: 4 }}>
                 <Tabs
@@ -708,16 +795,42 @@ function PrincipalDashboard() {
                                                         <Button size="small" onClick={() => router.push('/dashboard/principal/assets')}>Open</Button>
                                                     </Box>
                                                     <Box sx={{ width: '100%', height: 300 }}>
-                                                        <ResponsiveContainer width="100%" height="100%">
-                                                            <PieChart>
-                                                                <Pie data={assetChartData} dataKey="value" nameKey="name" outerRadius={100}>
-                                                                    {assetChartData.map((_, index) => (
-                                                                        <Cell key={`cell-${index}`} fill={ASSET_COLORS[index % ASSET_COLORS.length]} />
-                                                                    ))}
-                                                                </Pie>
-                                                                <RechartsTooltip />
-                                                            </PieChart>
-                                                        </ResponsiveContainer>
+                                                        {overview.kpis.assets.total === 0 ? (
+                                                            <Box height="100%" display="flex" alignItems="center" justifyContent="center">
+                                                                <Typography variant="body2" color="text.secondary">
+                                                                    No assets recorded yet.
+                                                                </Typography>
+                                                            </Box>
+                                                        ) : (
+                                                            <ResponsiveContainer width="100%" height="100%">
+                                                                <PieChart>
+                                                                    <Pie
+                                                                        data={assetChartData}
+                                                                        dataKey="value"
+                                                                        nameKey="name"
+                                                                        cx="50%"
+                                                                        cy="45%"
+                                                                        innerRadius={55}
+                                                                        outerRadius={95}
+                                                                        paddingAngle={2}
+                                                                        isAnimationActive={false}
+                                                                    >
+                                                                        {assetChartData.map((_, index) => (
+                                                                            <Cell key={`cell-${index}`} fill={ASSET_COLORS[index % ASSET_COLORS.length]} />
+                                                                        ))}
+                                                                    </Pie>
+                                                                    <RechartsTooltip formatter={(value: any, name: any) => [`${value} asset(s)`, name]} />
+                                                                    <Legend
+                                                                        verticalAlign="bottom"
+                                                                        height={36}
+                                                                        formatter={(value: any) => {
+                                                                            const item = assetChartData.find((d) => d.name === value);
+                                                                            return `${value}: ${item?.value ?? 0}`;
+                                                                        }}
+                                                                    />
+                                                                </PieChart>
+                                                            </ResponsiveContainer>
+                                                        )}
                                                     </Box>
                                                 </CardContent>
                                             </Card>
@@ -731,12 +844,18 @@ function PrincipalDashboard() {
                                                     </Box>
                                                     <Box sx={{ width: '100%', height: 300 }}>
                                                         <ResponsiveContainer width="100%" height="100%">
-                                                            <BarChart data={invoiceAmountChartData}>
+                                                            <BarChart data={invoiceAmountChartData} margin={{ top: 20, right: 8, left: 8, bottom: 0 }}>
                                                                 <CartesianGrid strokeDasharray="3 3" />
                                                                 <XAxis dataKey="name" />
-                                                                <YAxis />
-                                                                <RechartsTooltip />
-                                                                <Bar dataKey="amount" fill="#f59e0b" radius={[6, 6, 0, 0]} />
+                                                                <YAxis width={70} tickFormatter={(v: number) => formatCompactCurrency(Number(v))} />
+                                                                <RechartsTooltip formatter={(value: any) => formatCurrency(Number(value))} />
+                                                                <Bar dataKey="amount" fill="#f59e0b" radius={[6, 6, 0, 0]}>
+                                                                    <LabelList
+                                                                        dataKey="amount"
+                                                                        position="top"
+                                                                        formatter={(v: any) => formatCompactCurrency(Number(v))}
+                                                                    />
+                                                                </Bar>
                                                             </BarChart>
                                                         </ResponsiveContainer>
                                                     </Box>
@@ -866,13 +985,22 @@ function PrincipalDashboard() {
                         <Box>
                             <Box display="flex" justifyContent="space-between" mb={2}>
                                 <Typography variant="h6">School Users</Typography>
-                                <Button
-                                    variant="contained"
-                                    startIcon={<AddIcon />}
-                                    onClick={() => setIsUserModalOpen(true)}
-                                >
-                                    Add User
-                                </Button>
+                                <Box display="flex" gap={1}>
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={<UploadFileIcon />}
+                                        onClick={() => setBulkImportOpen(true)}
+                                    >
+                                        Import CSV
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<AddIcon />}
+                                        onClick={() => setIsUserModalOpen(true)}
+                                    >
+                                        Add User
+                                    </Button>
+                                </Box>
                             </Box>
                             <Box sx={{ height: 400, width: '100%' }}>
                                 <DataGrid
@@ -935,6 +1063,7 @@ function PrincipalDashboard() {
                                 </FormControl>
                                 <Button
                                     variant="contained"
+                                    disabled={!newDeptName.trim()}
                                     onClick={async () => {
                                         if (!newDeptName.trim()) return;
                                         const res = await fetch('/api/departments', {
@@ -945,11 +1074,15 @@ function PrincipalDashboard() {
                                                 hodUserId: newDeptHodUserId || null,
                                             }),
                                         });
-                                        if (!res.ok) return;
+                                        if (!res.ok) {
+                                            notify((await res.text()) || 'Failed to create department.', 'error');
+                                            return;
+                                        }
                                         setNewDeptName('');
                                         setNewDeptHodUserId('');
                                         fetchDepartments();
                                         fetchUsers();
+                                        notify('Department created.');
                                     }}
                                 >
                                     Add department
@@ -1009,12 +1142,18 @@ function PrincipalDashboard() {
             <AddClassModal
                 open={isClassModalOpen}
                 onClose={() => setIsClassModalOpen(false)}
-                onSuccess={() => { fetchClasses(); if (tabIndex === 0) fetchOverview(); }}
+                onSuccess={() => { fetchClasses(); if (tabIndex === 0) fetchOverview(); notify('Class created.'); }}
             />
             <AddUserModal
                 open={isUserModalOpen}
                 onClose={() => setIsUserModalOpen(false)}
                 onSuccess={() => { fetchUsers(); if (tabIndex === 0) fetchOverview(); }}
+            />
+            <BulkImportModal
+                open={bulkImportOpen}
+                onClose={() => setBulkImportOpen(false)}
+                onImported={() => { fetchUsers(); if (tabIndex === 0) fetchOverview(); }}
+                onNotify={notify}
             />
             <AssignTeacherModal
                 open={assignOpen}
@@ -1044,7 +1183,30 @@ function PrincipalDashboard() {
                 subjects={subjects}
                 teachers={teacherOptions}
                 onUpdated={fetchClasses}
+                onNotify={notify}
             />
+            <ManageClassLearnersModal
+                open={manageLearnersOpen}
+                onClose={() => setManageLearnersOpen(false)}
+                classInfo={manageLearnersTarget ? {
+                    id: manageLearnersTarget.id,
+                    name: manageLearnersTarget.name,
+                    grade: manageLearnersTarget.grade,
+                } : null}
+                onUpdated={() => { fetchClasses(); if (tabIndex === 0) fetchOverview(); }}
+                onNotify={notify}
+            />
+
+            <Snackbar
+                open={!!toast}
+                autoHideDuration={5000}
+                onClose={() => setToast(null)}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert severity={toast?.severity ?? 'success'} variant="filled" onClose={() => setToast(null)} sx={{ width: '100%' }}>
+                    {toast?.msg}
+                </Alert>
+            </Snackbar>
         </Container>
     );
 }

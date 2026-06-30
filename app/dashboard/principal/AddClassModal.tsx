@@ -39,14 +39,17 @@ export default function AddClassModal({ open, onClose, onSuccess }: AddClassModa
                 body: JSON.stringify({ name, grade }),
             });
 
-            if (!res.ok) throw new Error('Failed to create class');
+            if (!res.ok) {
+                const msg = await res.text();
+                throw new Error(msg || 'Failed to create class');
+            }
 
             onSuccess();
             onClose();
             setName('');
             setGrade('');
         } catch (err) {
-            setError('Error creating class.');
+            setError(err instanceof Error ? err.message : 'Error creating class.');
         } finally {
             setLoading(false);
         }
@@ -85,8 +88,8 @@ export default function AddClassModal({ open, onClose, onSuccess }: AddClassModa
                 </DialogContent>
                 <DialogActions sx={{ p: 3 }}>
                     <Button onClick={onClose} disabled={loading}>Cancel</Button>
-                    <Button type="submit" variant="contained" disabled={loading}>
-                        Create
+                    <Button type="submit" variant="contained" disabled={loading || !name.trim() || !grade}>
+                        {loading ? 'Creating…' : 'Create'}
                     </Button>
                 </DialogActions>
             </form>

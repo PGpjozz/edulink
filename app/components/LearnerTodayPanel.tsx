@@ -13,16 +13,21 @@ type HomeworkItem = {
 };
 
 function LearnerTodayInner() {
-    const [homework, setHomework] = useState<HomeworkItem[]>([]);
+    const [dueSoon, setDueSoon] = useState<HomeworkItem[]>([]);
 
     useEffect(() => {
         fetch('/api/homework')
-            .then((r) => r.json())
-            .then((d) => setHomework(Array.isArray(d) ? d : []));
+            .then((r) => (r.ok ? r.json() : []))
+            .then((d) => {
+                const homework: HomeworkItem[] = Array.isArray(d) ? d : [];
+                const pending = homework.filter((h) => !h.submissions?.length);
+                // Compute time-based values in the effect to keep render pure.
+                const now = Date.now();
+                const weekMs = 7 * 24 * 60 * 60 * 1000;
+                setDueSoon(pending.filter((h) => new Date(h.dueDate).getTime() - now < weekMs));
+            })
+            .catch(() => setDueSoon([]));
     }, []);
-
-    const pending = homework.filter((h) => !h.submissions?.length);
-    const dueSoon = pending.filter((h) => new Date(h.dueDate).getTime() - Date.now() < 7 * 24 * 60 * 60 * 1000);
 
     return (
         <Stack spacing={2} sx={{ mb: 3 }}>

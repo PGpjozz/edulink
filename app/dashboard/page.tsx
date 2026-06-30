@@ -47,6 +47,9 @@ export default function DashboardPage() {
             case 'PARENT':
                 router.push('/dashboard/parent');
                 break;
+            case 'STAFF':
+                router.push('/dashboard/staff');
+                break;
             default:
                 router.push('/unauthorized');
         }

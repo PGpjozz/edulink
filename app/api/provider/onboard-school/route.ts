@@ -17,6 +17,11 @@ export async function POST(req: Request) {
             tier,
             monthlyFee,
             contactEmail,
+            emisNumber,
+            district,
+            province,
+            country,
+            schoolType,
             principalFirstName,
             principalLastName,
             principalEmail,
@@ -67,6 +72,11 @@ export async function POST(req: Request) {
                     tier,
                     monthlyFee: monthlyFeeNumber,
                     contactEmail,
+                    emisNumber: emisNumber?.trim() || null,
+                    district: district?.trim() || null,
+                    province: province?.trim() || null,
+                    country: country?.trim() || null,
+                    schoolType: schoolType?.trim() || null,
                     isActive: true,
                     gradesOffered: ['8', '9', '10', '11', '12']
                 }

@@ -44,6 +44,7 @@ export default function ClassSubjectsModal({
     subjects,
     teachers,
     onUpdated,
+    onNotify,
 }: {
     open: boolean;
     onClose: () => void;
@@ -51,6 +52,7 @@ export default function ClassSubjectsModal({
     subjects: SubjectOption[];
     teachers: TeacherOption[];
     onUpdated?: () => void;
+    onNotify?: (msg: string) => void;
 }) {
     const [rows, setRows] = useState<ClassSubjectRow[]>([]);
     const [loading, setLoading] = useState(false);
@@ -109,6 +111,7 @@ export default function ClassSubjectsModal({
         setAddTeacherId('');
         await fetchRows();
         onUpdated?.();
+        onNotify?.('Subject added to class.');
     };
 
     const handleTeacherChange = async (row: ClassSubjectRow, teacherProfileId: string) => {
@@ -131,6 +134,7 @@ export default function ClassSubjectsModal({
         }
         await fetchRows();
         onUpdated?.();
+        onNotify?.('Subject teacher updated.');
     };
 
     const handleRemove = async (id: string) => {
@@ -146,6 +150,7 @@ export default function ClassSubjectsModal({
         }
         await fetchRows();
         onUpdated?.();
+        onNotify?.('Subject removed from class.');
     };
 
     return (

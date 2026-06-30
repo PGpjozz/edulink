@@ -1,8 +1,25 @@
 import { NextResponse } from 'next/server';
+import { z } from 'zod';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
+import { requireAuth, writeAuditLog } from '@/lib/api-auth';
+import { parseBody, serverError } from '@/lib/http';
 import { canManageHomework } from '@/lib/permissions';
 import { getStaffContext } from '@/lib/staff-context';
+
+const createHomeworkSchema = z.object({
+    title: z.string().trim().min(1).max(200),
+    description: z.string().trim().max(5000).optional(),
+    dueDate: z.string().datetime().or(z.string().refine((s) => !Number.isNaN(Date.parse(s)), 'Invalid date')),
+    subjectId: z.string().min(1).optional(),
+    classId: z.string().min(1).optional(),
+    // Accept absolute URLs (Vercel Blob) or root-relative paths (local /api/files/... uploads).
+    fileUrl: z
+        .string()
+        .trim()
+        .max(2000)
+        .refine((v) => /^https?:\/\//.test(v) || v.startsWith('/'), 'Invalid file URL')
+        .optional(),
+});
 
 export async function GET(req: Request) {
     const auth = await requireAuth({ requireSchoolId: true });
@@ -99,41 +116,34 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 
-    const body = await readJson<{
-        title?: string;
-        description?: string;
-        dueDate?: string;
-        subjectId?: string;
-        classId?: string;
-        fileUrl?: string;
-    }>(req);
+    const body = await parseBody(req, createHomeworkSchema);
     if (body instanceof NextResponse) return body;
 
-    if (!body.title?.trim() || !body.dueDate) {
-        return NextResponse.json({ error: 'Title and due date required' }, { status: 400 });
+    try {
+        const item = await prisma.homework.create({
+            data: {
+                schoolId: auth.schoolId!,
+                teacherId: auth.userId,
+                title: body.title,
+                description: body.description ?? null,
+                dueDate: new Date(body.dueDate),
+                subjectId: body.subjectId ?? null,
+                classId: body.classId ?? null,
+                fileUrl: body.fileUrl ?? null,
+            },
+        });
+
+        await writeAuditLog({
+            schoolId: auth.schoolId,
+            userId: auth.userId,
+            action: 'CREATE_HOMEWORK',
+            entity: 'HOMEWORK',
+            entityId: item.id,
+            details: { title: item.title },
+        });
+
+        return NextResponse.json(item);
+    } catch (e) {
+        return serverError('homework-create', e);
     }
-
-    const item = await prisma.homework.create({
-        data: {
-            schoolId: auth.schoolId!,
-            teacherId: auth.userId,
-            title: body.title.trim(),
-            description: body.description?.trim() ?? null,
-            dueDate: new Date(body.dueDate),
-            subjectId: body.subjectId ?? null,
-            classId: body.classId ?? null,
-            fileUrl: body.fileUrl ?? null,
-        },
-    });
-
-    await writeAuditLog({
-        schoolId: auth.schoolId,
-        userId: auth.userId,
-        action: 'CREATE_HOMEWORK',
-        entity: 'HOMEWORK',
-        entityId: item.id,
-        details: { title: item.title },
-    });
-
-    return NextResponse.json(item);
 }
