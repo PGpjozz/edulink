@@ -28,7 +28,7 @@ import {
     MenuItem,
     Snackbar,
 } from '@mui/material';
-import { Add as AddIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { Add as AddIcon, Refresh as RefreshIcon, UploadFile as UploadFileIcon } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import {
     ResponsiveContainer,
@@ -50,6 +50,7 @@ import AssignTeacherModal from './AssignTeacherModal';
 import AssignHodModal from './AssignHodModal';
 import ClassSubjectsModal from './ClassSubjectsModal';
 import ManageClassLearnersModal from './ManageClassLearnersModal';
+import BulkImportModal from './BulkImportModal';
 
 interface ClassData {
     id: string;
@@ -165,6 +166,7 @@ function PrincipalDashboard() {
     // Modals
     const [isClassModalOpen, setIsClassModalOpen] = useState(false);
     const [isUserModalOpen, setIsUserModalOpen] = useState(false);
+    const [bulkImportOpen, setBulkImportOpen] = useState(false);
 
     const [assignOpen, setAssignOpen] = useState(false);
     const [assignTitle, setAssignTitle] = useState('');
@@ -983,13 +985,22 @@ function PrincipalDashboard() {
                         <Box>
                             <Box display="flex" justifyContent="space-between" mb={2}>
                                 <Typography variant="h6">School Users</Typography>
-                                <Button
-                                    variant="contained"
-                                    startIcon={<AddIcon />}
-                                    onClick={() => setIsUserModalOpen(true)}
-                                >
-                                    Add User
-                                </Button>
+                                <Box display="flex" gap={1}>
+                                    <Button
+                                        variant="outlined"
+                                        startIcon={<UploadFileIcon />}
+                                        onClick={() => setBulkImportOpen(true)}
+                                    >
+                                        Import CSV
+                                    </Button>
+                                    <Button
+                                        variant="contained"
+                                        startIcon={<AddIcon />}
+                                        onClick={() => setIsUserModalOpen(true)}
+                                    >
+                                        Add User
+                                    </Button>
+                                </Box>
                             </Box>
                             <Box sx={{ height: 400, width: '100%' }}>
                                 <DataGrid
@@ -1137,6 +1148,12 @@ function PrincipalDashboard() {
                 open={isUserModalOpen}
                 onClose={() => setIsUserModalOpen(false)}
                 onSuccess={() => { fetchUsers(); if (tabIndex === 0) fetchOverview(); }}
+            />
+            <BulkImportModal
+                open={bulkImportOpen}
+                onClose={() => setBulkImportOpen(false)}
+                onImported={() => { fetchUsers(); if (tabIndex === 0) fetchOverview(); }}
+                onNotify={notify}
             />
             <AssignTeacherModal
                 open={assignOpen}
