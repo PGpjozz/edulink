@@ -40,7 +40,8 @@ import {
     History as HistoryIcon,
     MenuBook as MenuBookIcon,
     Dashboard as DashboardIcon,
-    EmojiEvents as EmojiEventsIcon
+    EmojiEvents as EmojiEventsIcon,
+    Schedule as ScheduleIcon
 } from '@mui/icons-material';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
@@ -51,6 +52,7 @@ const DRAWER_WIDTH = 280;
 
 const TEACHING_NAV = [
     { label: 'My Subjects', icon: <Book />, path: '/dashboard/teacher' },
+    { label: 'My Schedule', icon: <ScheduleIcon />, path: '/dashboard/teacher/schedule' },
     { label: 'Homework', icon: <Assignment />, path: '/dashboard/teacher/homework' },
     { label: 'Gradebook', icon: <MenuBookIcon />, path: '/dashboard/teacher/gradebook' },
     { label: 'Behavior', icon: <EmojiEventsIcon />, path: '/dashboard/teacher/behavior' },
@@ -67,6 +69,7 @@ const ADMIN_NAV = [
     { label: 'Subjects', icon: <Book />, path: '/dashboard/principal?tab=subjects' },
     { label: 'Departments', icon: <School />, path: '/dashboard/principal?tab=departments' },
     { label: 'Admissions', icon: <AppRegistration />, path: '/dashboard/principal/admissions' },
+    { label: 'Term Reports', icon: <Assignment />, path: '/dashboard/principal/reports' },
     { label: 'Library & Assets', icon: <Inventory />, path: '/dashboard/principal/assets' },
     { label: 'Finance', icon: <Payments />, path: '/dashboard/principal/finance' },
     { label: 'Subscription', icon: <ReceiptLong />, path: '/dashboard/principal/subscription' },
