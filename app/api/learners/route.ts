@@ -17,6 +17,7 @@ export async function GET() {
                           user: { schoolId: auth.schoolId! },
                           OR: [
                               { id: { in: ctx.learnerIds } },
+                              { class: { grade: { in: ctx.gradesTaught } } },
                               {
                                   class: {
                                       classSubjects: {

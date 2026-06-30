@@ -212,6 +212,9 @@ async function main() {
         })
     ]);
 
+    const { backfillClassSubjectsForSchool } = await import('../lib/class-subjects');
+    await backfillClassSubjectsForSchool(school.id);
+
     const now = new Date();
     const assessments = await Promise.all([
         prisma.assessment.upsert({

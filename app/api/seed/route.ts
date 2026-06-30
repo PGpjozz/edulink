@@ -160,6 +160,10 @@ export async function GET(req: Request) {
         }
         counts.departments = deptDefs.length;
 
+        // ─── CLASS ↔ SUBJECT LINKS ───────────────────────────────────
+        const { backfillClassSubjectsForSchool } = await import('@/lib/class-subjects');
+        counts.classSubjects = await backfillClassSubjectsForSchool(schoolId);
+
         // ─── LEARNERS ────────────────────────────────────────────────
         const learnerDefs = [
             { firstName: 'Ayanda', lastName: 'Nkosi', idNumber: '0801015001083', grade: '8', cIdx: 0 },

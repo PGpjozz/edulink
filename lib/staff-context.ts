@@ -1,6 +1,7 @@
 import { prisma } from './prisma';
 import type { AuthContext } from './api-auth';
 import { canManageSchool } from './permissions';
+import type { Prisma } from '@prisma/client';
 
 export type StaffContext = {
     teacherProfileId: string | null;
@@ -11,6 +12,7 @@ export type StaffContext = {
     formClassIds: string[];
     learnerIds: string[];
     classIds: string[];
+    gradesTaught: string[];
 };
 
 const emptyContext = (): StaffContext => ({
@@ -22,6 +24,7 @@ const emptyContext = (): StaffContext => ({
     formClassIds: [],
     learnerIds: [],
     classIds: [],
+    gradesTaught: [],
 });
 
 const staffContextCache = new Map<string, { at: number; ctx: StaffContext }>();
@@ -38,16 +41,17 @@ export async function getStaffContext(auth: AuthContext): Promise<StaffContext> 
 
     const departmentsLed = await prisma.department.findMany({
         where: { schoolId: auth.schoolId, hodUserId: auth.userId },
-        select: { id: true, subjects: { select: { id: true } } },
+        select: { id: true, subjects: { select: { id: true, grade: true } } },
     });
     const deptSubjectIds = departmentsLed.flatMap((d) => d.subjects.map((s) => s.id));
+    const deptGrades = [...new Set(departmentsLed.flatMap((d) => d.subjects.map((s) => s.grade)))];
 
     const teacherProfile = await prisma.teacherProfile.findUnique({
         where: { userId: auth.userId },
         select: {
             id: true,
             departmentId: true,
-            assignedSubjects: { select: { id: true } },
+            assignedSubjects: { select: { id: true, grade: true } },
             managedClasses: { select: { id: true, learners: { select: { id: true } } } },
             classSubjects: {
                 select: {
@@ -74,11 +78,28 @@ export async function getStaffContext(auth: AuthContext): Promise<StaffContext> 
         ]),
     ];
 
+    const gradesTaught = [
+        ...new Set([
+            ...(teacherProfile?.assignedSubjects.map((s) => s.grade) ?? []),
+            ...deptGrades,
+        ]),
+    ];
+
     const formClassIds = teacherProfile?.managedClasses.map((c) => c.id) ?? [];
+
+    const gradeClassRows =
+        gradesTaught.length > 0
+            ? await prisma.class.findMany({
+                  where: { schoolId: auth.schoolId, grade: { in: gradesTaught } },
+                  select: { id: true, learners: { select: { id: true } } },
+              })
+            : [];
+
     const classIds = [
         ...new Set([
             ...formClassIds,
             ...(teacherProfile?.classSubjects.map((cs) => cs.classId) ?? []),
+            ...gradeClassRows.map((c) => c.id),
         ]),
     ];
 
@@ -86,6 +107,7 @@ export async function getStaffContext(auth: AuthContext): Promise<StaffContext> 
         ...new Set([
             ...(teacherProfile?.managedClasses.flatMap((c) => c.learners.map((l) => l.id)) ?? []),
             ...(teacherProfile?.classSubjects.flatMap((cs) => cs.class.learners.map((l) => l.id)) ?? []),
+            ...gradeClassRows.flatMap((c) => c.learners.map((l) => l.id)),
         ]),
     ];
 
@@ -98,6 +120,7 @@ export async function getStaffContext(auth: AuthContext): Promise<StaffContext> 
         formClassIds,
         learnerIds,
         classIds,
+        gradesTaught,
     };
 
     staffContextCache.set(cacheKey, { at: Date.now(), ctx });
@@ -115,6 +138,12 @@ export async function canAccessClass(auth: AuthContext, classId: string): Promis
     const ctx = await getStaffContext(auth);
     if (ctx.classIds.includes(classId)) return true;
     if (auth.role === 'HOD' && ctx.departmentIdsLed.length > 0) {
+        const klass = await prisma.class.findFirst({
+            where: { id: classId, schoolId: auth.schoolId! },
+            select: { grade: true },
+        });
+        if (klass && ctx.gradesTaught.includes(klass.grade)) return true;
+
         const count = await prisma.classSubject.count({
             where: {
                 classId,
@@ -135,11 +164,16 @@ export async function canAccessLearner(auth: AuthContext, learnerId: string): Pr
             where: {
                 id: learnerId,
                 user: { schoolId: auth.schoolId! },
-                class: {
-                    classSubjects: {
-                        some: { subject: { departmentId: { in: ctx.departmentIdsLed } } },
+                OR: [
+                    { class: { grade: { in: ctx.gradesTaught } } },
+                    {
+                        class: {
+                            classSubjects: {
+                                some: { subject: { departmentId: { in: ctx.departmentIdsLed } } },
+                            },
+                        },
                     },
-                },
+                ],
             },
             select: { id: true },
         });
@@ -167,28 +201,38 @@ export function subjectScopeWhere(auth: AuthContext, ctx: StaffContext) {
     return { schoolId: auth.schoolId!, id: { in: [] as string[] } };
 }
 
-export function classScopeWhere(auth: AuthContext, ctx: StaffContext) {
+export function classScopeWhere(auth: AuthContext, ctx: StaffContext): Prisma.ClassWhereInput {
     if (canManageSchool(auth.role)) {
         return { schoolId: auth.schoolId! };
     }
+
+    const orClauses: Prisma.ClassWhereInput[] = [];
+
     if (ctx.classIds.length > 0) {
-        return { schoolId: auth.schoolId!, id: { in: ctx.classIds } };
+        orClauses.push({ id: { in: ctx.classIds } });
+    }
+    if (ctx.gradesTaught.length > 0) {
+        orClauses.push({ grade: { in: ctx.gradesTaught } });
     }
     if (auth.role === 'HOD' && ctx.departmentIdsLed.length > 0) {
-        return {
-            schoolId: auth.schoolId!,
+        orClauses.push({
             classSubjects: {
                 some: { subject: { departmentId: { in: ctx.departmentIdsLed } } },
             },
-        };
+        });
     }
+
+    if (orClauses.length > 0) {
+        return { schoolId: auth.schoolId!, OR: orClauses };
+    }
+
     return { schoolId: auth.schoolId!, id: { in: [] as string[] } };
 }
 
 export async function getLearnersForSubject(auth: AuthContext, subjectId: string) {
     const subject = await prisma.subject.findFirst({
         where: { id: subjectId, schoolId: auth.schoolId! },
-        select: { id: true, grade: true },
+        select: { id: true, grade: true, teacherId: true },
     });
     if (!subject) return [];
 
@@ -197,7 +241,7 @@ export async function getLearnersForSubject(auth: AuthContext, subjectId: string
         return [];
     }
 
-    return prisma.learnerProfile.findMany({
+    const viaClassSubjects = await prisma.learnerProfile.findMany({
         where: {
             class: {
                 schoolId: auth.schoolId!,
@@ -210,6 +254,28 @@ export async function getLearnersForSubject(auth: AuthContext, subjectId: string
                     },
                 },
             },
+        },
+        include: {
+            user: { select: { firstName: true, lastName: true, idNumber: true, email: true } },
+        },
+        orderBy: { user: { lastName: 'asc' } },
+    });
+
+    if (viaClassSubjects.length > 0) {
+        return viaClassSubjects;
+    }
+
+    // Fallback when class_subjects rows are missing but subject is assigned to this teacher
+    const teachesSubject =
+        ctx.teacherProfileId === subject.teacherId ||
+        auth.role === 'HOD' ||
+        canManageSchool(auth.role);
+
+    if (!teachesSubject) return [];
+
+    return prisma.learnerProfile.findMany({
+        where: {
+            class: { schoolId: auth.schoolId!, grade: subject.grade },
         },
         include: {
             user: { select: { firstName: true, lastName: true, idNumber: true, email: true } },
