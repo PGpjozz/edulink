@@ -22,9 +22,21 @@ import {
 import { useRouter } from 'next/navigation';
 import TimetableView from '@/app/components/TimetableView';
 import TeacherTodayPanel from '@/app/components/TeacherTodayPanel';
+import TeacherScheduleView from '@/app/components/TeacherScheduleView';
+import Link from 'next/link';
 
 type ClassInfo = { id: string; name: string; grade: string; _count?: { learners?: number }; timetable?: unknown };
 type SubjectSummary = { id: string; name: string; grade: string; code?: string; _count?: { assessments?: number } };
+type ScheduleSlot = {
+    day: string;
+    period: number;
+    time: string;
+    classId: string;
+    className: string;
+    grade: string;
+    subjectId: string;
+    subjectName: string;
+};
 
 function SubjectCardSkeleton() {
     return (
@@ -114,7 +126,9 @@ function ClassesSection({ onViewSchedule }: { onViewSchedule: (cls: ClassInfo) =
 
 export default function TeacherDashboard() {
     const [subjects, setSubjects] = useState<SubjectSummary[]>([]);
+    const [schedule, setSchedule] = useState<ScheduleSlot[]>([]);
     const [loading, setLoading] = useState(true);
+    const [scheduleLoading, setScheduleLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [timetableOpen, setTimetableOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
@@ -134,6 +148,13 @@ export default function TeacherDashboard() {
             .finally(() => setLoading(false));
     }, []);
 
+    useEffect(() => {
+        fetch('/api/teacher/schedule')
+            .then((res) => (res.ok ? res.json() : { slots: [] }))
+            .then((data) => setSchedule(Array.isArray(data.slots) ? data.slots : []))
+            .finally(() => setScheduleLoading(false));
+    }, []);
+
     const handleViewSchedule = (cls: ClassInfo) => {
         setSelectedClass(cls);
         setTimetableOpen(true);
@@ -148,6 +169,27 @@ export default function TeacherDashboard() {
             </Box>
 
             <TeacherTodayPanel />
+
+            <Box mb={6}>
+                <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                    <Box>
+                        <Typography variant="h5" fontWeight="bold">
+                            My Teaching Schedule
+                        </Typography>
+                        <Typography color="text.secondary">
+                            Classes you teach and when they are scheduled.
+                        </Typography>
+                    </Box>
+                    <Button component={Link} href="/dashboard/teacher/schedule" variant="outlined" startIcon={<Schedule />}>
+                        Full schedule
+                    </Button>
+                </Box>
+                {scheduleLoading ? (
+                    <Skeleton variant="rounded" height={280} />
+                ) : (
+                    <TeacherScheduleView slots={schedule} />
+                )}
+            </Box>
 
             {error && (
                 <Alert severity="error" sx={{ mb: 3 }}>
