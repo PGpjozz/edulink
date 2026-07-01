@@ -1,9 +1,8 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
     Box,
     Paper,
     Typography,
-    Grid,
     List,
     ListItem,
     ListItemAvatar,
@@ -24,9 +23,10 @@ import {
     Badge,
     ListItemButton
 } from '@mui/material';
-import { Send, Search, Person, School, Add } from '@mui/icons-material';
+import { Send, School, Add } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
 import { format } from 'date-fns';
+import EmptyState from '@/app/components/ui/EmptyState';
 
 interface Message {
     id: string;
@@ -34,57 +34,71 @@ interface Message {
     recipientId: string;
     content: string;
     subject: string;
+    readAt: string | null;
     createdAt: string;
     sender: { id: string, firstName: string, lastName: string, role: string };
     recipient: { id: string, firstName: string, lastName: string, role: string };
 }
 
+interface Conversation {
+    id: string;
+    user: { id: string; firstName: string; lastName: string; role: string };
+    lastMessage: string;
+    timestamp: string;
+    subject: string;
+    unreadCount: number;
+}
+
+const POLL_INTERVAL_MS = 15000;
+
 export default function MessagingInterface() {
     const { data: session } = useSession();
     const theme = useTheme();
-    const [conversations, setConversations] = useState<any[]>([]);
+    const [conversations, setConversations] = useState<Conversation[]>([]);
     const [messages, setMessages] = useState<Message[]>([]);
     const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
     const [newMessage, setNewMessage] = useState('');
     const [loading, setLoading] = useState(true);
     const [sending, setSending] = useState(false);
 
-    // New Chat State
     const [openDialog, setOpenDialog] = useState(false);
     const [recipients, setRecipients] = useState<any[]>([]);
     const [selectedRecipientId, setSelectedRecipientId] = useState('');
-    const [newChatSubject, setNewChatSubject] = useState('General');
 
     const scrollRef = useRef<HTMLDivElement>(null);
 
-    useEffect(() => {
-        fetchConversations();
-        fetchRecipients();
+    const buildConversations = useCallback((data: Message[]) => {
+        const convos: Record<string, Conversation> = {};
+        data.forEach((msg) => {
+            const otherUser = msg.senderId === session?.user?.id ? msg.recipient : msg.sender;
+            const otherUserId = otherUser.id;
+            const isUnread = msg.recipientId === session?.user?.id && !msg.readAt;
+
+            if (!convos[otherUserId]) {
+                convos[otherUserId] = {
+                    id: otherUserId,
+                    user: otherUser,
+                    lastMessage: msg.content,
+                    timestamp: msg.createdAt,
+                    subject: msg.subject,
+                    unreadCount: isUnread ? 1 : 0,
+                };
+            } else {
+                if (isUnread) convos[otherUserId].unreadCount += 1;
+            }
+        });
+        return Object.values(convos);
     }, [session?.user?.id]);
 
-    const fetchConversations = () => {
-        fetch('/api/messages')
+    const fetchConversations = useCallback(() => {
+        return fetch('/api/messages')
             .then(res => res.json())
-            .then(data => {
-                const convos: any = {};
-                data.forEach((msg: Message) => {
-                    const otherUser = msg.senderId === session?.user?.id ? msg.recipient : msg.sender;
-                    const otherUserId = otherUser.id;
-                    if (!convos[otherUserId]) {
-                        convos[otherUserId] = {
-                            id: otherUserId,
-                            user: otherUser,
-                            lastMessage: msg.content,
-                            timestamp: msg.createdAt,
-                            subject: msg.subject
-                        };
-                    }
-                });
-                setConversations(Object.values(convos));
+            .then((data: Message[]) => {
+                setConversations(buildConversations(data));
                 setLoading(false);
             })
             .catch(() => setLoading(false));
-    };
+    }, [buildConversations]);
 
     const fetchRecipients = () => {
         fetch('/api/users/recipients')
@@ -92,17 +106,40 @@ export default function MessagingInterface() {
             .then(setRecipients);
     };
 
+    const markConversationRead = async (senderId: string) => {
+        await fetch('/api/messages', {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ senderId }),
+        });
+    };
+
     useEffect(() => {
-        if (selectedUserId) {
-            setLoading(true);
-            fetch(`/api/messages?userId=${selectedUserId}`)
-                .then(res => res.json())
-                .then(data => {
-                    setMessages(data);
-                    setLoading(false);
-                })
-                .catch(() => setLoading(false));
-        }
+        fetchConversations();
+        fetchRecipients();
+    }, [fetchConversations, session?.user?.id]);
+
+    useEffect(() => {
+        const interval = setInterval(fetchConversations, POLL_INTERVAL_MS);
+        return () => clearInterval(interval);
+    }, [fetchConversations]);
+
+    useEffect(() => {
+        if (!selectedUserId) return;
+
+        setLoading(true);
+        fetch(`/api/messages?userId=${selectedUserId}`)
+            .then(res => res.json())
+            .then((data: Message[]) => {
+                setMessages(data);
+                setLoading(false);
+                markConversationRead(selectedUserId).then(() => {
+                    setConversations(prev =>
+                        prev.map(c => c.id === selectedUserId ? { ...c, unreadCount: 0 } : c)
+                    );
+                });
+            })
+            .catch(() => setLoading(false));
     }, [selectedUserId]);
 
     useEffect(() => {
@@ -116,31 +153,32 @@ export default function MessagingInterface() {
 
         setSending(true);
         try {
+            const existingSubject = messages[0]?.subject ?? 'General';
             const res = await fetch('/api/messages', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     recipientId: selectedUserId,
-                    subject: 'Reply', // Or use existing subject
+                    subject: existingSubject,
                     content: newMessage
                 })
             });
 
             if (res.ok) {
                 const msg = await res.json();
-                // Add current user info to the message for rendering
-                const fullMsg = {
+                const fullMsg: Message = {
                     ...msg,
                     sender: {
-                        id: session?.user?.id,
+                        id: session?.user?.id ?? '',
                         firstName: 'Me',
                         lastName: '',
-                        role: session?.user?.role
-                    }
+                        role: session?.user?.role ?? '',
+                    },
+                    recipient: selectedUser ?? { id: '', firstName: '', lastName: '', role: '' },
                 };
-                setMessages([...messages, fullMsg]);
+                setMessages(prev => [...prev, fullMsg]);
                 setNewMessage('');
-                fetchConversations(); // Update side list
+                fetchConversations();
             }
         } catch (err) {
             console.error(err);
@@ -158,13 +196,14 @@ export default function MessagingInterface() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     recipientId: selectedRecipientId,
-                    subject: newChatSubject,
+                    subject: 'General',
                     content: newMessage
                 })
             });
             if (res.ok) {
                 setOpenDialog(false);
                 setNewMessage('');
+                setSelectedRecipientId('');
                 setSelectedUserId(selectedRecipientId);
                 fetchConversations();
             }
@@ -176,32 +215,41 @@ export default function MessagingInterface() {
     };
 
     const selectedUser = conversations.find(c => c.id === selectedUserId)?.user;
+    const totalUnread = conversations.reduce((sum, c) => sum + c.unreadCount, 0);
 
     return (
         <Paper sx={{ height: '70vh', display: 'flex', overflow: 'hidden', borderRadius: 2 }}>
-            {/* Conversations List */}
             <Box sx={{ width: { xs: 80, sm: 320 }, borderRight: 1, borderColor: 'divider', display: 'flex', flexDirection: 'column' }}>
                 <Box p={2} display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="h6" fontWeight="bold" sx={{ display: { xs: 'none', sm: 'block' } }}>Chats</Typography>
-                    <IconButton color="primary" onClick={() => setOpenDialog(true)}>
+                    <Typography variant="h6" fontWeight="bold" sx={{ display: { xs: 'none', sm: 'block' } }}>
+                        Chats{totalUnread > 0 ? ` (${totalUnread})` : ''}
+                    </Typography>
+                    <IconButton color="primary" onClick={() => setOpenDialog(true)} disabled={recipients.length === 0}>
                         <Add />
                     </IconButton>
                 </Box>
                 <Divider />
                 <List sx={{ flexGrow: 1, overflowY: 'auto' }}>
+                    {conversations.length === 0 && !loading && (
+                        <Box px={1} py={2}>
+                            <EmptyState
+                                illustration="messages"
+                                title="No conversations yet"
+                                description="Start a conversation with a teacher or parent."
+                                actionLabel="New message"
+                                onAction={() => setOpenDialog(true)}
+                            />
+                        </Box>
+                    )}
                     {conversations.map((convo) => (
-                        <ListItem
-                            key={convo.id}
-                            disablePadding
-                            sx={{ px: { xs: 1, sm: 2 } }}
-                        >
+                        <ListItem key={convo.id} disablePadding sx={{ px: { xs: 1, sm: 2 } }}>
                             <ListItemButton
                                 selected={selectedUserId === convo.id}
                                 onClick={() => setSelectedUserId(convo.id)}
                                 sx={{ borderRadius: 2 }}
                             >
                                 <ListItemAvatar>
-                                    <Badge color="success" variant="dot" invisible={false}>
+                                    <Badge color="error" variant="dot" invisible={convo.unreadCount === 0}>
                                         <Avatar sx={{ bgcolor: theme.palette.primary.main }}>
                                             {convo.user.firstName[0]}
                                         </Avatar>
@@ -211,7 +259,7 @@ export default function MessagingInterface() {
                                     primary={`${convo.user.firstName} ${convo.user.lastName}`}
                                     secondary={convo.lastMessage}
                                     sx={{ display: { xs: 'none', sm: 'block' } }}
-                                    primaryTypographyProps={{ fontWeight: selectedUserId === convo.id ? 'bold' : 'medium' }}
+                                    primaryTypographyProps={{ fontWeight: convo.unreadCount > 0 ? 'bold' : 'medium' }}
                                     secondaryTypographyProps={{ noWrap: true }}
                                 />
                             </ListItemButton>
@@ -220,11 +268,9 @@ export default function MessagingInterface() {
                 </List>
             </Box>
 
-            {/* Chat Window */}
             <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', bgcolor: theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.02)' : 'rgba(0,0,0,0.01)' }}>
                 {selectedUserId ? (
                     <>
-                        {/* Header */}
                         <Box p={2} sx={{ bgcolor: 'background.paper', borderBottom: 1, borderColor: 'divider', display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Avatar sx={{ bgcolor: theme.palette.primary.main }}>{selectedUser?.firstName[0]}</Avatar>
                             <Box>
@@ -235,7 +281,6 @@ export default function MessagingInterface() {
                             </Box>
                         </Box>
 
-                        {/* Messages Area */}
                         <Box
                             ref={scrollRef}
                             sx={{
@@ -288,7 +333,6 @@ export default function MessagingInterface() {
                             )}
                         </Box>
 
-                        {/* Input Area */}
                         <Box p={2} sx={{ bgcolor: 'background.paper', borderTop: 1, borderColor: 'divider' }}>
                             <Box display="flex" gap={1}>
                                 <TextField
@@ -329,10 +373,13 @@ export default function MessagingInterface() {
                     <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100%" color="text.secondary">
                         <School sx={{ fontSize: 64, mb: 2, opacity: 0.1 }} />
                         <Typography variant="h6">Select a chat to view messages</Typography>
-                        <Button variant="text" startIcon={<Add />} onClick={() => setOpenDialog(true)}>Start new conversation</Button>
+                        {recipients.length > 0 ? (
+                            <Button variant="text" startIcon={<Add />} onClick={() => setOpenDialog(true)}>Start new conversation</Button>
+                        ) : (
+                            <Typography variant="body2" sx={{ mt: 1 }}>Messaging is available between parents and school staff.</Typography>
+                        )}
                     </Box>
                 )}
-                {/* New Chat Dialog */}
                 <Dialog open={openDialog} onClose={() => setOpenDialog(false)} fullWidth maxWidth="sm">
                     <DialogTitle>New Conversation</DialogTitle>
                     <DialogContent>
@@ -340,7 +387,7 @@ export default function MessagingInterface() {
                             <TextField
                                 select
                                 fullWidth
-                                label="Recipients"
+                                label="Recipient"
                                 value={selectedRecipientId}
                                 onChange={(e) => setSelectedRecipientId(e.target.value)}
                             >

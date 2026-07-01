@@ -45,10 +45,11 @@ interface SubjectView {
 }
 
 interface LearnerProgressViewProps {
-    childId?: string; // Optional: If present, fetches data for this child (if parent)
+    childId?: string;
+    hideHeader?: boolean;
 }
 
-export default function LearnerProgressView({ childId }: LearnerProgressViewProps) {
+export default function LearnerProgressView({ childId, hideHeader }: LearnerProgressViewProps) {
     const [data, setData] = useState<{ learner: any, subjects: SubjectView[] } | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -76,34 +77,7 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
     if (!data) return <Typography sx={{ m: 4 }}>No data available.</Typography>;
     if (!data.learner) return <Typography sx={{ m: 4 }}>No data available.</Typography>;
 
-    // Prepare chart data
-    const chartData = data?.subjects.map(sub => ({
-        name: sub.code || sub.name.substring(0, 3), // Use code or short name
-        score: sub.average || 0,
-        fullSubjectName: sub.name
-    })) || [];
-
-    const container = {
-        hidden: { opacity: 0 },
-        show: {
-            opacity: 1,
-            transition: {
-                staggerChildren: 0.1
-            }
-        }
-    };
-
-    const item = {
-        hidden: { opacity: 0, y: 20 },
-        show: { opacity: 1, y: 0 }
-    };
-
-    const handleOpenHub = (subject: SubjectView) => {
-        setSelectedSubject(subject);
-        setHubOpen(true);
-    };
-
-    const handleTabsWheelCapture = (e: any) => {
+    const handleTabsWheelCapture = (e: React.WheelEvent) => {
         if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
             e.stopPropagation();
         }
@@ -115,55 +89,100 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
         return Math.round(withAvg.reduce((sum, s) => sum + (s.average ?? 0), 0) / withAvg.length);
     })();
 
+    const reportHref = childId ? `/dashboard/learner/report?childId=${childId}` : '/dashboard/learner/report';
+
+    const tabBar = (
+        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: { md: 'flex-end' }, gap: 1 }}>
+            <Tabs
+                value={tabValue}
+                onChange={(_, v) => {
+                    setTabValue(v);
+                    requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur?.());
+                }}
+                onWheelCapture={handleTabsWheelCapture}
+                variant="scrollable"
+                scrollButtons="auto"
+                sx={{ borderBottom: 1, borderColor: 'divider', width: '100%' }}
+            >
+                <Tab label="Performance" icon={<EmojiEvents />} iconPosition="start" />
+                <Tab label="Weekly Schedule" icon={<MenuBook />} iconPosition="start" />
+                <Tab label="Behavior Log" icon={<HistoryEdu />} iconPosition="start" />
+                <Tab label="AI Advisor" icon={<AutoAwesome />} iconPosition="start" />
+            </Tabs>
+            <Button
+                variant="outlined"
+                size="small"
+                component={Link}
+                href={reportHref}
+                sx={{ mt: { xs: 1, md: 0 } }}
+            >
+                View Term Report
+            </Button>
+        </Box>
+    );
+
+    const headerBlock = !hideHeader && (
+        <Box
+            mb={4}
+            display="flex"
+            flexDirection={{ xs: 'column', md: 'row' }}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', md: 'flex-end' }}
+            gap={2}
+        >
+            <Box>
+                <Typography variant="h5" fontWeight="bold">
+                    {childId ? `${data.learner.name}'s Progress` : 'Academic Overview'}
+                </Typography>
+                <Typography variant="body1" color="primary">
+                    {data.learner.className} · Grade {data.learner.grade}
+                    {overallAverage !== null && ` · ${overallAverage}% average`}
+                </Typography>
+            </Box>
+            {tabBar}
+        </Box>
+    );
+
+    const tabsOnly = hideHeader && (
+        <Box
+            mb={3}
+            display="flex"
+            flexDirection={{ xs: 'column', md: 'row' }}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', md: 'center' }}
+            gap={2}
+        >
+            <Typography variant="body1" color="primary">
+                {data.learner.className} · Grade {data.learner.grade}
+                {overallAverage !== null && ` · ${overallAverage}% average`}
+            </Typography>
+            {tabBar}
+        </Box>
+    );
+
+    const chartData = data?.subjects.map(sub => ({
+        name: sub.code || sub.name.substring(0, 3),
+        score: sub.average || 0,
+        fullSubjectName: sub.name
+    })) || [];
+
+    const container = {
+        hidden: { opacity: 0 },
+        show: {
+            opacity: 1,
+            transition: { staggerChildren: 0.1 }
+        }
+    };
+
+    const handleOpenHub = (subject: SubjectView) => {
+        setSelectedSubject(subject);
+        setHubOpen(true);
+    };
+
     return (
         <Box>
-            <Box
-                mb={4}
-                display="flex"
-                flexDirection={{ xs: 'column', md: 'row' }}
-                justifyContent="space-between"
-                alignItems={{ xs: 'flex-start', md: 'flex-end' }}
-                gap={2}
-            >
-                <Box>
-                    <Typography variant="h5" fontWeight="bold">
-                        {childId ? `${data.learner.name}'s Progress` : 'Academic Overview'}
-                    </Typography>
-                    <Typography variant="body1" color="primary">
-                        {data.learner.className} · Grade {data.learner.grade}
-                        {overallAverage !== null && ` · ${overallAverage}% average`}
-                    </Typography>
-                </Box>
-
-                <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: { md: 'flex-end' }, gap: 1 }}>
-                    <Tabs
-                        value={tabValue}
-                        onChange={(_, v) => {
-                            setTabValue(v);
-                            requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur?.());
-                        }}
-                        onWheelCapture={handleTabsWheelCapture}
-                        variant="scrollable"
-                        scrollButtons="auto"
-                        sx={{ borderBottom: 1, borderColor: 'divider', width: '100%' }}
-                    >
-                        <Tab label="Performance" icon={<EmojiEvents />} iconPosition="start" />
-                        <Tab label="Weekly Schedule" icon={<MenuBook />} iconPosition="start" />
-                        <Tab label="Behavior Log" icon={<HistoryEdu />} iconPosition="start" />
-                        <Tab label="AI Advisor" icon={<AutoAwesome />} iconPosition="start" />
-                    </Tabs>
-
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        component={Link}
-                        href={childId ? `/dashboard/learner/report?childId=${childId}` : '/dashboard/learner/report'}
-                        sx={{ mt: { xs: 1, md: 0 } }}
-                    >
-                        View Term Report
-                    </Button>
-                </Box>
-            </Box>
+            {headerBlock}
+            {tabsOnly}
 
             {tabValue === 0 && (
                 <>
@@ -182,7 +201,7 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
                                 data={chartData}
                                 xKey="name"
                                 yKey="score"
-                                color="#1976d2" // Primary Blue
+                                color="#1976d2"
                             />
                         </Box>
                     )}

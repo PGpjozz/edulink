@@ -1,23 +1,30 @@
 'use client';
 import { ReactNode, Suspense, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Box, AppBar, Toolbar, IconButton, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { Menu as MenuIcon, Brightness4, Brightness7 } from '@mui/icons-material';
 import { useThemeContext } from '@/app/theme/ThemeContext';
 import Sidebar from '@/app/components/Sidebar';
 import DashboardPathGuard from '@/app/components/DashboardPathGuard';
+import ParentMobileNav from '@/app/components/ParentMobileNav';
+import ParentChildBar from '@/app/components/ParentChildBar';
+import NotificationDropdown from '@/app/components/NotificationDropdown';
+import { getPageTitle } from '@/lib/page-titles';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [mobileOpen, setMobileOpen] = useState(false);
-    const { mode, toggleTheme } = useThemeContext();
+    const { mode, toggleTheme, schoolName } = useThemeContext();
     const pathname = usePathname();
+    const pageTitle = getPageTitle(pathname);
+    const { data: session } = useSession();
+    const isParent = session?.user?.role === 'PARENT';
+    const showParentChrome = isParent && pathname.startsWith('/dashboard/parent');
 
     useEffect(() => {
         setMobileOpen(false);
-
-        // Defensive: ensure any previous modal/drawer scroll-lock is cleared on navigation
         if (typeof document !== 'undefined') {
             document.body.classList.remove('MuiModal-open');
             document.body.style.overflow = '';
@@ -26,24 +33,20 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         }
     }, [pathname]);
 
-    const handleDrawerToggle = () => {
-        setMobileOpen(!mobileOpen);
-    };
-
     const isDark = mode === 'dark';
 
     return (
         <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
-            {/* Mobile AppBar */}
             <AppBar
                 position="fixed"
                 sx={{
                     display: { md: 'none' },
-                    bgcolor: isDark ? 'rgba(15, 23, 42, 0.8)' : 'rgba(255, 255, 255, 0.8)',
-                    backdropFilter: 'blur(8px)',
+                    bgcolor: isDark ? 'rgba(15, 23, 42, 0.85)' : 'rgba(255, 255, 255, 0.9)',
+                    backdropFilter: 'blur(12px)',
                     color: 'text.primary',
                     boxShadow: 'none',
-                    borderBottom: `1px solid ${isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.12)'}`
+                    borderBottom: 1,
+                    borderColor: 'divider',
                 }}
             >
                 <Toolbar>
@@ -51,37 +54,57 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                         color="inherit"
                         aria-label="open drawer"
                         edge="start"
-                        onClick={handleDrawerToggle}
-                        sx={{ mr: 2 }}
+                        onClick={() => setMobileOpen(!mobileOpen)}
+                        sx={{ mr: 1 }}
                     >
                         <MenuIcon />
                     </IconButton>
-                    <Typography variant="h6" noWrap fontWeight="bold" sx={{ color: 'primary.main', flexGrow: 1 }}>
-                        EduLink
-                    </Typography>
-                    <IconButton onClick={() => toggleTheme()} color="inherit">
+                    <Box sx={{ flexGrow: 1, minWidth: 0 }}>
+                        <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.2}>
+                            {schoolName || 'EduLink'}
+                        </Typography>
+                        <Typography variant="subtitle1" noWrap fontWeight="bold">
+                            {pageTitle}
+                        </Typography>
+                    </Box>
+                    <NotificationDropdown />
+                    <IconButton onClick={() => toggleTheme()} color="inherit" size="small">
                         {isDark ? <Brightness7 sx={{ color: 'warning.main' }} /> : <Brightness4 />}
                     </IconButton>
                 </Toolbar>
             </AppBar>
 
-            <Suspense fallback={
-                <Box sx={{ width: 280, display: { xs: 'none', md: 'block' } }} />
-            }>
-                <Sidebar mobileOpen={mobileOpen} onClose={handleDrawerToggle} />
+            <Suspense fallback={<Box sx={{ width: 280, display: { xs: 'none', md: 'block' } }} />}>
+                <Sidebar mobileOpen={mobileOpen} onClose={() => setMobileOpen(false)} />
             </Suspense>
             <Box
                 component="main"
                 sx={{
                     flexGrow: 1,
-                    p: 3,
-                    mt: { xs: 8, md: 0 }, // Offset for AppBar on mobile
+                    p: { xs: 2, sm: 3 },
+                    mt: { xs: 7, md: 0 },
+                    mb: isParent && isMobile ? 8 : 0,
                     width: { md: `calc(100% - 280px)` },
+                    minWidth: 0,
                 }}
             >
                 <DashboardPathGuard />
+                {!isMobile && (
+                    <Box display="flex" justifyContent="flex-end" alignItems="center" gap={1} mb={2}>
+                        <NotificationDropdown />
+                        <IconButton onClick={() => toggleTheme()} size="small" aria-label="Toggle theme">
+                            {isDark ? <Brightness7 sx={{ color: 'warning.main' }} /> : <Brightness4 />}
+                        </IconButton>
+                    </Box>
+                )}
+                {showParentChrome && (
+                    <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 2 }}>
+                        <ParentChildBar />
+                    </Box>
+                )}
                 {children}
             </Box>
+            {isParent && <ParentMobileNav />}
         </Box>
     );
 }

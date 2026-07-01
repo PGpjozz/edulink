@@ -47,7 +47,8 @@ import { signOut, useSession } from 'next-auth/react';
 import { useThemeContext } from '@/app/theme/ThemeContext';
 import { useEffect, useState } from 'react';
 import RoleSwitcher from '@/app/components/RoleSwitcher';
-import { DASHBOARD_ROLE_LABELS, type DashboardRole, roleForNav } from '@/lib/dashboard-roles';
+import RoleChip from '@/app/components/ui/RoleChip';
+import { type DashboardRole, roleForNav } from '@/lib/dashboard-roles';
 
 const DRAWER_WIDTH = 280;
 
@@ -64,10 +65,10 @@ const TEACHING_NAV = [
 const ADMIN_NAV = [
     { label: 'Overview', icon: <Dashboard />, path: '/dashboard/principal' },
     { label: 'Data Hub', icon: <BarChartIcon />, path: '/dashboard/principal/analytics' },
-    { label: 'Classes', icon: <Class />, path: '/dashboard/principal?tab=classes' },
-    { label: 'Users', icon: <Person />, path: '/dashboard/principal?tab=users' },
-    { label: 'Subjects', icon: <Book />, path: '/dashboard/principal?tab=subjects' },
-    { label: 'Departments', icon: <School />, path: '/dashboard/principal?tab=departments' },
+    { label: 'Classes', icon: <Class />, path: '/dashboard/principal/classes' },
+    { label: 'Users', icon: <Person />, path: '/dashboard/principal/users' },
+    { label: 'Subjects', icon: <Book />, path: '/dashboard/principal/subjects' },
+    { label: 'Departments', icon: <School />, path: '/dashboard/principal/departments' },
     { label: 'Admissions', icon: <AppRegistration />, path: '/dashboard/principal/admissions' },
     { label: 'Library & Assets', icon: <Inventory />, path: '/dashboard/principal/assets' },
     { label: 'Finance', icon: <Payments />, path: '/dashboard/principal/finance' },
@@ -79,7 +80,6 @@ const ADMIN_NAV = [
 const HOD_NAV = [
     { label: 'Department', icon: <Dashboard />, path: '/dashboard/hod' },
     { label: 'Department Analytics', icon: <BarChartIcon />, path: '/dashboard/hod/analytics' },
-    { label: 'Behavior', icon: <EmojiEventsIcon />, path: '/dashboard/teacher/behavior' },
     { label: 'Messages', icon: <Message />, path: '/dashboard/messages' },
 ];
 
@@ -101,11 +101,13 @@ const NAV_ITEMS: Record<string, { label: string; icon: React.ReactNode; path: st
     PRINCIPAL: [
         ...ADMIN_NAV,
         { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
+        { label: 'Messages', icon: <Message />, path: '/dashboard/messages' },
         { label: 'Homework', icon: <Assignment />, path: '/dashboard/teacher/homework' },
     ],
     SCHOOL_ADMIN: [
         ...ADMIN_NAV,
         { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
+        { label: 'Messages', icon: <Message />, path: '/dashboard/messages' },
         { label: 'Homework', icon: <Assignment />, path: '/dashboard/teacher/homework' },
     ],
     HOD: [
@@ -139,9 +141,35 @@ const NAV_ITEMS: Record<string, { label: string; icon: React.ReactNode; path: st
     ]
 };
 
-function getNavItems(activeRole: string, primaryRole: string) {
+function getNavItems(activeRole: string, primaryRole: string, hasTeacherProfile: boolean) {
     const navRole = roleForNav(activeRole as DashboardRole, primaryRole);
-    return NAV_ITEMS[navRole] || NAV_ITEMS[activeRole] || [];
+    const base = NAV_ITEMS[navRole] || NAV_ITEMS[activeRole] || [];
+    const shared = [{ label: 'Messages', icon: <Message />, path: '/dashboard/messages' }];
+
+    if (
+        (activeRole === 'PRINCIPAL' || activeRole === 'SCHOOL_ADMIN' || activeRole === 'SCHOOL_OWNER') &&
+        hasTeacherProfile
+    ) {
+        return [
+            ...base,
+            { label: '— Teaching —', icon: <Book />, path: '/dashboard/teacher' },
+            ...TEACHING_NAV.filter((i) => i.path !== '/dashboard/teacher'),
+            ...shared.filter((s) => !base.some((b) => b.path === s.path)),
+        ];
+    }
+
+    if (activeRole === 'HOD' && hasTeacherProfile) {
+        return [
+            { label: 'My Classroom', icon: <Dashboard />, path: '/dashboard/teacher' },
+            ...TEACHING_NAV.filter((i) => i.path !== '/dashboard/teacher'),
+            { label: '— Department —', icon: <School />, path: '/dashboard/hod' },
+            ...HOD_NAV.filter((i) => i.path !== '/dashboard/hod'),
+            { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
+            ...shared.filter((s) => !base.some((b) => b.path === s.path)),
+        ];
+    }
+
+    return base;
 }
 
 interface SidebarProps {
@@ -157,8 +185,9 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     const router = useRouter();
     const { data: session } = useSession();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-    const { mode, toggleTheme, logoUrl } = useThemeContext();
+    const { mode, toggleTheme, logoUrl, schoolName } = useThemeContext();
     const [unreadCount, setUnreadCount] = useState(0);
+    const [unreadMessages, setUnreadMessages] = useState(0);
 
     useEffect(() => {
         if (session?.user?.role === 'PARENT') {
@@ -172,11 +201,24 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         }
     }, [session]);
 
+    useEffect(() => {
+        const role = session?.user?.role;
+        const messagingRoles = ['PARENT', 'TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN'];
+        if (role && messagingRoles.includes(role)) {
+            fetch('/api/messages?unreadOnly=true')
+                .then(res => res.json())
+                .then(data => {
+                    if (Array.isArray(data)) setUnreadMessages(data.length);
+                })
+                .catch(() => {});
+        }
+    }, [session]);
+
     if (!session) return null;
 
     const primaryRole = session.user.primaryRole ?? session.user.role;
     const activeRole = session.user.activeRole ?? primaryRole;
-    const items = getNavItems(activeRole, primaryRole);
+    const items = getNavItems(activeRole, primaryRole, session.user.hasTeacherProfile);
 
     const drawerContent = (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -186,8 +228,8 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                 ) : (
                     <Avatar sx={{ bgcolor: theme.palette.primary.main }}>EL</Avatar>
                 )}
-                <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main' }}>
-                    EduLink
+                <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main' }} noWrap>
+                    {schoolName || 'EduLink'}
                 </Typography>
             </Box>
 
@@ -198,9 +240,9 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             <Box px={2} mb={4}>
                 <Box p={2} sx={{ bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', borderRadius: 2 }}>
                     <Typography variant="subtitle2" fontWeight="bold">{session.user.name}</Typography>
-                    <Typography variant="caption" color="text.secondary">
-                        {DASHBOARD_ROLE_LABELS[activeRole as DashboardRole] ?? activeRole}
-                    </Typography>
+                    <Box mt={0.5}>
+                        <RoleChip role={activeRole} />
+                    </Box>
                 </Box>
             </Box>
 
@@ -228,6 +270,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                     return (
                         <ListItem key={item.path} disablePadding sx={{ mb: 1 }}>
                             <ListItemButton
+                                selected={isActive}
                                 onClick={() => {
                                     router.push(item.path);
                                     requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur?.());
@@ -236,16 +279,19 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                                 sx={{
                                     borderRadius: 2,
                                     mx: 2,
-                                    bgcolor: isActive ? 'primary.light' : 'transparent',
-                                    color: isActive ? 'primary.contrastText' : 'inherit',
-                                    '&:hover': {
-                                        bgcolor: isActive ? 'primary.main' : (mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)')
-                                    }
+                                    fontWeight: isActive ? 700 : 500,
+                                    borderLeft: isActive ? 3 : 0,
+                                    borderColor: 'primary.main',
+                                    pl: isActive ? 1.5 : 2,
                                 }}
                             >
                                 <ListItemIcon sx={{ color: isActive ? 'inherit' : 'gray' }}>
                                     {item.label === 'Alerts' && unreadCount > 0 ? (
                                         <Badge badgeContent={unreadCount} color="error">
+                                            {item.icon}
+                                        </Badge>
+                                    ) : item.label === 'Messages' && unreadMessages > 0 ? (
+                                        <Badge badgeContent={unreadMessages} color="error">
                                             {item.icon}
                                         </Badge>
                                     ) : (

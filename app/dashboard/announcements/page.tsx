@@ -1,9 +1,12 @@
 'use client';
 
-import { Container, Typography, Box, Button } from '@mui/material';
+import { Container, Button } from '@mui/material';
 import AnnouncementsFeed from '@/app/components/AnnouncementsFeed';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
+import PageHeader from '@/app/components/ui/PageHeader';
+import PageTransition from '@/app/components/ui/PageTransition';
+import ContentPanel from '@/app/components/ui/ContentPanel';
 
 const STAFF_ROLES = ['SCHOOL_OWNER', 'PRINCIPAL', 'SCHOOL_ADMIN', 'HOD', 'TEACHER'];
 
@@ -16,16 +19,23 @@ export default function AnnouncementsPage() {
             : '/dashboard/announcements/new';
 
     return (
-        <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
-                <Typography variant="h4" fontWeight="bold">Announcements</Typography>
-                {canPost && (
-                    <Button variant="contained" component={Link} href={postHref}>
-                        Post announcement
-                    </Button>
-                )}
-            </Box>
-            <AnnouncementsFeed />
-        </Container>
+        <PageTransition>
+            <Container maxWidth="md">
+                <PageHeader
+                    title="Announcements"
+                    subtitle="School-wide updates and notices for your community."
+                    actions={
+                        canPost ? (
+                            <Button variant="contained" component={Link} href={postHref}>
+                                Post announcement
+                            </Button>
+                        ) : undefined
+                    }
+                />
+                <ContentPanel>
+                    <AnnouncementsFeed />
+                </ContentPanel>
+            </Container>
+        </PageTransition>
     );
 }

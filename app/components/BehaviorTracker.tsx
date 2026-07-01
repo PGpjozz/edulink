@@ -46,7 +46,7 @@ export default function BehaviorTracker({ learnerId }: BehaviorTrackerProps) {
     if (loading) return <CircularProgress />;
 
     const totalMerits = records.filter(r => r.type === 'MERIT').reduce((sum, r) => sum + r.points, 0);
-    const totalDemerits = records.filter(r => r.type === 'DEMERIT').reduce((sum, r) => sum + r.points, 0);
+    const totalDemerits = records.filter(r => r.type === 'DEMERIT').reduce((sum, r) => sum + Math.abs(r.points), 0);
     const netPoints = totalMerits - totalDemerits;
 
     return (
@@ -92,7 +92,7 @@ export default function BehaviorTracker({ learnerId }: BehaviorTrackerProps) {
                                 secondary={`By ${record.teacher.firstName} ${record.teacher.lastName} • ${record.category} • ${new Date(record.createdAt).toLocaleDateString()}`}
                             />
                             <Chip
-                                label={`${record.type === 'MERIT' ? '+' : '-'}${record.points}`}
+                                label={`${record.type === 'MERIT' ? '+' : '-'}${Math.abs(record.points)}`}
                                 color={record.type === 'MERIT' ? 'success' : 'error'}
                                 size="small"
                                 sx={{ fontWeight: 'bold' }}

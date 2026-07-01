@@ -6,7 +6,6 @@ import {
     Container,
     Typography,
     Button,
-    Paper,
     TextField,
     Table,
     TableBody,
@@ -15,15 +14,19 @@ import {
     TableRow,
     Avatar,
     Alert,
-    CircularProgress
 } from '@mui/material';
 import { Save as SaveIcon, ArrowBack as ArrowBackIcon } from '@mui/icons-material';
 import { useRouter, useParams } from 'next/navigation';
+import PageHeader from '@/app/components/ui/PageHeader';
+import PageTransition from '@/app/components/ui/PageTransition';
+import ContentPanel from '@/app/components/ui/ContentPanel';
+import LoadingSkeleton from '@/app/components/ui/LoadingSkeleton';
+import EmptyState from '@/app/components/ui/EmptyState';
 
 export default function AssessmentGrading() {
     const router = useRouter();
     const params = useParams();
-    const { id: subjectId, assessmentId } = params as { id: string, assessmentId: string };
+    const { id: subjectId, assessmentId } = params as { id: string; assessmentId: string };
 
     type Learner = { id: string; user: { firstName: string; lastName: string } };
     type GradeItem = { learnerId: string; score: number; comments?: string };
@@ -33,49 +36,35 @@ export default function AssessmentGrading() {
     const [comments, setComments] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
     useEffect(() => {
-        // Fetch assessment details, class learners, and existing grades
-        // Ideally we have a dedicated endpoint for "Grading Sheet"
-        // For now, we fetch fetch learners for the Subject's Class + Grades
-
-        // 1. Fetch Subject to get ClassId (mocking simplified flow: assume we fetch learners via API)
-        // Actually, we need to fetch the learners enrolled in this subject's class.
-
-        // Let's assume we implement a specific route /api/assessments/[id]/grading-sheet
-        // Or we fetch learners from Class and Grades separately and merge.
-
-        // Let's try fetching grades first
         const fetchData = async () => {
             try {
-                // Get grades
-                const gradesRes = await fetch(`/api/grades?assessmentId=${assessmentId}`);
-                const gradesData: GradeItem[] = await gradesRes.json();
+                const [gradesRes, learnersRes] = await Promise.all([
+                    fetch(`/api/grades?assessmentId=${assessmentId}`),
+                    fetch(`/api/subjects/${subjectId}/learners`),
+                ]);
 
-                // Map existing grades
-                const gradeMap: Record<string, number> = {};
-                const commentMap: Record<string, string> = {};
-                gradesData.forEach((g) => {
-                    gradeMap[g.learnerId] = g.score;
-                    commentMap[g.learnerId] = g.comments || '';
-                });
-                setGrades(gradeMap);
-                setComments(commentMap);
-
-                // Fetch Learners (We need an endpoint to get learners for a SUBJECT)
-                // Or we fetch the Subject -> Class -> Learners
-                // Let's assume for now we just show the learners returned by the grades (if any)
-                // BUT if no grades exist, we see nobody. 
-
-                // Fix: We need to fetch the learners of the class associated with the subject.
-                // Let's add a `GET /api/subjects/[id]/learners` endpoint or similar.
-                // For now, let's mock the learner list or rely on `gradesData` if populated via seed.
-                // Real implementation:
-                const learnersRes = await fetch(`/api/subjects/${subjectId}/learners`);
                 if (learnersRes.ok) {
                     const learnersData: Learner[] = await learnersRes.json();
-                    setLearners(learnersData);
+                    if (Array.isArray(learnersData)) {
+                        setLearners(learnersData);
+                    }
+                }
+
+                if (gradesRes.ok) {
+                    const gradesData: GradeItem[] = await gradesRes.json();
+                    if (Array.isArray(gradesData)) {
+                        const gradeMap: Record<string, number> = {};
+                        const commentMap: Record<string, string> = {};
+                        gradesData.forEach((g) => {
+                            gradeMap[g.learnerId] = g.score;
+                            commentMap[g.learnerId] = g.comments || '';
+                        });
+                        setGrades(gradeMap);
+                        setComments(commentMap);
+                    }
                 }
             } catch {
                 // swallow
@@ -91,17 +80,25 @@ export default function AssessmentGrading() {
         setSaving(true);
         setMessage(null);
 
-        const gradesToSave = Object.keys(grades).map(learnerId => ({
-            learnerId,
-            score: grades[learnerId],
-            comments: comments[learnerId]
-        }));
+        const gradesToSave = learners
+            .filter((l) => grades[l.id] !== undefined && grades[l.id] !== null && grades[l.id] !== ('' as unknown as number))
+            .map((l) => ({
+                learnerId: l.id,
+                score: grades[l.id],
+                comments: comments[l.id],
+            }));
+
+        if (gradesToSave.length === 0) {
+            setMessage({ type: 'error', text: 'Enter at least one score before saving.' });
+            setSaving(false);
+            return;
+        }
 
         try {
             const res = await fetch('/api/grades', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ assessmentId, grades: gradesToSave })
+                body: JSON.stringify({ assessmentId, grades: gradesToSave }),
             });
 
             if (!res.ok) throw new Error('Failed to save');
@@ -113,86 +110,105 @@ export default function AssessmentGrading() {
         }
     };
 
-    if (loading) return <CircularProgress sx={{ mt: 5 }} />;
+    if (loading) {
+        return (
+            <Container maxWidth="lg">
+                <LoadingSkeleton variant="page" />
+            </Container>
+        );
+    }
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4 }}>
-            <Button
-                startIcon={<ArrowBackIcon />}
-                onClick={() => router.back()}
-                sx={{ mb: 2 }}
-            >
-                Back to Assessment
-            </Button>
+        <PageTransition>
+            <Container maxWidth="lg">
+                <PageHeader
+                    title="Grading"
+                    subtitle="Enter scores and feedback for each learner."
+                    breadcrumbs={[
+                        { label: 'Gradebook', href: '/dashboard/teacher/gradebook' },
+                        { label: 'Assessment' },
+                    ]}
+                    actions={
+                        <Box display="flex" gap={1} flexWrap="wrap">
+                            <Button startIcon={<ArrowBackIcon />} onClick={() => router.back()}>
+                                Back
+                            </Button>
+                            <Button
+                                variant="contained"
+                                startIcon={<SaveIcon />}
+                                onClick={handleSave}
+                                disabled={saving}
+                            >
+                                {saving ? 'Saving...' : 'Save grades'}
+                            </Button>
+                        </Box>
+                    }
+                />
 
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                <Typography variant="h4" fontWeight="bold">
-                    Grading
-                </Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<SaveIcon />}
-                    onClick={handleSave}
-                    disabled={saving}
-                >
-                    {saving ? 'Saving...' : 'Save Grades'}
-                </Button>
-            </Box>
+                {message && (
+                    <Alert severity={message.type} sx={{ mb: 2 }}>
+                        {message.text}
+                    </Alert>
+                )}
 
-            {message && (
-                <Alert severity={message.type} sx={{ mb: 2 }}>{message.text}</Alert>
-            )}
-
-            <Paper sx={{ overflow: 'hidden' }}>
-                <Table>
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Learner</TableCell>
-                            <TableCell width={150}>Score</TableCell>
-                            <TableCell>Comments</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {learners.map((learner) => (
-                            <TableRow key={learner.id}>
-                                <TableCell>
-                                    <Box display="flex" alignItems="center" gap={2}>
-                                        <Avatar>{learner.user.firstName[0]}</Avatar>
-                                        <Typography>
-                                            {learner.user.firstName} {learner.user.lastName}
-                                        </Typography>
-                                    </Box>
-                                </TableCell>
-                                <TableCell>
-                                    <TextField
-                                        size="small"
-                                        type="number"
-                                        value={grades[learner.id] ?? ''}
-                                        onChange={(e) => setGrades({ ...grades, [learner.id]: parseFloat(e.target.value) || 0 })}
-                                        inputProps={{ min: 0, max: 100 }}
-                                    />
-                                </TableCell>
-                                <TableCell>
-                                    <TextField
-                                        size="small"
-                                        fullWidth
-                                        placeholder="Optional comments"
-                                        value={comments[learner.id] || ''}
-                                        onChange={(e) => setComments({ ...comments, [learner.id]: e.target.value })}
-                                    />
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                        {learners.length === 0 && (
-                            <TableRow>
-                                <TableCell colSpan={3} align="center">
-                                    No learners found for this class.
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </TableBody>
-                </Table>
-            </Paper>
-        </Container>
+                {learners.length === 0 ? (
+                    <EmptyState
+                        title="No learners found"
+                        description="There are no learners enrolled in this subject's class yet."
+                    />
+                ) : (
+                    <ContentPanel title={`${learners.length} learners`} noPadding>
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Learner</TableCell>
+                                    <TableCell width={150}>Score</TableCell>
+                                    <TableCell>Comments</TableCell>
+                                </TableRow>
+                            </TableHead>
+                            <TableBody>
+                                {learners.map((learner) => (
+                                    <TableRow key={learner.id}>
+                                        <TableCell>
+                                            <Box display="flex" alignItems="center" gap={2}>
+                                                <Avatar>{learner.user.firstName[0]}</Avatar>
+                                                <Typography>
+                                                    {learner.user.firstName} {learner.user.lastName}
+                                                </Typography>
+                                            </Box>
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                size="small"
+                                                type="number"
+                                                value={grades[learner.id] ?? ''}
+                                                onChange={(e) =>
+                                                    setGrades({
+                                                        ...grades,
+                                                        [learner.id]: parseFloat(e.target.value) || 0,
+                                                    })
+                                                }
+                                                inputProps={{ min: 0, max: 100 }}
+                                            />
+                                        </TableCell>
+                                        <TableCell>
+                                            <TextField
+                                                size="small"
+                                                fullWidth
+                                                placeholder="Optional comments"
+                                                value={comments[learner.id] || ''}
+                                                onChange={(e) =>
+                                                    setComments({ ...comments, [learner.id]: e.target.value })
+                                                }
+                                            />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </ContentPanel>
+                )}
+            </Container>
+        </PageTransition>
     );
 }

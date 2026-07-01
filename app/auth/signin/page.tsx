@@ -1,139 +1,200 @@
 'use client';
 
-import { useState } from 'react';
-import { signIn, signOut, getSession } from 'next-auth/react';
+import { useState, useEffect } from 'react';
+import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
-    Box,
-    Button,
-    Container,
-    TextField,
-    Typography,
-    Paper,
-    Tabs,
-    Tab,
-    Alert,
-    CircularProgress
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Alert,
+  CircularProgress,
+  InputAdornment,
+  IconButton,
+  Divider,
 } from '@mui/material';
-import { motion } from 'framer-motion';
+import { Visibility, VisibilityOff, School } from '@mui/icons-material';
+import { useThemeContext } from '@/app/theme/ThemeContext';
 
-export default function SignIn() {
-    const router = useRouter();
-    const [tabIndex, setTabIndex] = useState(0); // 0: Email, 1: ID Number
-    const [identifier, setIdentifier] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const [loading, setLoading] = useState(false);
+type PublicBranding = {
+  schoolName: string;
+  logoUrl: string | null;
+  primaryColor: string;
+};
 
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setError('');
+export default function SignInPage() {
+  const router = useRouter();
+  const { schoolName, logoUrl } = useThemeContext();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [branding, setBranding] = useState<PublicBranding | null>(null);
 
-        const res = await signIn('credentials', {
-            identifier,
-            password,
-            redirect: false,
-        });
+  useEffect(() => {
+    fetch('/api/school/branding/public')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (data?.schoolName) setBranding(data);
+      })
+      .catch(() => {});
+  }, []);
 
-        if (res?.error) {
-            setError('Invalid credentials');
-            setLoading(false);
-        } else {
-            const session = await getSession();
-            if (session?.user?.mustChangePassword) {
-                router.push('/dashboard/change-password');
-                return;
-            }
-            if (session?.user?.role === 'PROVIDER') {
-                await signOut({ redirect: false });
-                setError('Provider accounts must sign in at the provider portal.');
-                setLoading(false);
-                return;
-            }
-            router.push('/dashboard');
-            router.refresh();
-        }
-    };
+  const displayName = branding?.schoolName || schoolName;
+  const displayLogo = branding?.logoUrl || logoUrl;
 
-    const handleTabChange = (_: React.SyntheticEvent, newValue: number) => {
-        setTabIndex(newValue);
-        setIdentifier('');
-        setPassword('');
-        setError('');
-    };
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
 
-    return (
-        <Container maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', minHeight: '100vh' }}>
-            <Paper
-                component={motion.div}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                elevation={3}
-                sx={{ p: 4, width: '100%', borderRadius: 4 }}
-            >
-                <Typography variant="h4" component="h1" gutterBottom align="center" fontWeight="bold" color="primary">
-                    EduLink
-                </Typography>
-                <Typography variant="body1" align="center" color="text.secondary" gutterBottom>
-                    Sign in to your account
-                </Typography>
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
 
-                <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-                    <Tabs value={tabIndex} onChange={handleTabChange} variant="fullWidth">
-                        <Tab label="Staff & Parents" />
-                        <Tab label="Learners" />
-                    </Tabs>
-                </Box>
+      if (result?.error) {
+        setError('Invalid email or password');
+      } else {
+        router.push('/dashboard');
+        router.refresh();
+      }
+    } catch {
+      setError('An error occurred. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+  return (
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        bgcolor: 'background.default',
+      }}
+    >
+      <Box
+        sx={{
+          display: { xs: 'none', md: 'flex' },
+          width: '42%',
+          minHeight: '100vh',
+          background: (theme) =>
+            `linear-gradient(145deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 55%, #0f172a 100%)`,
+          color: 'primary.contrastText',
+          flexDirection: 'column',
+          justifyContent: 'center',
+          px: 6,
+          py: 8,
+        }}
+      >
+        <Box sx={{ maxWidth: 400 }}>
+          {displayLogo ? (
+            <Box
+              component="img"
+              src={displayLogo}
+              alt=""
+              sx={{ height: 56, mb: 3, objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
+            />
+          ) : (
+            <School sx={{ fontSize: 56, mb: 2, opacity: 0.9 }} />
+          )}
+          <Typography variant="h3" fontWeight={800} gutterBottom sx={{ letterSpacing: '-0.03em' }}>
+            {displayName}
+          </Typography>
+          <Typography variant="h6" sx={{ opacity: 0.88, fontWeight: 400, lineHeight: 1.6 }}>
+            One place for grades, attendance, homework, and school communication.
+          </Typography>
+        </Box>
+      </Box>
 
-                <Box component="form" onSubmit={handleSubmit}>
-                    <TextField
-                        fullWidth
-                        label={tabIndex === 0 ? "Email Address" : "ID Number"}
-                        type="text"
-                        value={identifier}
-                        onChange={(e) => setIdentifier(e.target.value)}
-                        margin="normal"
-                        required
-                        placeholder={tabIndex === 0 ? "Enter your email" : "Enter your ID number"}
-                    />
-                    <TextField
-                        fullWidth
-                        label="Password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        margin="normal"
-                        required
-                    />
+      <Box
+        sx={{
+          flex: 1,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          p: { xs: 2, sm: 4 },
+        }}
+      >
+        <Box sx={{ width: '100%', maxWidth: 420 }}>
+          <Box sx={{ display: { xs: 'block', md: 'none' }, textAlign: 'center', mb: 3 }}>
+            {displayLogo ? (
+              <Box component="img" src={displayLogo} alt="" sx={{ height: 48, mb: 1, objectFit: 'contain' }} />
+            ) : (
+              <School color="primary" sx={{ fontSize: 48, mb: 1 }} />
+            )}
+            <Typography variant="h5" fontWeight={700}>
+              {displayName}
+            </Typography>
+          </Box>
 
-                    <Button
-                        fullWidth
-                        variant="contained"
-                        size="large"
-                        type="submit"
-                        sx={{ mt: 3, mb: 2 }}
-                        disabled={loading}
-                    >
-                        {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
-                    </Button>
-                </Box>
+          <Typography variant="h4" fontWeight={700} gutterBottom sx={{ display: { xs: 'none', md: 'block' } }}>
+            Sign in
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+            Use your school email and password
+          </Typography>
 
-                <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 2 }}>
-                    <a href="/auth/forgot-password" style={{ color: 'inherit' }}>Forgot password?</a>
-                    {' · '}
-                    <a href="/privacy" style={{ color: 'inherit' }}>Privacy Policy</a>
-                </Typography>
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
 
-                <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 2 }}>
-                    EduLink provider?{' '}
-                    <a href="/auth/provider-signin" style={{ color: 'inherit', fontWeight: 600 }}>
-                        Sign in at the provider portal
-                    </a>
-                </Typography>
-            </Paper>
-        </Container>
-    );
+          <Box component="form" onSubmit={handleSubmit}>
+            <TextField
+              fullWidth
+              label="Email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Password"
+              type={showPassword ? 'text' : 'password'}
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+              sx={{ mb: 1 }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" aria-label="toggle password">
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+            <Box sx={{ textAlign: 'right', mb: 3 }}>
+              <Link href="/auth/forgot-password" style={{ fontSize: '0.875rem' }}>
+                Forgot password?
+              </Link>
+            </Box>
+            <Button type="submit" fullWidth variant="contained" size="large" disabled={loading} sx={{ py: 1.5, mb: 2 }}>
+              {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign in'}
+            </Button>
+          </Box>
+
+          <Divider sx={{ my: 2 }} />
+          <Typography variant="body2" color="text.secondary" textAlign="center">
+            <Link href="/privacy">Privacy policy</Link>
+            {' · '}
+            <Link href="/terms">Terms of use</Link>
+          </Typography>
+        </Box>
+      </Box>
+    </Box>
+  );
 }

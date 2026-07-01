@@ -1,10 +1,12 @@
 'use client';
 
 import { Suspense, useEffect, useState } from 'react';
-import { Paper, Typography, Stack, Chip, Button, Box, Skeleton, Alert } from '@mui/material';
+import { Typography, Stack, Chip, Button, Box, Alert } from '@mui/material';
 import Link from 'next/link';
 import { AssignmentLate, CheckCircle } from '@mui/icons-material';
 import AnnouncementsFeed from '@/app/components/AnnouncementsFeed';
+import ContentPanel from '@/app/components/ui/ContentPanel';
+import LoadingSkeleton from '@/app/components/ui/LoadingSkeleton';
 
 type HomeworkItem = {
     id: string;
@@ -38,24 +40,21 @@ function LearnerTodayInner() {
     }, []);
 
     if (loading) {
-        return (
-            <Stack spacing={2} sx={{ mb: 3 }}>
-                <Skeleton variant="rounded" height={72} />
-                <Skeleton variant="rounded" height={120} />
-            </Stack>
-        );
+        return <LoadingSkeleton variant="cards" count={2} />;
     }
 
     return (
         <Stack spacing={2} sx={{ mb: 3 }}>
             {overdue.length > 0 && (
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, borderColor: 'error.main' }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                        <Typography variant="subtitle1" fontWeight="bold" color="error.main">
-                            Overdue homework
-                        </Typography>
-                        <Button size="small" component={Link} href="/dashboard/learner/homework">View all</Button>
-                    </Box>
+                <ContentPanel
+                    title="Overdue homework"
+                    actions={
+                        <Button size="small" component={Link} href="/dashboard/learner/homework">
+                            View all
+                        </Button>
+                    }
+                    sx={{ borderColor: 'error.main' }}
+                >
                     <Stack direction="row" spacing={1} flexWrap="wrap">
                         {overdue.slice(0, 4).map((h) => (
                             <Chip
@@ -67,21 +66,29 @@ function LearnerTodayInner() {
                             />
                         ))}
                     </Stack>
-                </Paper>
+                </ContentPanel>
             )}
 
             {dueSoon.length > 0 && (
-                <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                    <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                        <Typography variant="subtitle1" fontWeight="bold">Due this week</Typography>
-                        <Button size="small" component={Link} href="/dashboard/learner/homework">View all</Button>
-                    </Box>
+                <ContentPanel
+                    title="Due this week"
+                    actions={
+                        <Button size="small" component={Link} href="/dashboard/learner/homework">
+                            View all
+                        </Button>
+                    }
+                >
                     <Stack direction="row" spacing={1} flexWrap="wrap">
                         {dueSoon.slice(0, 4).map((h) => (
-                            <Chip key={h.id} label={`${h.title} · ${new Date(h.dueDate).toLocaleDateString()}`} size="small" color="warning" />
+                            <Chip
+                                key={h.id}
+                                label={`${h.title} · ${new Date(h.dueDate).toLocaleDateString()}`}
+                                size="small"
+                                color="warning"
+                            />
                         ))}
                     </Stack>
-                </Paper>
+                </ContentPanel>
             )}
 
             {allCaughtUp && (
@@ -90,20 +97,23 @@ function LearnerTodayInner() {
                 </Alert>
             )}
 
-            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2 }}>
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={1}>
-                    <Typography variant="subtitle1" fontWeight="bold">Announcements</Typography>
-                    <Button size="small" component={Link} href="/dashboard/announcements">View all</Button>
-                </Box>
+            <ContentPanel
+                title="Announcements"
+                actions={
+                    <Button size="small" component={Link} href="/dashboard/announcements">
+                        View all
+                    </Button>
+                }
+            >
                 <AnnouncementsFeed compact />
-            </Paper>
+            </ContentPanel>
         </Stack>
     );
 }
 
 export default function LearnerTodayPanel() {
     return (
-        <Suspense fallback={<Skeleton variant="rounded" height={80} sx={{ mb: 2 }} />}>
+        <Suspense fallback={<LoadingSkeleton variant="cards" count={2} />}>
             <LearnerTodayInner />
         </Suspense>
     );

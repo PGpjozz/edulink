@@ -14,6 +14,8 @@ interface ThemeContextType {
     setPrimaryColor: (color: string) => void;
     logoUrl: string;
     setLogoUrl: (url: string) => void;
+    schoolName: string;
+    setSchoolName: (name: string) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -36,6 +38,7 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return saved ?? '#4338ca';
     });
     const [logoUrl, setLogoUrl] = useState('');
+    const [schoolName, setSchoolName] = useState('');
     const { data: session } = useSession();
 
     // Fetch school-specific branding when session is available
@@ -54,6 +57,9 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
                     }
                     if (data.logoUrl) {
                         setLogoUrl(data.logoUrl);
+                    }
+                    if (data.name) {
+                        setSchoolName(data.name);
                     }
                 })
                 .catch(() => { });
@@ -81,14 +87,27 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     const theme = useMemo(() => getTheme(mode, primaryColor), [mode, primaryColor]);
 
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+        let meta = document.querySelector('meta[name="theme-color"]');
+        if (!meta) {
+            meta = document.createElement('meta');
+            meta.setAttribute('name', 'theme-color');
+            document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', primaryColor);
+    }, [primaryColor]);
+
     const value = useMemo(() => ({
         mode,
         toggleTheme,
         primaryColor,
         setPrimaryColor: handleSetPrimaryColor,
         logoUrl,
-        setLogoUrl
-    }), [mode, toggleTheme, primaryColor, handleSetPrimaryColor, logoUrl, setLogoUrl]);
+        setLogoUrl,
+        schoolName,
+        setSchoolName,
+    }), [mode, toggleTheme, primaryColor, handleSetPrimaryColor, logoUrl, setLogoUrl, schoolName, setSchoolName]);
 
     return (
         <ThemeContext.Provider value={value}>

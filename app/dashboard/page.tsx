@@ -23,8 +23,14 @@ export default function DashboardPage() {
             return;
         }
 
-        const activeRole = (session.user.activeRole ?? session.user.primaryRole) as DashboardRole;
-        router.push(dashboardHomePath(activeRole));
+        const activeRole = (session.user.activeRole ?? session.user.primaryRole ?? session.user.role) as DashboardRole;
+        let path = dashboardHomePath(activeRole);
+
+        if (activeRole === 'HOD' && session.user.hasTeacherProfile) {
+            path = '/dashboard/teacher';
+        }
+
+        router.push(path);
     }, [session, status, router]);
 
     return (

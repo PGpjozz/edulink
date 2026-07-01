@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/api-auth';
-import { canAccessSubject } from '@/lib/staff-context';
+import { canAccessSubject, getLearnersForSubject } from '@/lib/staff-context';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const auth = await requireAuth({ requireSchoolId: true });
@@ -19,16 +19,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             orderBy: { date: 'asc' }
         });
 
-        const learners = await prisma.learnerProfile.findMany({
-            where: {
-                class: {
-                    schoolId: auth.schoolId!,
-                    classSubjects: { some: { subjectId } },
-                },
-            },
-            include: { user: { select: { firstName: true, lastName: true } } },
-            orderBy: { user: { lastName: 'asc' } },
-        });
+        const learners = await getLearnersForSubject(auth, subjectId);
 
         const grades = await prisma.grade.findMany({
             where: { assessmentId: { in: assessments.map((a) => a.id) } },

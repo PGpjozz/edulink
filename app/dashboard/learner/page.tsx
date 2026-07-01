@@ -1,33 +1,28 @@
 'use client';
 
-import { Container, Typography, Box } from '@mui/material';
+import { Container } from '@mui/material';
 import { useSession } from 'next-auth/react';
 import LearnerProgressView from '@/app/components/LearnerProgressView';
 import LearnerTodayPanel from '@/app/components/LearnerTodayPanel';
-
-function getGreeting() {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-}
+import PageHeader from '@/app/components/ui/PageHeader';
+import PageTransition from '@/app/components/ui/PageTransition';
+import { getTimeGreeting } from '@/lib/greeting';
 
 export default function LearnerDashboard() {
     const { data: session } = useSession();
-    const firstName = session?.user?.name?.split(' ')[0] ?? 'there';
+    const firstName = session?.user?.name?.split(' ')[0] ?? 'Learner';
+    const greeting = getTimeGreeting();
 
     return (
-        <Container maxWidth="xl" sx={{ mt: 4 }}>
-            <Box mb={3}>
-                <Typography variant="h4" fontWeight="bold">
-                    {getGreeting()}, {firstName}
-                </Typography>
-                <Typography color="text.secondary">
-                    Here&apos;s what&apos;s happening with your learning today.
-                </Typography>
-            </Box>
-            <LearnerTodayPanel />
-            <LearnerProgressView />
-        </Container>
+        <PageTransition>
+            <Container maxWidth="xl">
+                <PageHeader
+                    title={`${greeting}, ${firstName}`}
+                    subtitle="Track your progress, homework, and announcements."
+                />
+                <LearnerTodayPanel />
+                <LearnerProgressView hideHeader />
+            </Container>
+        </PageTransition>
     );
 }

@@ -36,7 +36,7 @@ export default function ForgotPasswordPage() {
                     Reset password
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                    Enter your school email address. If an account exists, a temporary password will be sent to you.
+                    Enter your school email address. If an account exists, a temporary password will be sent. You must change it after signing in.
                 </Typography>
                 {message && <Alert severity="success" sx={{ mb: 2 }}>{message}</Alert>}
                 {tempPassword && (

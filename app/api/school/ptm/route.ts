@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { createNotification } from '@/lib/notifications';
 
 export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
@@ -66,6 +67,26 @@ export async function PATCH(req: Request) {
         const body = await req.json();
         const { sessionId, learnerId, startTime, endTime } = body;
 
+        const ptmSession = await prisma.pTMSession.findUnique({
+            where: { id: sessionId },
+            select: { teacherId: true, date: true },
+        });
+
+        if (!ptmSession) {
+            return new NextResponse('Session not found', { status: 404 });
+        }
+
+        const [learner, parent] = await Promise.all([
+            prisma.learnerProfile.findUnique({
+                where: { id: learnerId },
+                select: { user: { select: { firstName: true, lastName: true } } },
+            }),
+            prisma.user.findUnique({
+                where: { id: session.user.id },
+                select: { firstName: true, lastName: true },
+            }),
+        ]);
+
         const booking = await prisma.pTMBooking.create({
             data: {
                 sessionId,
@@ -74,6 +95,20 @@ export async function PATCH(req: Request) {
                 startTime: new Date(startTime),
                 endTime: new Date(endTime)
             }
+        });
+
+        const learnerName = learner
+            ? `${learner.user.firstName} ${learner.user.lastName}`
+            : 'a learner';
+        const parentName = parent ? `${parent.firstName} ${parent.lastName}` : 'A parent';
+        const slotTime = new Date(startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        await createNotification({
+            userId: ptmSession.teacherId,
+            title: 'New PTM booking',
+            message: `${parentName} booked a meeting for ${learnerName} at ${slotTime}.`,
+            type: 'SYSTEM',
+            link: '/dashboard/teacher/meetings',
         });
 
         return NextResponse.json(booking);

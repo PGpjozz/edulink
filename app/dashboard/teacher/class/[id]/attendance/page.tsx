@@ -13,15 +13,25 @@ import {
     TableBody,
     Button,
     TextField,
-    RadioGroup,
-    FormControlLabel,
-    Radio,
     LinearProgress,
     Alert,
-    IconButton
+    IconButton,
+    Chip,
+    Stack,
 } from '@mui/material';
-import { ArrowBack } from '@mui/icons-material'; // Simplified back
+import { ArrowBack, CheckCircle } from '@mui/icons-material';
 import { useParams, useRouter } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
+import PageHeader from '@/app/components/ui/PageHeader';
+import PageTransition from '@/app/components/ui/PageTransition';
+import ContentPanel from '@/app/components/ui/ContentPanel';
+import LoadingSkeleton from '@/app/components/ui/LoadingSkeleton';
+
+const STATUS_OPTIONS = [
+    { value: 'PRESENT', label: 'Present', color: 'success' as const },
+    { value: 'LATE', label: 'Late', color: 'warning' as const },
+    { value: 'ABSENT', label: 'Absent', color: 'error' as const },
+];
 
 export default function AttendancePage() {
     const { id: classId } = useParams();
@@ -29,12 +39,12 @@ export default function AttendancePage() {
 
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     type ClassLearner = { id: string; firstName: string; lastName: string; idNumber?: string };
-    type AttendanceRecord = { learnerId: string; status: string };
     const [learners, setLearners] = useState<ClassLearner[]>([]);
-    const [attendance, setAttendance] = useState<Record<string, string>>({}); // learnerId -> status
+    const [attendance, setAttendance] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
-    const [success, setSuccess] = useState('');
+    const [success, setSuccess] = useState(false);
+    const [recentTap, setRecentTap] = useState<string | null>(null);
 
     const fetchLearnersAndAttendance = useCallback(async () => {
         setLoading(true);
@@ -44,7 +54,7 @@ export default function AttendancePage() {
             const classLearners: ClassLearner[] = await learnersRes.json();
 
             const attRes = await fetch(`/api/attendance?classId=${classId}&date=${date}`);
-            const existingAtt: AttendanceRecord[] = attRes.ok ? await attRes.json() : [];
+            const existingAtt: { learnerId: string; status: string }[] = attRes.ok ? await attRes.json() : [];
 
             const attMap: Record<string, string> = {};
             classLearners.forEach((l) => {
@@ -55,48 +65,40 @@ export default function AttendancePage() {
             setLearners(classLearners);
             setAttendance(attMap);
         } catch {
-            // swallow to avoid noisy logs
+            // swallow
         } finally {
             setLoading(false);
         }
     }, [classId, date]);
 
     useEffect(() => {
-        // Fetch class learners first
-        // Ideally we'd have a specific endpoint for "learners in class", but we use the generic one or custom
-        // For now, let's assume we can fetch attendance which includes learners? 
-        // Or better: Fetch Class Rosters.
-        // Let's use `api/users` but filtered? No, `api/classes` includes count but not list.
-        // We need a way to get learners in a class.
-        // Let's rely on the `GET /api/attendance` to return *existing* records, 
-        // BUT if no records exist, we still need the list of students to mark them!
-        // So we need: GET /api/classes/[id]/learners. 
-        // I haven't built that yet. I'll mock-fetch or build it.
-        // Actually, `api/users` returns all users. 
-        // Quickest path: Build `api/classes/[id]/learners` or similar.
-
-        // Wait, I can reuse `api/subjects/[id]/learners` logic but for class.
         fetchLearnersAndAttendance();
     }, [fetchLearnersAndAttendance]);
 
+    const setStatus = (learnerId: string, status: string) => {
+        setAttendance({ ...attendance, [learnerId]: status });
+        setRecentTap(learnerId);
+        setTimeout(() => setRecentTap(null), 300);
+    };
+
     const handleSave = async () => {
         setSaving(true);
-        setSuccess('');
+        setSuccess(false);
         try {
-            const records = learners.map(l => ({
+            const records = learners.map((l) => ({
                 learnerId: l.id,
                 status: attendance[l.id],
-                reason: ''
+                reason: '',
             }));
 
             await fetch('/api/attendance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ classId, date, records })
+                body: JSON.stringify({ classId, date, records }),
             });
 
-            setSuccess('Attendance saved successfully!');
-            setTimeout(() => setSuccess(''), 3000);
+            setSuccess(true);
+            setTimeout(() => setSuccess(false), 3000);
         } catch {
             alert('Failed to save');
         } finally {
@@ -105,68 +107,115 @@ export default function AttendancePage() {
     };
 
     return (
-        <Container maxWidth="lg">
-            <Box mb={4} display="flex" alignItems="center" gap={2}>
-                <IconButton onClick={() => router.back()}><ArrowBack /></IconButton>
-                <Typography variant="h4" fontWeight="bold">Class Attendance</Typography>
-            </Box>
+        <PageTransition>
+            <Container maxWidth="lg">
+                <PageHeader
+                    title="Class attendance"
+                    subtitle="Mark each learner present, late, or absent."
+                    breadcrumbs={[
+                        { label: 'My Classroom', href: '/dashboard/teacher' },
+                        { label: 'Attendance' },
+                    ]}
+                    actions={
+                        <IconButton onClick={() => router.back()} aria-label="Back">
+                            <ArrowBack />
+                        </IconButton>
+                    }
+                />
 
-            <Paper sx={{ p: 3, mb: 3 }}>
-                <Box display="flex" gap={2} alignItems="center" mb={2}>
-                    <TextField
-                        label="Date"
-                        type="date"
-                        value={date}
-                        onChange={(e) => setDate(e.target.value)}
-                        InputLabelProps={{ shrink: true }}
-                    />
-                    <Button variant="outlined" onClick={() => {
-                        const all: Record<string, string> = {};
-                        learners.forEach((l) => { all[l.id] = 'PRESENT'; });
-                        setAttendance(all);
-                    }}>
-                        Mark all present
-                    </Button>
-                    <Button variant="contained" onClick={handleSave} disabled={saving}>
-                        {saving ? 'Saving...' : 'Save Attendance'}
-                    </Button>
-                </Box>
+                <ContentPanel
+                    title="Register"
+                    actions={
+                        <Stack direction="row" spacing={1} flexWrap="wrap">
+                            <TextField
+                                label="Date"
+                                type="date"
+                                size="small"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                InputLabelProps={{ shrink: true }}
+                            />
+                            <Button
+                                variant="outlined"
+                                onClick={() => {
+                                    const all: Record<string, string> = {};
+                                    learners.forEach((l) => { all[l.id] = 'PRESENT'; });
+                                    setAttendance(all);
+                                }}
+                            >
+                                All present
+                            </Button>
+                            <Button variant="contained" onClick={handleSave} disabled={saving} component={motion.button} whileTap={{ scale: 0.97 }}>
+                                {saving ? 'Saving…' : 'Save'}
+                            </Button>
+                        </Stack>
+                    }
+                >
+                    <AnimatePresence>
+                        {success && (
+                            <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                                <Alert severity="success" icon={<CheckCircle />} sx={{ mb: 2 }}>
+                                    Attendance saved successfully.
+                                </Alert>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
-                {success && <Alert severity="success" sx={{ mb: 2 }}>{success}</Alert>}
-                {loading && <LinearProgress />}
-
-                {!loading && (
-                    <Table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Learner</TableCell>
-                                <TableCell>Status</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <TableBody>
-                            {learners.map((learner) => (
-                                <TableRow key={learner.id}>
-                                    <TableCell>
-                                        <Typography variant="subtitle1">{learner.firstName} {learner.lastName}</Typography>
-                                        <Typography variant="caption" color="text.secondary">{learner.idNumber}</Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <RadioGroup
-                                            row
-                                            value={attendance[learner.id]}
-                                            onChange={(e) => setAttendance({ ...attendance, [learner.id]: e.target.value })}
-                                        >
-                                            <FormControlLabel value="PRESENT" control={<Radio color="success" />} label="Present" />
-                                            <FormControlLabel value="ABSENT" control={<Radio color="error" />} label="Absent" />
-                                            <FormControlLabel value="LATE" control={<Radio color="warning" />} label="Late" />
-                                        </RadioGroup>
-                                    </TableCell>
+                    {loading ? (
+                        <LoadingSkeleton variant="table" count={6} />
+                    ) : (
+                        <Table>
+                            <TableHead>
+                                <TableRow>
+                                    <TableCell>Learner</TableCell>
+                                    <TableCell>Status</TableCell>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                )}
-            </Paper>
-        </Container>
+                            </TableHead>
+                            <TableBody>
+                                {learners.map((learner) => (
+                                    <TableRow
+                                        key={learner.id}
+                                        sx={{
+                                            bgcolor: recentTap === learner.id ? 'action.selected' : undefined,
+                                            transition: 'background-color 0.25s',
+                                        }}
+                                    >
+                                        <TableCell>
+                                            <Typography variant="subtitle1" fontWeight="bold">
+                                                {learner.firstName} {learner.lastName}
+                                            </Typography>
+                                            {learner.idNumber && (
+                                                <Typography variant="caption" color="text.secondary">{learner.idNumber}</Typography>
+                                            )}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Stack direction="row" spacing={1} flexWrap="wrap">
+                                                {STATUS_OPTIONS.map((opt) => (
+                                                    <Chip
+                                                        key={opt.value}
+                                                        label={opt.label}
+                                                        color={attendance[learner.id] === opt.value ? opt.color : 'default'}
+                                                        variant={attendance[learner.id] === opt.value ? 'filled' : 'outlined'}
+                                                        onClick={() => setStatus(learner.id, opt.value)}
+                                                        sx={{
+                                                            minHeight: 40,
+                                                            minWidth: 80,
+                                                            fontWeight: 600,
+                                                            cursor: 'pointer',
+                                                            transition: 'transform 0.12s ease',
+                                                            '&:active': { transform: 'scale(0.94)' },
+                                                        }}
+                                                    />
+                                                ))}
+                                            </Stack>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
+                </ContentPanel>
+            </Container>
+        </PageTransition>
     );
 }

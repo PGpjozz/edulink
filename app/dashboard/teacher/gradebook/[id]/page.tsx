@@ -20,7 +20,9 @@ import {
 } from '@mui/material';
 import { ArrowBack, FileDownload, Refresh } from '@mui/icons-material';
 import { useRouter, useParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+import PageHeader from '@/app/components/ui/PageHeader';
+import PageTransition from '@/app/components/ui/PageTransition';
+import ContentPanel from '@/app/components/ui/ContentPanel';
 
 export default function MasterGradebook() {
     const router = useRouter();
@@ -79,20 +81,25 @@ export default function MasterGradebook() {
     if (!data) return <Alert severity="error">Failed to load data.</Alert>;
 
     return (
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }} component={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                <Box>
-                    <Button startIcon={<ArrowBack />} onClick={() => router.back()} sx={{ mb: 1 }}>Back</Button>
-                    <Typography variant="h4" fontWeight="bold">Master Gradebook</Typography>
-                    <Typography color="text.secondary">Class performance matrix across all assessments.</Typography>
-                </Box>
-                <Box display="flex" gap={1}>
-                    <Button startIcon={<Refresh />} onClick={fetchData}>Refresh</Button>
-                    <Button variant="contained" startIcon={<FileDownload />} onClick={exportCSV}>Export CSV</Button>
-                </Box>
-            </Box>
+        <PageTransition>
+            <Container maxWidth="xl">
+                <PageHeader
+                    title="Master gradebook"
+                    subtitle="Class performance matrix across all assessments."
+                    breadcrumbs={[
+                        { label: 'Gradebook', href: '/dashboard/teacher/gradebook' },
+                        { label: 'Subject grades' },
+                    ]}
+                    actions={
+                        <Box display="flex" gap={1}>
+                            <Button startIcon={<Refresh />} onClick={fetchData}>Refresh</Button>
+                            <Button variant="contained" startIcon={<FileDownload />} onClick={exportCSV}>Export CSV</Button>
+                        </Box>
+                    }
+                />
 
-            <TableContainer component={Paper} sx={{ borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', overflowX: 'auto' }}>
+                <ContentPanel noPadding>
+            <TableContainer sx={{ overflowX: 'auto' }}>
                 <Table size="small">
                     <TableHead sx={{ bgcolor: 'action.hover' }}>
                         <TableRow>
@@ -134,6 +141,8 @@ export default function MasterGradebook() {
                     </TableBody>
                 </Table>
             </TableContainer>
-        </Container>
+                </ContentPanel>
+            </Container>
+        </PageTransition>
     );
 }
