@@ -44,10 +44,11 @@ interface SubjectView {
 }
 
 interface LearnerProgressViewProps {
-    childId?: string; // Optional: If present, fetches data for this child (if parent)
+    childId?: string;
+    hideHeader?: boolean;
 }
 
-export default function LearnerProgressView({ childId }: LearnerProgressViewProps) {
+export default function LearnerProgressView({ childId, hideHeader }: LearnerProgressViewProps) {
     const [data, setData] = useState<{ learner: any, subjects: SubjectView[] } | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -75,9 +76,102 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
     if (!data) return <Typography sx={{ m: 4 }}>No data available.</Typography>;
     if (!data.learner) return <Typography sx={{ m: 4 }}>No data available.</Typography>;
 
-    // Prepare chart data
+    const handleTabsWheelCapture = (e: React.WheelEvent) => {
+        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+            e.stopPropagation();
+        }
+    };
+
+    const headerBlock = !hideHeader && (
+        <Box
+            mb={4}
+            display="flex"
+            flexDirection={{ xs: 'column', md: 'row' }}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', md: 'flex-end' }}
+            gap={2}
+        >
+            <Box>
+                <Typography variant="h4" fontWeight="bold">
+                    {childId ? `${data.learner.name}'s Progress` : 'My Progress'}
+                </Typography>
+                <Typography variant="h6" color="primary">
+                    {data.learner.className} • Grade {data.learner.grade}
+                </Typography>
+            </Box>
+
+            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: { md: 'flex-end' }, gap: 1 }}>
+                <Tabs
+                    value={tabValue}
+                    onChange={(_, v) => {
+                        setTabValue(v);
+                        requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur?.());
+                    }}
+                    onWheelCapture={handleTabsWheelCapture}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    sx={{ borderBottom: 1, borderColor: 'divider', width: '100%' }}
+                >
+                    <Tab label="Performance" icon={<EmojiEvents />} iconPosition="start" />
+                    <Tab label="Weekly Schedule" icon={<MenuBook />} iconPosition="start" />
+                    <Tab label="Behavior Log" icon={<HistoryEdu />} iconPosition="start" />
+                    <Tab label="AI Advisor" icon={<AutoAwesome />} iconPosition="start" />
+                </Tabs>
+
+                <Button
+                    variant="outlined"
+                    size="small"
+                    fullWidth={false}
+                    onClick={() => window.location.href = childId ? `/dashboard/learner/report?childId=${childId}` : '/dashboard/learner/report'}
+                    sx={{ mt: { xs: 1, md: 0 } }}
+                >
+                    View Term Report
+                </Button>
+            </Box>
+        </Box>
+    );
+
+    const tabsOnly = hideHeader && (
+        <Box
+            mb={3}
+            display="flex"
+            flexDirection={{ xs: 'column', md: 'row' }}
+            justifyContent="space-between"
+            alignItems={{ xs: 'flex-start', md: 'center' }}
+            gap={2}
+        >
+            <Typography variant="h6" color="primary">
+                {data.learner.className} • Grade {data.learner.grade}
+            </Typography>
+            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: { md: 'flex-end' }, gap: 1 }}>
+                <Tabs
+                    value={tabValue}
+                    onChange={(_, v) => {
+                        setTabValue(v);
+                        requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur?.());
+                    }}
+                    onWheelCapture={handleTabsWheelCapture}
+                    variant="scrollable"
+                    scrollButtons="auto"
+                    sx={{ borderBottom: 1, borderColor: 'divider', width: '100%' }}
+                >
+                    <Tab label="Performance" icon={<EmojiEvents />} iconPosition="start" />
+                    <Tab label="Weekly Schedule" icon={<MenuBook />} iconPosition="start" />
+                    <Tab label="Behavior Log" icon={<HistoryEdu />} iconPosition="start" />
+                    <Tab label="AI Advisor" icon={<AutoAwesome />} iconPosition="start" />
+                </Tabs>
+                <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => window.location.href = childId ? `/dashboard/learner/report?childId=${childId}` : '/dashboard/learner/report'}
+                >
+                    View Term Report
+                </Button>
+            </Box>
+        </Box>
+    );
     const chartData = data?.subjects.map(sub => ({
-        name: sub.code || sub.name.substring(0, 3), // Use code or short name
+        name: sub.code || sub.name.substring(0, 3),
         score: sub.average || 0,
         fullSubjectName: sub.name
     })) || [];
@@ -86,15 +180,8 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
         hidden: { opacity: 0 },
         show: {
             opacity: 1,
-            transition: {
-                staggerChildren: 0.1
-            }
+            transition: { staggerChildren: 0.1 }
         }
-    };
-
-    const item = {
-        hidden: { opacity: 0, y: 20 },
-        show: { opacity: 1, y: 0 }
     };
 
     const handleOpenHub = (subject: SubjectView) => {
@@ -102,60 +189,10 @@ export default function LearnerProgressView({ childId }: LearnerProgressViewProp
         setHubOpen(true);
     };
 
-    const handleTabsWheelCapture = (e: any) => {
-        if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-            e.stopPropagation();
-        }
-    };
-
     return (
         <Box>
-            <Box
-                mb={4}
-                display="flex"
-                flexDirection={{ xs: 'column', md: 'row' }}
-                justifyContent="space-between"
-                alignItems={{ xs: 'flex-start', md: 'flex-end' }}
-                gap={2}
-            >
-                <Box>
-                    <Typography variant="h4" fontWeight="bold">
-                        {childId ? `${data.learner.name}'s Progress` : 'My Progress'}
-                    </Typography>
-                    <Typography variant="h6" color="primary">
-                        {data.learner.className} • Grade {data.learner.grade}
-                    </Typography>
-                </Box>
-
-                <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: { md: 'flex-end' }, gap: 1 }}>
-                    <Tabs
-                        value={tabValue}
-                        onChange={(_, v) => {
-                            setTabValue(v);
-                            requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur?.());
-                        }}
-                        onWheelCapture={handleTabsWheelCapture}
-                        variant="scrollable"
-                        scrollButtons="auto"
-                        sx={{ borderBottom: 1, borderColor: 'divider', width: '100%' }}
-                    >
-                        <Tab label="Performance" icon={<EmojiEvents />} iconPosition="start" />
-                        <Tab label="Weekly Schedule" icon={<MenuBook />} iconPosition="start" />
-                        <Tab label="Behavior Log" icon={<HistoryEdu />} iconPosition="start" />
-                        <Tab label="AI Advisor" icon={<AutoAwesome />} iconPosition="start" />
-                    </Tabs>
-
-                    <Button
-                        variant="outlined"
-                        size="small"
-                        fullWidth={false}
-                        onClick={() => window.location.href = childId ? `/dashboard/learner/report?childId=${childId}` : '/dashboard/learner/report'}
-                        sx={{ mt: { xs: 1, md: 0 } }}
-                    >
-                        View Term Report
-                    </Button>
-                </Box>
-            </Box>
+            {headerBlock}
+            {tabsOnly}
 
             {tabValue === 0 && (
                 <>

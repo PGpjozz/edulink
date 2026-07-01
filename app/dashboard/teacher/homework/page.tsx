@@ -2,11 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import {
-    Container, Typography, Box, Paper, Button, Stack, Chip, Dialog,
+    Container, Typography, Box, Button, Stack, Chip, Dialog,
     DialogTitle, DialogContent, DialogActions, TextField, FormControl,
     InputLabel, Select, MenuItem, Alert, Table, TableHead, TableRow, TableCell, TableBody,
     Link as MuiLink,
 } from '@mui/material';
+import { Assignment } from '@mui/icons-material';
+import PageHeader from '@/app/components/ui/PageHeader';
+import PageTransition from '@/app/components/ui/PageTransition';
+import ContentPanel from '@/app/components/ui/ContentPanel';
+import EmptyState from '@/app/components/ui/EmptyState';
 
 type HomeworkItem = {
     id: string;
@@ -126,44 +131,54 @@ export default function TeacherHomeworkPage() {
     };
 
     return (
-        <Container maxWidth="lg" sx={{ mt: 4, mb: 4 }}>
-            <Box display="flex" justifyContent="space-between" mb={3}>
-                <Typography variant="h4" fontWeight="bold">Homework</Typography>
-                <Button variant="contained" onClick={() => setOpen(true)}>Assign homework</Button>
-            </Box>
+        <PageTransition>
+            <Container maxWidth="lg">
+                <PageHeader
+                    title="Homework"
+                    subtitle="Assign work and review learner submissions."
+                    actions={
+                        <Button variant="contained" onClick={() => setOpen(true)}>
+                            Assign homework
+                        </Button>
+                    }
+                />
 
-            <Stack spacing={2}>
-                {items.map((h) => (
-                    <Paper
-                        key={h.id}
-                        variant="outlined"
-                        sx={{ p: 2, cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                        onClick={() => openReview(h)}
-                    >
-                        <Typography fontWeight="bold">{h.title}</Typography>
-                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            {h.description}
-                        </Typography>
-                        <Box display="flex" gap={1} flexWrap="wrap" alignItems="center">
-                            {h.subject && <Chip size="small" label={h.subject.name} />}
-                            {h.class && <Chip size="small" label={h.class.name} />}
-                            <Chip size="small" label={`Due ${new Date(h.dueDate).toLocaleDateString()}`} />
-                            <Chip
-                                size="small"
-                                variant="outlined"
-                                color={(h._count?.submissions ?? 0) > 0 ? 'primary' : 'default'}
-                                label={`${h._count?.submissions ?? 0} submissions`}
-                            />
-                            <Button size="small" onClick={(e) => { e.stopPropagation(); openReview(h); }}>
-                                Review
-                            </Button>
-                        </Box>
-                    </Paper>
-                ))}
-                {items.length === 0 && (
-                    <Typography color="text.secondary">No homework assigned yet.</Typography>
-                )}
-            </Stack>
+                <Stack spacing={2}>
+                    {items.map((h) => (
+                        <ContentPanel
+                            key={h.id}
+                            title={h.title}
+                            subtitle={h.description}
+                            actions={
+                                <Button size="small" onClick={() => openReview(h)}>
+                                    Review
+                                </Button>
+                            }
+                            sx={{ cursor: 'pointer', '&:hover': { borderColor: 'primary.light' } }}
+                        >
+                            <Box display="flex" gap={1} flexWrap="wrap" alignItems="center" onClick={() => openReview(h)}>
+                                {h.subject && <Chip size="small" label={h.subject.name} />}
+                                {h.class && <Chip size="small" label={h.class.name} />}
+                                <Chip size="small" label={`Due ${new Date(h.dueDate).toLocaleDateString()}`} />
+                                <Chip
+                                    size="small"
+                                    variant="outlined"
+                                    color={(h._count?.submissions ?? 0) > 0 ? 'primary' : 'default'}
+                                    label={`${h._count?.submissions ?? 0} submissions`}
+                                />
+                            </Box>
+                        </ContentPanel>
+                    ))}
+                    {items.length === 0 && (
+                        <EmptyState
+                            icon={<Assignment sx={{ fontSize: 56 }} />}
+                            title="No homework yet"
+                            description="Create your first assignment for a class."
+                            actionLabel="Assign homework"
+                            onAction={() => setOpen(true)}
+                        />
+                    )}
+                </Stack>
 
             <Dialog open={!!reviewId} onClose={() => setReviewId(null)} maxWidth="md" fullWidth>
                 <DialogTitle>Submissions — {reviewTitle}</DialogTitle>
@@ -270,6 +285,7 @@ export default function TeacherHomeworkPage() {
                     <Button variant="contained" onClick={handleCreate}>Create</Button>
                 </DialogActions>
             </Dialog>
-        </Container>
+            </Container>
+        </PageTransition>
     );
 }

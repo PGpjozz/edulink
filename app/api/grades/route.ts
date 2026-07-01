@@ -1,11 +1,23 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
+import { canAccessSubject } from '@/lib/staff-context';
+import { canManageSchool } from '@/lib/permissions';
 
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
+async function canGradeAssessment(auth: { role: string; schoolId: string | null; userId: string }, assessmentId: string) {
+    const assessment = await prisma.assessment.findFirst({
+        where: { id: assessmentId, subject: { schoolId: auth.schoolId as string } },
+        select: { subjectId: true },
+    });
+    if (!assessment) return false;
+    if (canManageSchool(auth.role)) return true;
+    return canAccessSubject(auth as Parameters<typeof canAccessSubject>[0], assessment.subjectId);
+}
+
 export async function GET(req: Request) {
-    const auth = await requireAuth({ roles: ['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN', 'LEARNER', 'PARENT'], requireSchoolId: true });
+    const auth = await requireAuth({ roles: ['TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN', 'LEARNER', 'PARENT'], requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(req.url);
@@ -25,12 +37,8 @@ export async function GET(req: Request) {
             return new NextResponse('Assessment not found', { status: 404 });
         }
 
-        if (auth.role === 'TEACHER') {
-            const teacherProfile = await prisma.teacherProfile.findUnique({
-                where: { userId: auth.userId },
-                select: { id: true }
-            });
-            if (!teacherProfile || assessment.subject.teacherId !== teacherProfile.id) {
+        if (['TEACHER', 'HOD'].includes(auth.role)) {
+            if (!(await canGradeAssessment(auth, assessmentId))) {
                 return new NextResponse('Forbidden', { status: 403 });
             }
         }
@@ -73,7 +81,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-    const auth = await requireAuth({ roles: ['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    const auth = await requireAuth({ roles: ['TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
 
     try {
@@ -94,12 +102,8 @@ export async function POST(req: Request) {
             return new NextResponse('Assessment not found', { status: 404 });
         }
 
-        if (auth.role === 'TEACHER') {
-            const teacherProfile = await prisma.teacherProfile.findUnique({
-                where: { userId: auth.userId },
-                select: { id: true }
-            });
-            if (!teacherProfile || assessment.subject.teacherId !== teacherProfile.id) {
+        if (['TEACHER', 'HOD'].includes(auth.role)) {
+            if (!(await canGradeAssessment(auth, assessmentId))) {
                 return new NextResponse('Forbidden', { status: 403 });
             }
         }

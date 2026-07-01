@@ -2,9 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import {
-    Container, Typography, Box, Paper, Button, Stack, Chip, Dialog,
+    Container, Box, Button, Stack, Chip, Dialog,
     DialogTitle, DialogContent, DialogActions, TextField, Alert,
 } from '@mui/material';
+import { Assignment } from '@mui/icons-material';
+import PageHeader from '@/app/components/ui/PageHeader';
+import PageTransition from '@/app/components/ui/PageTransition';
+import ContentPanel from '@/app/components/ui/ContentPanel';
+import EmptyState from '@/app/components/ui/EmptyState';
 
 type HomeworkItem = {
     id: string;
@@ -57,35 +62,40 @@ export default function LearnerHomeworkPage() {
     };
 
     return (
-        <Container maxWidth="md" sx={{ mt: 4, mb: 4 }}>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>My homework</Typography>
-            <Stack spacing={2}>
-                {items.map((h) => {
-                    const submitted = h.submissions && h.submissions.length > 0;
-                    return (
-                        <Paper key={h.id} variant="outlined" sx={{ p: 2 }}>
-                            <Typography fontWeight="bold">{h.title}</Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                {h.description}
-                            </Typography>
-                            <Box display="flex" gap={1} flexWrap="wrap" alignItems="center">
-                                {h.subject && <Chip size="small" label={h.subject.name} />}
-                                <Chip size="small" label={`Due ${new Date(h.dueDate).toLocaleDateString()}`} />
-                                {submitted ? (
-                                    <Chip size="small" color="success" label="Submitted" />
-                                ) : (
-                                    <Button size="small" variant="contained" onClick={() => openSubmit(h)}>
-                                        Submit
-                                    </Button>
-                                )}
-                            </Box>
-                        </Paper>
-                    );
-                })}
-                {items.length === 0 && (
-                    <Typography color="text.secondary">No homework right now.</Typography>
-                )}
-            </Stack>
+        <PageTransition>
+            <Container maxWidth="md">
+                <PageHeader
+                    title="My homework"
+                    subtitle="View assignments and submit your work."
+                />
+
+                <Stack spacing={2}>
+                    {items.map((h) => {
+                        const submitted = h.submissions && h.submissions.length > 0;
+                        return (
+                            <ContentPanel key={h.id} title={h.title} subtitle={h.description}>
+                                <Box display="flex" gap={1} flexWrap="wrap" alignItems="center">
+                                    {h.subject && <Chip size="small" label={h.subject.name} />}
+                                    <Chip size="small" label={`Due ${new Date(h.dueDate).toLocaleDateString()}`} />
+                                    {submitted ? (
+                                        <Chip size="small" color="success" label="Submitted" />
+                                    ) : (
+                                        <Button size="small" variant="contained" onClick={() => openSubmit(h)}>
+                                            Submit
+                                        </Button>
+                                    )}
+                                </Box>
+                            </ContentPanel>
+                        );
+                    })}
+                    {items.length === 0 && (
+                        <EmptyState
+                            icon={<Assignment sx={{ fontSize: 56 }} />}
+                            title="All caught up"
+                            description="No homework assigned right now."
+                        />
+                    )}
+                </Stack>
 
             <Dialog open={!!selected} onClose={() => setSelected(null)} maxWidth="sm" fullWidth>
                 <DialogTitle>Submit: {selected?.title}</DialogTitle>
@@ -117,6 +127,7 @@ export default function LearnerHomeworkPage() {
                     </Button>
                 </DialogActions>
             </Dialog>
-        </Container>
+            </Container>
+        </PageTransition>
     );
 }

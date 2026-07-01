@@ -27,7 +27,7 @@ import {
     Select,
     MenuItem,
 } from '@mui/material';
-import { Add as AddIcon, Refresh as RefreshIcon } from '@mui/icons-material';
+import { Add as AddIcon, Refresh as RefreshIcon, People, Class, MenuBook, Inventory, EventNote, Receipt } from '@mui/icons-material';
 import { DataGrid, GridColDef, GridToolbar } from '@mui/x-data-grid';
 import {
     ResponsiveContainer,
@@ -46,6 +46,11 @@ import AddUserModal from './AddUserModal';
 import AssignTeacherModal from './AssignTeacherModal';
 import AssignHodModal from './AssignHodModal';
 import ClassSubjectsModal from './ClassSubjectsModal';
+import PageHeader from '@/app/components/ui/PageHeader';
+import PageTransition from '@/app/components/ui/PageTransition';
+import StatCard from '@/app/components/ui/StatCard';
+import ContentPanel from '@/app/components/ui/ContentPanel';
+import LoadingSkeleton from '@/app/components/ui/LoadingSkeleton';
 
 interface ClassData {
     id: string;
@@ -457,12 +462,14 @@ function PrincipalDashboard() {
     };
 
     return (
-        <Container maxWidth="xl" sx={{ mt: 4 }}>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-                School Management
-            </Typography>
+        <PageTransition>
+        <Container maxWidth="xl">
+            <PageHeader
+                title="School Management"
+                subtitle="Overview, classes, staff, subjects, and departments."
+            />
 
-            <Paper sx={{ width: '100%', mb: 4 }}>
+            <Paper sx={{ width: '100%', mb: 4, borderRadius: 3, overflow: 'hidden', border: '1px solid', borderColor: 'divider' }} elevation={0}>
                 <Tabs
                     value={tabIndex}
                     onChange={(_, v) => {
@@ -508,9 +515,7 @@ function PrincipalDashboard() {
                             )}
 
                             {overviewLoading && !overview && (
-                                <Box display="flex" justifyContent="center" py={6}>
-                                    <CircularProgress />
-                                </Box>
+                                <LoadingSkeleton variant="page" />
                             )}
 
                             {overview && (
@@ -549,10 +554,7 @@ function PrincipalDashboard() {
                                         </Stack>
                                     )}
 
-                                    <Paper variant="outlined" sx={{ p: 2, mb: 2 }}>
-                                        <Typography variant="subtitle1" fontWeight="bold" gutterBottom>
-                                            Quick actions
-                                        </Typography>
+                                    <ContentPanel title="Quick actions" sx={{ mb: 2 }}>
                                         <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} flexWrap="wrap">
                                             <Button variant="contained" startIcon={<AddIcon />} onClick={() => setIsClassModalOpen(true)}>
                                                 Add class
@@ -579,123 +581,85 @@ function PrincipalDashboard() {
                                                 Audit logs
                                             </Button>
                                         </Stack>
-                                    </Paper>
+                                    </ContentPanel>
 
                                     <Grid container spacing={2} sx={{ mb: 2 }}>
                                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                            <Card
-                                                variant="outlined"
-                                                onClick={() => setTabIndex(2)}
-                                                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                                            >
-                                                <CardContent>
-                                                    <Typography variant="overline" color="text.secondary">Learners</Typography>
-                                                    <Typography variant="h5" fontWeight="bold">{overview.kpis.learners}</Typography>
-                                                </CardContent>
-                                            </Card>
+                                            <Box onClick={() => setTabIndex(2)} sx={{ cursor: 'pointer', height: '100%' }}>
+                                                <StatCard label="Learners" value={overview.kpis.learners} icon={<People />} variant="primary" />
+                                            </Box>
                                         </Grid>
                                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                            <Card
-                                                variant="outlined"
-                                                onClick={() => setTabIndex(2)}
-                                                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                                            >
-                                                <CardContent>
-                                                    <Typography variant="overline" color="text.secondary">Staff</Typography>
-                                                    <Typography variant="h5" fontWeight="bold">{overview.kpis.staff}</Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Teachers: {overview.kpis.teachers}
-                                                    </Typography>
-                                                </CardContent>
-                                            </Card>
+                                            <Box onClick={() => setTabIndex(2)} sx={{ cursor: 'pointer', height: '100%' }}>
+                                                <StatCard
+                                                    label="Staff"
+                                                    value={overview.kpis.staff}
+                                                    subtitle={`Teachers: ${overview.kpis.teachers}`}
+                                                    icon={<People />}
+                                                />
+                                            </Box>
                                         </Grid>
                                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                            <Card
-                                                variant="outlined"
-                                                onClick={() => setTabIndex(1)}
-                                                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                                            >
-                                                <CardContent>
-                                                    <Typography variant="overline" color="text.secondary">Classes</Typography>
-                                                    <Typography variant="h5" fontWeight="bold">{overview.kpis.classes}</Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Unassigned: {overview.kpis.classesUnassigned}
-                                                    </Typography>
-                                                </CardContent>
-                                            </Card>
+                                            <Box onClick={() => setTabIndex(1)} sx={{ cursor: 'pointer', height: '100%' }}>
+                                                <StatCard
+                                                    label="Classes"
+                                                    value={overview.kpis.classes}
+                                                    subtitle={`Unassigned: ${overview.kpis.classesUnassigned}`}
+                                                    icon={<Class />}
+                                                />
+                                            </Box>
                                         </Grid>
                                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                            <Card
-                                                variant="outlined"
-                                                onClick={() => setTabIndex(3)}
-                                                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                                            >
-                                                <CardContent>
-                                                    <Typography variant="overline" color="text.secondary">Subjects</Typography>
-                                                    <Typography variant="h5" fontWeight="bold">{overview.kpis.subjects}</Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Unassigned: {overview.kpis.subjectsUnassigned}
-                                                    </Typography>
-                                                </CardContent>
-                                            </Card>
+                                            <Box onClick={() => setTabIndex(3)} sx={{ cursor: 'pointer', height: '100%' }}>
+                                                <StatCard
+                                                    label="Subjects"
+                                                    value={overview.kpis.subjects}
+                                                    subtitle={`Unassigned: ${overview.kpis.subjectsUnassigned}`}
+                                                    icon={<MenuBook />}
+                                                />
+                                            </Box>
                                         </Grid>
 
                                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                            <Card
-                                                variant="outlined"
-                                                onClick={() => router.push('/dashboard/principal/assets')}
-                                                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                                            >
-                                                <CardContent>
-                                                    <Typography variant="overline" color="text.secondary">Assets</Typography>
-                                                    <Typography variant="h5" fontWeight="bold">{overview.kpis.assets.total}</Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        Available: {overview.kpis.assets.available} | Out: {overview.kpis.assets.checkedOut}
-                                                    </Typography>
-                                                </CardContent>
-                                            </Card>
+                                            <Box onClick={() => router.push('/dashboard/principal/assets')} sx={{ cursor: 'pointer', height: '100%' }}>
+                                                <StatCard
+                                                    label="Assets"
+                                                    value={overview.kpis.assets.total}
+                                                    subtitle={`Available: ${overview.kpis.assets.available} · Out: ${overview.kpis.assets.checkedOut}`}
+                                                    icon={<Inventory />}
+                                                />
+                                            </Box>
                                         </Grid>
                                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                            <Card
-                                                variant="outlined"
-                                                onClick={() => router.push('/dashboard/principal/assets?tab=bookings')}
-                                                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                                            >
-                                                <CardContent>
-                                                    <Typography variant="overline" color="text.secondary">Bookings pending</Typography>
-                                                    <Typography variant="h5" fontWeight="bold">{overview.kpis.bookingsPending}</Typography>
-                                                </CardContent>
-                                            </Card>
+                                            <Box onClick={() => router.push('/dashboard/principal/assets?tab=bookings')} sx={{ cursor: 'pointer', height: '100%' }}>
+                                                <StatCard
+                                                    label="Bookings pending"
+                                                    value={overview.kpis.bookingsPending}
+                                                    icon={<EventNote />}
+                                                    variant="warning"
+                                                />
+                                            </Box>
                                         </Grid>
                                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                            <Card
-                                                variant="outlined"
-                                                onClick={() => router.push('/dashboard/principal/finance')}
-                                                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                                            >
-                                                <CardContent>
-                                                    <Typography variant="overline" color="text.secondary">Invoices pending</Typography>
-                                                    <Typography variant="h6" fontWeight="bold">{formatCurrency(overview.kpis.invoices.pendingAmount)}</Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        {overview.kpis.invoices.pendingCount} invoice(s) | Due soon: {overview.kpis.invoices.dueSoonCount}
-                                                    </Typography>
-                                                </CardContent>
-                                            </Card>
+                                            <Box onClick={() => router.push('/dashboard/principal/finance')} sx={{ cursor: 'pointer', height: '100%' }}>
+                                                <StatCard
+                                                    label="Invoices pending"
+                                                    value={formatCurrency(overview.kpis.invoices.pendingAmount)}
+                                                    subtitle={`${overview.kpis.invoices.pendingCount} invoice(s) · Due soon: ${overview.kpis.invoices.dueSoonCount}`}
+                                                    icon={<Receipt />}
+                                                />
+                                            </Box>
                                         </Grid>
                                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                                            <Card
-                                                variant="outlined"
-                                                onClick={() => router.push('/dashboard/principal/finance')}
-                                                sx={{ cursor: 'pointer', '&:hover': { bgcolor: 'action.hover' } }}
-                                            >
-                                                <CardContent>
-                                                    <Typography variant="overline" color="text.secondary">Invoices overdue</Typography>
-                                                    <Typography variant="h6" fontWeight="bold">{formatCurrency(overview.kpis.invoices.overdueAmount)}</Typography>
-                                                    <Typography variant="body2" color="text.secondary">
-                                                        {overview.kpis.invoices.overdueCount} invoice(s)
-                                                    </Typography>
-                                                </CardContent>
-                                            </Card>
+                                            <Box onClick={() => router.push('/dashboard/principal/finance')} sx={{ cursor: 'pointer', height: '100%' }}>
+                                                <StatCard
+                                                    label="Invoices overdue"
+                                                    value={formatCurrency(overview.kpis.invoices.overdueAmount)}
+                                                    subtitle={`${overview.kpis.invoices.overdueCount} invoice(s)`}
+                                                    icon={<Receipt />}
+                                                    variant="error"
+                                                />
+                                            </Box>
                                         </Grid>
                                     </Grid>
 
@@ -1046,6 +1010,7 @@ function PrincipalDashboard() {
                 onUpdated={fetchClasses}
             />
         </Container>
+        </PageTransition>
     );
 }
 
