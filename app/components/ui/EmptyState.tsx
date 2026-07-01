@@ -3,9 +3,11 @@
 import { Box, Typography, Button } from '@mui/material';
 import Link from 'next/link';
 import { ReactNode } from 'react';
+import { EmptyIllustration, type IllustrationName } from './illustrations';
 
 interface EmptyStateProps {
     icon?: ReactNode;
+    illustration?: IllustrationName;
     title: string;
     description?: string;
     actionLabel?: string;
@@ -15,12 +17,16 @@ interface EmptyStateProps {
 
 export default function EmptyState({
     icon,
+    illustration,
     title,
     description,
     actionLabel,
     onAction,
     actionHref,
 }: EmptyStateProps) {
+    const visual = illustration ? <EmptyIllustration name={illustration} /> : icon ? (
+        <Box sx={{ fontSize: 56, color: 'text.disabled', mb: 2, lineHeight: 0 }}>{icon}</Box>
+    ) : null;
     return (
         <Box
             textAlign="center"
@@ -33,11 +39,7 @@ export default function EmptyState({
                 bgcolor: 'action.hover',
             }}
         >
-            {icon && (
-                <Box sx={{ fontSize: 56, color: 'text.disabled', mb: 2, lineHeight: 0 }}>
-                    {icon}
-                </Box>
-            )}
+            {visual ?? <EmptyIllustration name="empty" />}
             <Typography variant="h6" fontWeight="bold" gutterBottom>
                 {title}
             </Typography>

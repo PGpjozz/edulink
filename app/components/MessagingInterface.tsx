@@ -26,6 +26,7 @@ import {
 import { Send, School, Add } from '@mui/icons-material';
 import { useSession } from 'next-auth/react';
 import { format } from 'date-fns';
+import EmptyState from '@/app/components/ui/EmptyState';
 
 interface Message {
     id: string;
@@ -230,8 +231,14 @@ export default function MessagingInterface() {
                 <Divider />
                 <List sx={{ flexGrow: 1, overflowY: 'auto' }}>
                     {conversations.length === 0 && !loading && (
-                        <Box px={2} py={4} textAlign="center">
-                            <Typography variant="body2" color="text.secondary">No conversations yet</Typography>
+                        <Box px={1} py={2}>
+                            <EmptyState
+                                illustration="messages"
+                                title="No conversations yet"
+                                description="Start a conversation with a teacher or parent."
+                                actionLabel="New message"
+                                onAction={() => setOpenDialog(true)}
+                            />
                         </Box>
                     )}
                     {conversations.map((convo) => (

@@ -21,6 +21,7 @@ import {
 import { School, Lock, Email } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { useThemeContext } from '@/app/theme/ThemeContext';
+import { resolveSchoolSubdomain } from '@/lib/school-subdomain';
 
 function SignInInner() {
     const router = useRouter();
@@ -40,7 +41,7 @@ function SignInInner() {
     });
 
     useEffect(() => {
-        const subdomain = searchParams.get('school') || 'westview';
+        const subdomain = resolveSchoolSubdomain(window.location.hostname, searchParams);
         fetch(`/api/school/branding/public?subdomain=${encodeURIComponent(subdomain)}`)
             .then((r) => r.json())
             .then((data) => {

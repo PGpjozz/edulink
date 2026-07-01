@@ -8,6 +8,7 @@ import { useThemeContext } from '@/app/theme/ThemeContext';
 import Sidebar from '@/app/components/Sidebar';
 import ParentMobileNav from '@/app/components/ParentMobileNav';
 import ParentChildBar from '@/app/components/ParentChildBar';
+import NotificationDropdown from '@/app/components/NotificationDropdown';
 import { getPageTitle } from '@/lib/page-titles';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
@@ -59,12 +60,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     </IconButton>
                     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                         <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.2}>
-                            EduLink
+                            {schoolName || 'EduLink'}
                         </Typography>
                         <Typography variant="subtitle1" noWrap fontWeight="bold">
                             {pageTitle}
                         </Typography>
                     </Box>
+                    <NotificationDropdown />
                     <IconButton onClick={() => toggleTheme()} color="inherit" size="small">
                         {isDark ? <Brightness7 sx={{ color: 'warning.main' }} /> : <Brightness4 />}
                     </IconButton>
@@ -85,6 +87,19 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     minWidth: 0,
                 }}
             >
+                {!isMobile && (
+                    <Box display="flex" justifyContent="flex-end" alignItems="center" gap={1} mb={2}>
+                        <NotificationDropdown />
+                        <IconButton onClick={() => toggleTheme()} size="small" aria-label="Toggle theme">
+                            {isDark ? <Brightness7 sx={{ color: 'warning.main' }} /> : <Brightness4 />}
+                        </IconButton>
+                    </Box>
+                )}
+                {showParentChrome && (
+                    <Box sx={{ display: { xs: 'block', md: 'none' }, mb: 2 }}>
+                        <ParentChildBar />
+                    </Box>
+                )}
                 {children}
             </Box>
             {isParent && <ParentMobileNav />}

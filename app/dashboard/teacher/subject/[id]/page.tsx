@@ -14,6 +14,9 @@ import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { useRouter, useParams } from 'next/navigation';
 import AddAssessmentModal from './AddAssessmentModal';
 import SubjectHub from '@/app/components/SubjectHub';
+import PageHeader from '@/app/components/ui/PageHeader';
+import PageTransition from '@/app/components/ui/PageTransition';
+import ContentPanel from '@/app/components/ui/ContentPanel';
 
 
 interface AssessmentData {
@@ -81,41 +84,27 @@ export default function SubjectDetail() {
     }, [subjectId, fetchAssessments]);
 
     return (
-        <Container maxWidth="xl" sx={{ mt: 4 }}>
-            <Button
-                startIcon={<ArrowBackIcon />}
-                onClick={() => router.back()}
-                sx={{ mb: 2 }}
-            >
-                Back to Dashboard
-            </Button>
+        <PageTransition>
+            <Container maxWidth="xl">
+                <PageHeader
+                    title="Subject management"
+                    subtitle="Manage assessments, resources, and grades."
+                    breadcrumbs={[
+                        { label: 'My Classroom', href: '/dashboard/teacher' },
+                        { label: 'Subject' },
+                    ]}
+                    actions={
+                        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setIsModalOpen(true)}>
+                            Create assessment
+                        </Button>
+                    }
+                />
 
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                <Box>
-                    <Typography variant="h4" fontWeight="bold">
-                        Subject Management
-                    </Typography>
-                    <Typography color="text.secondary">
-                        Manage assessments and grades
-                    </Typography>
+                <Box mb={4}>
+                    <SubjectHub subjectId={subjectId} role="TEACHER" />
                 </Box>
-                <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={() => setIsModalOpen(true)}
-                >
-                    Create Assessment
-                </Button>
-            </Box>
 
-            <Box mb={6}>
-                <SubjectHub subjectId={subjectId} role="TEACHER" />
-            </Box>
-
-            <Paper sx={{ width: '100%', p: 2 }}>
-                <Typography variant="h6" gutterBottom fontWeight="bold" sx={{ px: 1, py: 1 }}>
-                    Assessment Gradebook
-                </Typography>
+                <ContentPanel title="Assessment gradebook" noPadding>
                 <Box sx={{ height: 500, width: '100%' }}>
                     <DataGrid
                         rows={assessments}
@@ -124,7 +113,7 @@ export default function SubjectDetail() {
                         disableRowSelectionOnClick
                     />
                 </Box>
-            </Paper>
+                </ContentPanel>
 
             <AddAssessmentModal
                 open={isModalOpen}
@@ -132,6 +121,7 @@ export default function SubjectDetail() {
                 onSuccess={fetchAssessments}
                 subjectId={subjectId}
             />
-        </Container>
+            </Container>
+        </PageTransition>
     );
 }

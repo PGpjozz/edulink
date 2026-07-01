@@ -66,6 +66,7 @@ export default function TeacherGradebook() {
                 <PageHeader
                     title="Digital Gradebook"
                     subtitle="Access your subjects and manage holistic academic records."
+                    breadcrumbs={[{ label: 'My Classroom', href: '/dashboard/teacher' }, { label: 'Gradebook' }]}
                     actions={
                         <Button startIcon={<Refresh />} onClick={fetchGradebookData}>
                             Refresh

@@ -23,6 +23,7 @@ import {
     Alert,
 } from '@mui/material';
 import { Add, TrendingUp, TrendingDown, Refresh } from '@mui/icons-material';
+import { motion } from 'framer-motion';
 import PageHeader from '@/app/components/ui/PageHeader';
 import PageTransition from '@/app/components/ui/PageTransition';
 import StatCard from '@/app/components/ui/StatCard';
@@ -48,6 +49,7 @@ export default function BehaviorLedger() {
     const [error, setError] = useState('');
     const [submitError, setSubmitError] = useState('');
     const [dialogOpen, setDialogOpen] = useState(false);
+    const [submitSuccess, setSubmitSuccess] = useState(false);
     const [formData, setFormData] = useState({
         learnerId: '',
         type: 'MERIT',
@@ -97,6 +99,8 @@ export default function BehaviorLedger() {
             });
             if (!res.ok) throw new Error(await res.text() || 'Failed to save behavior record');
             setDialogOpen(false);
+            setSubmitSuccess(true);
+            setTimeout(() => setSubmitSuccess(false), 1200);
             fetchData();
             setFormData({ learnerId: '', type: 'MERIT', category: 'ACADEMIC', points: 1, reason: '' });
         } catch (e: unknown) {
@@ -121,6 +125,10 @@ export default function BehaviorLedger() {
                 <PageHeader
                     title="Behavior ledger"
                     subtitle="Track and reward student conduct with merit and demerit points."
+                    breadcrumbs={[
+                        { label: 'My Classroom', href: '/dashboard/teacher' },
+                        { label: 'Behavior' },
+                    ]}
                     actions={
                         <>
                             <Button startIcon={<Refresh />} onClick={fetchData}>Refresh</Button>
@@ -133,12 +141,16 @@ export default function BehaviorLedger() {
 
                 {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
 
-                <Grid container spacing={2} sx={{ mb: 4 }}>
+                <Grid container spacing={2} sx={{ mb: 4 }} component={motion.div} animate={submitSuccess ? { scale: [1, 1.02, 1] } : {}} transition={{ duration: 0.35 }}>
                     <Grid size={{ xs: 12, md: 4 }}>
-                        <StatCard label="Total merits" value={merits} icon={<TrendingUp />} variant="success" />
+                        <motion.div whileTap={{ scale: 0.97 }}>
+                            <StatCard label="Total merits" value={merits} icon={<TrendingUp />} variant="success" />
+                        </motion.div>
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
-                        <StatCard label="Total demerits" value={demerits} icon={<TrendingDown />} variant="error" />
+                        <motion.div whileTap={{ scale: 0.97 }}>
+                            <StatCard label="Total demerits" value={demerits} icon={<TrendingDown />} variant="error" />
+                        </motion.div>
                     </Grid>
                     <Grid size={{ xs: 12, md: 4 }}>
                         <StatCard label="Net score" value={merits - demerits} />
@@ -149,6 +161,7 @@ export default function BehaviorLedger() {
                     {records.length === 0 ? (
                         <Box p={3}>
                             <EmptyState
+                                illustration="behavior"
                                 title="No behavior records yet"
                                 description="Award merits for positive conduct or log demerits when needed."
                                 actionLabel="Add first record"
@@ -227,7 +240,13 @@ export default function BehaviorLedger() {
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-                        <Button variant="contained" onClick={handleSubmit} disabled={!formData.learnerId || !formData.reason.trim()}>
+                        <Button
+                            variant="contained"
+                            onClick={handleSubmit}
+                            disabled={!formData.learnerId || !formData.reason.trim()}
+                            component={motion.button}
+                            whileTap={{ scale: 0.96 }}
+                        >
                             Submit
                         </Button>
                     </DialogActions>

@@ -13,6 +13,7 @@ export default function MessagesPage() {
                 <PageHeader
                     title="Messages"
                     subtitle="Contact teachers, parents, or school staff directly."
+                    breadcrumbs={[{ label: 'Messages' }]}
                 />
                 <ContentPanel noPadding>
                     <MessagingInterface />
