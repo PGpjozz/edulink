@@ -27,7 +27,7 @@ type PublicBranding = {
 export default function SignInPage() {
   const router = useRouter();
   const { schoolName, logoUrl } = useThemeContext();
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
@@ -53,7 +53,7 @@ export default function SignInPage() {
 
     try {
       const result = await signIn('credentials', {
-        email,
+        identifier: identifier.trim(),
         password,
         redirect: false,
       });
@@ -138,7 +138,7 @@ export default function SignInPage() {
             Sign in
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-            Use your school email and password
+            Use your school email, ID number, and password
           </Typography>
 
           {error && (
@@ -150,12 +150,12 @@ export default function SignInPage() {
           <Box component="form" onSubmit={handleSubmit}>
             <TextField
               fullWidth
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              label="Email or ID number"
+              type="text"
+              value={identifier}
+              onChange={(e) => setIdentifier(e.target.value)}
               required
-              autoComplete="email"
+              autoComplete="username"
               sx={{ mb: 2 }}
             />
             <TextField
