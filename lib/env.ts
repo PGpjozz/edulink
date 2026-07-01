@@ -13,9 +13,15 @@ export function isDevRouteEnabled(): boolean {
 export function getNextAuthSecret(): string {
     const secret = process.env.NEXTAUTH_SECRET;
     if (secret && secret.length >= 32) return secret;
-    if (PRODUCTION) {
+
+    // Next.js evaluates auth config during `next build`; don't fail the build if
+    // env vars are only injected at runtime on some hosts.
+    const isBuildPhase = process.env.NEXT_PHASE === 'phase-production-build';
+
+    if (PRODUCTION && !isBuildPhase) {
         throw new Error('NEXTAUTH_SECRET must be set to at least 32 characters in production');
     }
+
     return secret || 'dev-only-secret-not-for-production-use!!';
 }
 
