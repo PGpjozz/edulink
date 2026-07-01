@@ -9,6 +9,8 @@ import Sidebar from '@/app/components/Sidebar';
 import DashboardPathGuard from '@/app/components/DashboardPathGuard';
 import ParentMobileNav from '@/app/components/ParentMobileNav';
 import ParentChildBar from '@/app/components/ParentChildBar';
+import TeacherMobileNav from '@/app/components/TeacherMobileNav';
+import PrivacyConsentGate from '@/app/components/PrivacyConsentGate';
 import NotificationDropdown from '@/app/components/NotificationDropdown';
 import { getPageTitle } from '@/lib/page-titles';
 
@@ -21,7 +23,12 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     const pageTitle = getPageTitle(pathname);
     const { data: session } = useSession();
     const isParent = session?.user?.role === 'PARENT';
+    const hasTeacherProfile = session?.user?.hasTeacherProfile;
+    const activeRole = session?.user?.activeRole ?? session?.user?.role;
     const showParentChrome = isParent && pathname.startsWith('/dashboard/parent');
+    const showTeacherMobilePad =
+        hasTeacherProfile &&
+        (activeRole === 'TEACHER' || activeRole === 'HOD' || activeRole === 'PRINCIPAL' || activeRole === 'SCHOOL_ADMIN');
 
     useEffect(() => {
         setMobileOpen(false);
@@ -83,12 +90,13 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     flexGrow: 1,
                     p: { xs: 2, sm: 3 },
                     mt: { xs: 7, md: 0 },
-                    mb: isParent && isMobile ? 8 : 0,
+                    mb: isParent && isMobile ? 8 : showTeacherMobilePad && isMobile ? 8 : 0,
                     width: { md: `calc(100% - 280px)` },
                     minWidth: 0,
                 }}
             >
                 <DashboardPathGuard />
+                <PrivacyConsentGate />
                 {!isMobile && (
                     <Box display="flex" justifyContent="flex-end" alignItems="center" gap={1} mb={2}>
                         <NotificationDropdown />
@@ -105,6 +113,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                 {children}
             </Box>
             {isParent && <ParentMobileNav />}
+            {showTeacherMobilePad && <TeacherMobileNav />}
         </Box>
     );
 }

@@ -6,10 +6,16 @@ export function canMessage(senderRole: string, recipientRole: string): boolean {
 
     return (
         (isStaff && recipientRole === 'PARENT') ||
-        (senderRole === 'PARENT' && recipientIsStaff)
+        (senderRole === 'PARENT' && recipientIsStaff) ||
+        (senderRole === 'LEARNER' && recipientIsStaff) ||
+        (isStaff && recipientRole === 'LEARNER')
     );
 }
 
 export function isMessagingRole(role: string): boolean {
-    return role === 'PARENT' || STAFF_MESSAGE_ROLES.includes(role as (typeof STAFF_MESSAGE_ROLES)[number]);
+    return (
+        role === 'PARENT' ||
+        role === 'LEARNER' ||
+        STAFF_MESSAGE_ROLES.includes(role as (typeof STAFF_MESSAGE_ROLES)[number])
+    );
 }

@@ -81,6 +81,10 @@ export function canManageFinance(auth: Pick<AuthContext, 'role' | 'permissions'>
     return canManageSchool(auth.role) || hasPermission(auth, 'MANAGE_FINANCE');
 }
 
+export function canManageAdmissions(auth: Pick<AuthContext, 'role' | 'permissions'>): boolean {
+    return canManageSchool(auth.role) || hasPermission(auth, 'MANAGE_ADMISSIONS');
+}
+
 export function canManageAnnouncements(auth: Pick<AuthContext, 'role' | 'permissions'>): boolean {
     return isStaffRole(auth.role) && (canManageSchool(auth.role) || hasPermission(auth, 'MANAGE_ANNOUNCEMENTS'));
 }

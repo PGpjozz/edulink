@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
+import { notifyParent } from '@/lib/notifications-delivery';
 
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -210,17 +211,20 @@ export async function POST(req: Request) {
                     // SIMULATE SMS SENDING (SaaS Feature)
                     const parentUsers = await tx.user.findMany({
                         where: { id: { in: learner.parentIds } },
-                        select: { firstName: true, lastName: true, phoneNumber: true }
+                        select: { firstName: true, lastName: true, phoneNumber: true, email: true },
                     });
 
-                    parentUsers.forEach(p => {
-                        const parentName = `${p.firstName} ${p.lastName}`;
-                        if (p.phoneNumber) {
-                            console.log(`[SIMULATED SMS] TO: ${p.phoneNumber} (${parentName}) | MSG: ${message}`);
-                        } else {
-                            console.log(`[SIMULATED PUSH] TO: ${parentName} (In-App Only) | MSG: ${message}`);
-                        }
-                    });
+                    const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+                    for (const p of parentUsers) {
+                        await notifyParent({
+                            parentName: `${p.firstName} ${p.lastName}`,
+                            phoneNumber: p.phoneNumber,
+                            email: p.email,
+                            title,
+                            message,
+                            link: `${baseUrl}/dashboard/parent/notifications`,
+                        });
+                    }
                 }
             }
         });

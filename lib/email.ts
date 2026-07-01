@@ -59,7 +59,23 @@ export function inviteEmailHtml(params: {
     `;
 }
 
-export function passwordResetEmailHtml(params: { tempPassword: string; signInUrl: string }) {
+export function passwordResetEmailHtml(params: { resetUrl: string }) {
+    return `
+        <p>We received a request to reset your EduLink password.</p>
+        <p><a href="${params.resetUrl}">Reset your password</a></p>
+        <p>This link expires in 1 hour. If you didn't request this, you can ignore this email.</p>
+    `;
+}
+
+export function passwordResetConfirmEmailHtml(params: { signInUrl: string }) {
+    return `
+        <p>Your EduLink password was changed successfully.</p>
+        <p><a href="${params.signInUrl}">Sign in to EduLink</a></p>
+    `;
+}
+
+/** @deprecated Use passwordResetEmailHtml with reset link */
+export function passwordResetTempEmailHtml(params: { tempPassword: string; signInUrl: string }) {
     return `
         <p>Your EduLink password was reset.</p>
         <p>Sign in with this temporary password: <strong>${params.tempPassword}</strong></p>

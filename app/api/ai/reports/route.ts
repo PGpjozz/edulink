@@ -1,53 +1,53 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { canAccessLearner } from '@/lib/staff-context';
 
 export async function POST(req: Request) {
-    const session = await getServerSession(authOptions);
-    const allowedRoles = ['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN', 'HOD'];
-    if (!session || !allowedRoles.includes(session.user.role)) {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN', 'HOD'], requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
         const { learnerId, subjectId, tone = 'professional' } = await req.json();
 
-        // 1. Fetch relevant data for the student
         const [learner, attendance, attempts] = await Promise.all([
             prisma.learnerProfile.findUnique({
                 where: { id: learnerId },
-                include: { user: true }
+                include: { user: { select: { firstName: true, schoolId: true } } },
             }),
             prisma.attendance.findMany({
                 where: { learnerId },
                 take: 10,
-                orderBy: { date: 'desc' }
+                orderBy: { date: 'desc' },
             }),
             prisma.quizAttempt.findMany({
                 where: { learnerId, quiz: { subjectId } },
                 include: { quiz: true },
-                orderBy: { completedAt: 'desc' }
-            })
+                orderBy: { completedAt: 'desc' },
+            }),
         ]);
 
-        if (!learner) {
+        if (!learner || learner.user.schoolId !== auth.schoolId) {
             return NextResponse.json({ error: 'Learner not found' }, { status: 404 });
         }
 
-        // 2. Synthesize performance data
-        const avgScore = attempts.length > 0
-            ? attempts.reduce(
-                (acc: number, curr: { score: number | null }) => acc + (curr.score || 0),
-                0
-            ) / attempts.length
-            : null;
+        const allowed = await canAccessLearner(auth, learnerId);
+        if (!allowed) {
+            return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
 
-        const attendanceRate = attendance.length > 0
-            ? (attendance.filter((a: any) => a.status === 'PRESENT' || a.status === 'LATE').length / attendance.length) * 100
-            : null;
+        const avgScore =
+            attempts.length > 0
+                ? attempts.reduce((acc, curr) => acc + (curr.score || 0), 0) / attempts.length
+                : null;
 
-        // 3. Generate a "Smart Comment" (Mocking the AI Generation Logic)
+        const attendanceRate =
+            attendance.length > 0
+                ? (attendance.filter((a) => a.status === 'PRESENT' || a.status === 'LATE').length /
+                      attendance.length) *
+                  100
+                : null;
+
         let comment = '';
         const name = learner.user.firstName;
 
@@ -78,8 +78,8 @@ export async function POST(req: Request) {
             dataPoints: {
                 avgScore,
                 attendanceRate,
-                assessmentsCount: attempts.length
-            }
+                assessmentsCount: attempts.length,
+            },
         });
     } catch (error) {
         console.error('AI Comment Error:', error);

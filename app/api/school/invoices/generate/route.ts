@@ -1,10 +1,17 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, writeAuditLog } from '@/lib/api-auth';
+import { canManageFinance } from '@/lib/permissions';
+import { sendEmail } from '@/lib/email';
+import { invoiceIssuedEmailHtml } from '@/lib/notifications-delivery';
 
-export async function POST(req: Request) {
-    const auth = await requireAuth({ roles: ['PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+export async function POST() {
+    const auth = await requireAuth({ requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
+
+    if (!canManageFinance(auth)) {
+        return new NextResponse('Forbidden', { status: 403 });
+    }
 
     try {
         const school = await prisma.school.findUnique({
@@ -12,9 +19,15 @@ export async function POST(req: Request) {
             include: {
                 users: {
                     where: { role: 'LEARNER' },
-                    include: { learnerProfile: true }
-                }
-            }
+                    include: {
+                        learnerProfile: {
+                            include: {
+                                class: { select: { name: true } },
+                            },
+                        },
+                    },
+                },
+            },
         });
 
         if (!school) return new NextResponse('School not found', { status: 404 });
@@ -22,36 +35,60 @@ export async function POST(req: Request) {
         const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
         const title = `Monthly Tuition Fee - ${currentMonth}`;
         const dueDate = new Date();
-        dueDate.setDate(dueDate.getDate() + 7); // Due in 7 days
+        dueDate.setDate(dueDate.getDate() + 7);
 
-        const batch = school.users
-            .filter(u => u.learnerProfile)
-            .map(u => ({
-                schoolId: school.id,
-                learnerId: u.learnerProfile!.id,
-                title,
-                amount: school.monthlyFee,
-                dueDate,
-                status: 'PENDING' as const
-            }));
-
-        // To avoid duplicates for the same month, we'd normally check here.
-        // For MVP, we'll just create them. In production, we'd check if title exists for student.
-
+        const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
         let createdCount = 0;
-        for (const invoiceData of batch) {
-            // Upsert-like check to prevent double billing in same month
+        let notifiedCount = 0;
+
+        for (const learnerUser of school.users) {
+            if (!learnerUser.learnerProfile) continue;
+
             const existing = await prisma.feeInvoice.findFirst({
                 where: {
-                    schoolId: invoiceData.schoolId,
-                    learnerId: invoiceData.learnerId,
-                    title: invoiceData.title
-                }
+                    schoolId: school.id,
+                    learnerId: learnerUser.learnerProfile.id,
+                    title,
+                },
             });
 
-            if (!existing) {
-                await prisma.feeInvoice.create({ data: invoiceData });
-                createdCount++;
+            if (existing) continue;
+
+            await prisma.feeInvoice.create({
+                data: {
+                    schoolId: school.id,
+                    learnerId: learnerUser.learnerProfile.id,
+                    title,
+                    amount: school.monthlyFee,
+                    dueDate,
+                    status: 'PENDING',
+                },
+            });
+            createdCount++;
+
+            const parentIds = learnerUser.learnerProfile.parentIds ?? [];
+            if (parentIds.length === 0) continue;
+
+            const parents = await prisma.user.findMany({
+                where: { id: { in: parentIds } },
+                select: { email: true, firstName: true, lastName: true },
+            });
+
+            for (const parent of parents) {
+                if (!parent.email) continue;
+                const sent = await sendEmail({
+                    to: parent.email,
+                    subject: `New school fee invoice — ${school.name}`,
+                    html: invoiceIssuedEmailHtml({
+                        parentName: parent.firstName,
+                        learnerName: `${learnerUser.firstName} ${learnerUser.lastName}`,
+                        title,
+                        amount: school.monthlyFee,
+                        dueDate: dueDate.toLocaleDateString('en-ZA'),
+                        billingUrl: `${baseUrl}/dashboard/parent/billing`,
+                    }),
+                });
+                if (sent.sent) notifiedCount++;
             }
         }
 
@@ -61,12 +98,12 @@ export async function POST(req: Request) {
             action: 'GENERATE_INVOICES',
             entity: 'FEE_INVOICE',
             entityId: school.id,
-            details: { createdCount, totalLearners: batch.length, title }
+            details: { createdCount, notifiedCount, title },
         });
 
         return NextResponse.json({
             message: `Generated ${createdCount} invoices for ${currentMonth}`,
-            total: batch.length
+            notifiedParents: notifiedCount,
         });
     } catch (error) {
         console.error(error);

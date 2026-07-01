@@ -1,12 +1,20 @@
 import { NextResponse } from 'next/server';
-import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
 import { readJson } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
 import { sendEmail, passwordResetEmailHtml } from '@/lib/email';
+import { createPasswordResetToken } from '@/lib/password-reset-token';
+import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
 
-// Dev-friendly reset: sets a one-time temp password. In production, send email with token.
 export async function POST(req: Request) {
+    const ip = getClientIp(req);
+    const limit = checkRateLimit(`forgot-password:${ip}`, 5, 15 * 60 * 1000);
+    if (!limit.allowed) {
+        return NextResponse.json(
+            { error: 'Too many requests. Try again later.' },
+            { status: 429, headers: { 'Retry-After': String(limit.retryAfterSec) } },
+        );
+    }
+
     const body = await readJson<{ email?: string }>(req);
     if (body instanceof NextResponse) return body;
 
@@ -20,32 +28,26 @@ export async function POST(req: Request) {
         select: { id: true, email: true },
     });
 
-    // Always return success to avoid email enumeration
     if (!user) {
-        return NextResponse.json({ ok: true, message: 'If that account exists, a temporary password was set.' });
+        return NextResponse.json({ ok: true, message: 'If that account exists, a reset link was sent.' });
     }
 
-    const tempPassword = crypto.randomBytes(4).toString('hex') + 'A1!';
-    const hashed = await bcrypt.hash(tempPassword, 10);
-
-    await prisma.user.update({
-        where: { id: user.id },
-        data: { password: hashed, mustChangePassword: true },
-    });
-
     const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
+    const token = createPasswordResetToken(user.id);
+    const resetUrl = `${baseUrl}/auth/reset-password?token=${encodeURIComponent(token)}`;
+
     const emailResult = await sendEmail({
         to: user.email!,
-        subject: 'Your EduLink temporary password',
-        html: passwordResetEmailHtml({ tempPassword, signInUrl: `${baseUrl}/auth/signin` }),
-        text: `Temporary password: ${tempPassword}. Sign in at ${baseUrl}/auth/signin`,
+        subject: 'Reset your EduLink password',
+        html: passwordResetEmailHtml({ resetUrl }),
+        text: `Reset your password: ${resetUrl}`,
     });
 
     return NextResponse.json({
         ok: true,
         message: emailResult.sent
-            ? 'If that account exists, a temporary password was emailed to you.'
-            : 'Temporary password generated. You must change it after signing in.',
-        ...(process.env.NODE_ENV !== 'production' && !emailResult.sent ? { tempPassword } : {}),
+            ? 'If that account exists, a reset link was emailed to you.'
+            : 'If that account exists, use the reset link below (email not configured).',
+        ...(process.env.NODE_ENV !== 'production' && !emailResult.sent ? { resetUrl } : {}),
     });
 }

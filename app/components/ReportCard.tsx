@@ -77,7 +77,7 @@ export default function ReportCard({ data }: ReportCardProps) {
                     </Typography>
                 </Box>
                 <Box textAlign="right">
-                    <Typography variant="h6" fontWeight="bold">Term 1, 2025</Typography>
+                    <Typography variant="h6" fontWeight="bold">{data.term ?? 'Current term'}</Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 0.5 }}>
                         <CalendarMonth fontSize="small" /> Issued: {new Date().toLocaleDateString()}
                     </Typography>
@@ -124,6 +124,9 @@ export default function ReportCard({ data }: ReportCardProps) {
                                 Subject Area
                             </TableCell>
                             <TableCell align="center" sx={{ fontWeight: '900', color: 'text.secondary', fontSize: '0.8rem', textTransform: 'uppercase' }}>
+                                CAPS Level
+                            </TableCell>
+                            <TableCell align="center" sx={{ fontWeight: '900', color: 'text.secondary', fontSize: '0.8rem', textTransform: 'uppercase' }}>
                                 Achievement (%)
                             </TableCell>
                             <TableCell sx={{ fontWeight: '900', color: 'text.secondary', fontSize: '0.8rem', textTransform: 'uppercase' }}>
@@ -135,6 +138,9 @@ export default function ReportCard({ data }: ReportCardProps) {
                         {data.subjects.map((sub: any) => (
                             <TableRow key={sub.subjectName} sx={{ '&:last-child td': { border: 0 } }}>
                                 <TableCell sx={{ fontWeight: '700', py: 3 }}>{sub.subjectName}</TableCell>
+                                <TableCell align="center" sx={{ fontWeight: 700 }}>
+                                    {sub.level != null ? `Level ${sub.level}` : '—'}
+                                </TableCell>
                                 <TableCell align="center">
                                     <Box
                                         sx={{

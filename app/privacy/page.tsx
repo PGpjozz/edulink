@@ -57,7 +57,9 @@ export default function PrivacyPage() {
                     <Typography variant="h6" fontWeight="bold" gutterBottom>5. Your rights</Typography>
                     <Typography paragraph>
                         Under POPIA you may request access to, correction of, or deletion of your personal information.
-                        Contact your school administrator or email the address on your school&apos;s EduLink account.
+                        Signed-in users can download a copy of their account data from{' '}
+                        <code>/api/user/data-export</code> while logged in.
+                        Contact your school administrator for full academic record requests.
                     </Typography>
                 </Box>
 

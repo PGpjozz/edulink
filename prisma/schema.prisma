@@ -571,6 +571,7 @@ model Application {
   lastName       String
   email          String
   grade          String        // Grade they are applying for
+  idNumber       String?       // SA ID (optional at apply, required on approval)
   status         ApplicationStatus @default(PENDING)
   
   notes          String?

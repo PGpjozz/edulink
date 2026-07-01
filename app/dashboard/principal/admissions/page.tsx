@@ -49,14 +49,28 @@ export default function AdmissionsManager() {
     }, []);
 
     const handleAction = async (id: string, status: string) => {
+        let idNumber: string | undefined;
+        if (status === 'APPROVED') {
+            const app = applications.find((a) => a.id === id);
+            idNumber = app?.idNumber ?? undefined;
+            if (!idNumber) {
+                const entered = window.prompt('Enter learner SA ID number (13 digits) to approve:');
+                if (!entered?.trim()) return;
+                idNumber = entered.trim();
+            }
+        }
+
         setActioning(id);
         try {
             const res = await fetch('/api/school/applications', {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id, status })
+                body: JSON.stringify({ id, status, idNumber }),
             });
-            if (res.ok) {
+            if (!res.ok) {
+                const text = await res.text();
+                alert(text || 'Action failed');
+            } else {
                 fetchApplications();
             }
         } catch (err) {
@@ -72,6 +86,7 @@ export default function AdmissionsManager() {
         { field: 'lastName', headerName: 'Last Name', width: 130 },
         { field: 'email', headerName: 'Email', width: 200 },
         { field: 'grade', headerName: 'Grade', width: 100 },
+        { field: 'idNumber', headerName: 'SA ID', width: 130 },
         {
             field: 'status',
             headerName: 'Status',
@@ -118,6 +133,15 @@ export default function AdmissionsManager() {
             <Box mb={4}>
                 <Typography variant="h4" fontWeight="bold">Admissions Pipeline</Typography>
                 <Typography color="text.secondary">Review and approve incoming student applications.</Typography>
+                <Button
+                    variant="outlined"
+                    size="small"
+                    sx={{ mt: 1 }}
+                    href="/apply?school=westview"
+                    target="_blank"
+                >
+                    Open public application form
+                </Button>
             </Box>
 
             <Grid container spacing={3} mb={4}>

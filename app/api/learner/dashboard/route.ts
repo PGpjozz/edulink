@@ -1,90 +1,84 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
+import { requireAuth } from '@/lib/api-auth';
+import { resolveLearnerAccess } from '@/lib/parent-access';
 
 export async function GET(req: Request) {
-    const session = await getServerSession(authOptions);
-
-    if (!session || !session.user.schoolId) {
-        return new NextResponse('Unauthorized', { status: 401 });
-    }
+    const auth = await requireAuth({ requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(req.url);
-    let learnerUserId = session.user.id;
+    const access = await resolveLearnerAccess(auth, searchParams.get('childId'));
+    if (!access.ok) return access.response;
 
-    if (session.user.role === 'PARENT') {
-        const childId = searchParams.get('childId');
-        if (!childId) return new NextResponse('Child ID required', { status: 400 });
-        // In real app, check if childId is in parentProfile.learnerIds
-        learnerUserId = childId;
-    }
+    const learnerUserId = access.learnerUserId;
 
     try {
-        // 1. Get Learner Profile to find Class
         const learnerProfile = await prisma.learnerProfile.findUnique({
             where: { userId: learnerUserId },
             include: {
                 class: true,
-                user: { select: { firstName: true, lastName: true } }
-            }
+                user: { select: { firstName: true, lastName: true, schoolId: true } },
+            },
         });
 
-        if (!learnerProfile || !learnerProfile.class) {
+        if (!learnerProfile?.user || learnerProfile.user.schoolId !== auth.schoolId) {
+            return new NextResponse('Forbidden', { status: 403 });
+        }
+
+        if (!learnerProfile.class) {
             return NextResponse.json({ learner: null, subjects: [] });
         }
 
-        // 2. Get Subjects for this Class Grade
         const subjects = await prisma.subject.findMany({
             where: {
                 grade: learnerProfile.class.grade,
-                schoolId: session.user.schoolId
+                schoolId: auth.schoolId as string,
             },
             include: {
                 assessments: {
                     include: {
                         grades: {
-                            where: { learnerId: learnerProfile.id }
-                        }
-                    }
-                }
-            }
+                            where: { learnerId: learnerProfile.id },
+                        },
+                    },
+                },
+            },
         });
 
-        // 3. Process Data
-        // Deduplicate subjects that share the same code (e.g. legacy seed data)
         const seenCodes = new Set<string>();
-        const uniqueSubjects = subjects.filter(sub => {
+        const uniqueSubjects = subjects.filter((sub) => {
             const key = sub.code || sub.name;
             if (seenCodes.has(key)) return false;
             seenCodes.add(key);
             return true;
         });
 
-        const processedSubjects = uniqueSubjects.map(sub => {
-            const assessmentsWithGrades = sub.assessments.map(ass => {
+        const processedSubjects = uniqueSubjects.map((sub) => {
+            const assessmentsWithGrades = sub.assessments.map((ass) => {
                 const gradeEntry = ass.grades[0];
                 return {
                     id: ass.id,
                     title: ass.title,
                     totalMarks: ass.totalMarks,
                     userScore: gradeEntry?.score || null,
-                    percentage: gradeEntry ? (gradeEntry.score / ass.totalMarks) * 100 : null
+                    percentage: gradeEntry ? (gradeEntry.score / ass.totalMarks) * 100 : null,
                 };
             });
 
-            // Calculate Subject Average (Simple average of percentages for now)
-            const gradedAssessments = assessmentsWithGrades.filter(a => a.percentage !== null);
-            const average = gradedAssessments.length > 0
-                ? gradedAssessments.reduce((acc, curr) => acc + (curr.percentage || 0), 0) / gradedAssessments.length
-                : null;
+            const gradedAssessments = assessmentsWithGrades.filter((a) => a.percentage !== null);
+            const average =
+                gradedAssessments.length > 0
+                    ? gradedAssessments.reduce((acc, curr) => acc + (curr.percentage || 0), 0) /
+                      gradedAssessments.length
+                    : null;
 
             return {
                 id: sub.id,
                 name: sub.name,
                 code: sub.code,
                 average: average ? Math.round(average) : null,
-                assessments: assessmentsWithGrades
+                assessments: assessmentsWithGrades,
             };
         });
 
@@ -94,14 +88,11 @@ export async function GET(req: Request) {
                 name: `${learnerProfile.user.firstName} ${learnerProfile.user.lastName}`,
                 grade: learnerProfile.class.grade,
                 className: learnerProfile.class.name,
-                timetable: learnerProfile.class.timetable
+                timetable: learnerProfile.class.timetable,
             },
-            subjects: processedSubjects
+            subjects: processedSubjects,
         });
-
-    } catch (error) {
-        // console.error('Error fetching learner dashboard:', error);
-        // Silent fail for now if DB not connected to avoid clutter
+    } catch {
         return new NextResponse('Internal Error', { status: 500 });
     }
 }

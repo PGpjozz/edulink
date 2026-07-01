@@ -59,12 +59,19 @@ export default function ChangePasswordPage() {
                         You must set a new password before continuing.
                     </Alert>
                 )}
+                {session?.user?.mustChangePassword ? (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                        Set a new password below. You do not need your temporary password.
+                    </Alert>
+                ) : null}
                 {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
                 <Box component="form" onSubmit={handleSubmit}>
+                    {!session?.user?.mustChangePassword && (
                     <TextField
                         fullWidth margin="normal" type="password" label="Current password"
                         value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} required
                     />
+                    )}
                     <TextField
                         fullWidth margin="normal" type="password" label="New password"
                         value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required

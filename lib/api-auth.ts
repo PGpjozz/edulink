@@ -12,6 +12,8 @@ type RequireAuthOptions = {
     /** Use permission groups instead of raw role list */
     schoolAdmin?: boolean;
     gradingStaff?: boolean;
+    /** Allow access when user must change password (e.g. change-password API) */
+    allowPasswordChange?: boolean;
 };
 
 export type AuthContext = {
@@ -51,6 +53,13 @@ export async function requireAuth(options: RequireAuthOptions = {}): Promise<Aut
 
     if (options.requireSchoolId && !schoolId) {
         return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (mustChangePassword && !options.allowPasswordChange) {
+        return NextResponse.json(
+            { error: 'Password change required', code: 'MUST_CHANGE_PASSWORD' },
+            { status: 403 },
+        );
     }
 
     return {
