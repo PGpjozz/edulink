@@ -34,9 +34,12 @@ export default function ProviderSchoolsPage() {
         setLoading(true);
         setError('');
         fetch('/api/schools')
-            .then((r) => r.json())
+            .then(async (r) => {
+                const data = await r.json();
+                if (!r.ok) throw new Error(data.error || `Failed to load schools (${r.status})`);
+                return data;
+            })
             .then((data) => {
-                if (data.error) throw new Error(data.error);
                 setSchools(Array.isArray(data) ? data : []);
             })
             .catch((e) => setError(e.message || 'Failed to load schools'))

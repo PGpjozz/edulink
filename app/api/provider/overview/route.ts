@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/api-auth';
+import { prismaErrorResponse } from '@/lib/prisma-errors';
 import { getEffectiveMonthlyFee, TIER_PLANS, type BillingTier } from '@/lib/provider-pricing';
 
 export async function GET() {
@@ -91,7 +92,6 @@ export async function GET() {
             tierPlans: TIER_PLANS,
         });
     } catch (error) {
-        console.error('provider overview', error);
-        return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
+        return prismaErrorResponse(error, 'provider overview');
     }
 }

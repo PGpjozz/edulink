@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/api-auth';
+import { prismaErrorResponse } from '@/lib/prisma-errors';
 import { getEffectiveMonthlyFee, type BillingTier } from '@/lib/provider-pricing';
 
 export async function GET() {
@@ -45,8 +46,7 @@ export async function GET() {
 
         return NextResponse.json(enriched);
     } catch (error) {
-        console.error('Error fetching schools:', error);
-        return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
+        return prismaErrorResponse(error, 'Error fetching schools');
     }
 }
 
