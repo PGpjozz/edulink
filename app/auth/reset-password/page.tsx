@@ -12,6 +12,7 @@ import {
   CircularProgress,
   Paper,
 } from '@mui/material';
+import BrandLogo from '@/app/components/BrandLogo';
 
 function ResetPasswordInner() {
   const router = useRouter();
@@ -61,6 +62,9 @@ function ResetPasswordInner() {
   return (
     <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', p: 2 }}>
       <Paper sx={{ p: 4, maxWidth: 420, width: '100%' }}>
+        <Box display="flex" justifyContent="center" mb={3}>
+          <BrandLogo variant="full" height={44} />
+        </Box>
         <Typography variant="h5" fontWeight={700} gutterBottom>
           Set a new password
         </Typography>

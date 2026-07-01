@@ -15,8 +15,10 @@ import {
   IconButton,
   Divider,
 } from '@mui/material';
-import { Visibility, VisibilityOff, School } from '@mui/icons-material';
+import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useThemeContext } from '@/app/theme/ThemeContext';
+import { BRAND } from '@/lib/branding';
+import BrandLogo from '@/app/components/BrandLogo';
 
 type PublicBranding = {
   schoolName: string;
@@ -43,8 +45,9 @@ export default function SignInPage() {
       .catch(() => {});
   }, []);
 
-  const displayName = branding?.schoolName || schoolName;
+  const displayName = branding?.schoolName || schoolName || BRAND.name;
   const displayLogo = branding?.logoUrl || logoUrl;
+  const isSchoolBranded = Boolean(branding?.schoolName || schoolName);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,11 +101,18 @@ export default function SignInPage() {
             <Box
               component="img"
               src={displayLogo}
-              alt=""
-              sx={{ height: 56, mb: 3, objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
+              alt={`${displayName} logo`}
+              sx={{
+                height: isSchoolBranded ? 56 : 64,
+                mb: 3,
+                objectFit: 'contain',
+                ...(isSchoolBranded ? { filter: 'brightness(0) invert(1)' } : {}),
+              }}
             />
           ) : (
-            <School sx={{ fontSize: 56, mb: 2, opacity: 0.9 }} />
+            <Box mb={3}>
+              <BrandLogo variant="full" height={64} onDark />
+            </Box>
           )}
           <Typography variant="h3" fontWeight={800} gutterBottom sx={{ letterSpacing: '-0.03em' }}>
             {displayName}
@@ -125,9 +135,11 @@ export default function SignInPage() {
         <Box sx={{ width: '100%', maxWidth: 420 }}>
           <Box sx={{ display: { xs: 'block', md: 'none' }, textAlign: 'center', mb: 3 }}>
             {displayLogo ? (
-              <Box component="img" src={displayLogo} alt="" sx={{ height: 48, mb: 1, objectFit: 'contain' }} />
+              <Box component="img" src={displayLogo} alt={`${displayName} logo`} sx={{ height: 48, mb: 1, objectFit: 'contain' }} />
             ) : (
-              <School color="primary" sx={{ fontSize: 48, mb: 1 }} />
+              <Box display="flex" justifyContent="center" mb={1}>
+                <BrandLogo variant="full" height={48} />
+              </Box>
             )}
             <Typography variant="h5" fontWeight={700}>
               {displayName}

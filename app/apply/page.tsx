@@ -13,7 +13,8 @@ import {
   MenuItem,
   CircularProgress,
 } from '@mui/material';
-import { School } from '@mui/icons-material';
+import { BRAND } from '@/lib/branding';
+import BrandLogo from '@/app/components/BrandLogo';
 
 type SchoolInfo = {
   id: string;
@@ -21,6 +22,7 @@ type SchoolInfo = {
   subdomain: string;
   gradesOffered: string[];
   primaryColor?: string;
+  logoUrl?: string | null;
 };
 
 function ApplyFormInner() {
@@ -108,14 +110,23 @@ function ApplyFormInner() {
   return (
     <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', py: 6, px: 2 }}>
       <Paper sx={{ maxWidth: 520, mx: 'auto', p: { xs: 3, sm: 4 }, borderRadius: 3 }}>
-        <Box display="flex" alignItems="center" gap={1} mb={2}>
-          <School color="primary" />
-          <Typography variant="h5" fontWeight={800}>
+        <Box display="flex" flexDirection="column" alignItems="center" mb={3}>
+          {school.logoUrl ? (
+            <Box component="img" src={school.logoUrl} alt={`${school.name} logo`} sx={{ height: 56, mb: 2, objectFit: 'contain' }} />
+          ) : (
+            <Box mb={2}>
+              <BrandLogo variant="icon" height={56} />
+            </Box>
+          )}
+          <Typography variant="h5" fontWeight={800} textAlign="center">
             Apply to {school.name}
           </Typography>
         </Box>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+        <Typography variant="body2" color="text.secondary" textAlign="center" sx={{ mb: 3 }}>
           Submit an online application. Our admissions team will review and contact you by email.
+        </Typography>
+        <Typography variant="caption" color="text.secondary" display="block" textAlign="center" sx={{ mb: 3 }}>
+          Powered by {BRAND.name}
         </Typography>
 
         {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}

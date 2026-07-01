@@ -22,6 +22,7 @@ export async function GET(req: Request) {
             name: true,
             subdomain: true,
             primaryColor: true,
+            logoUrl: true,
             gradesOffered: true,
             contactEmail: true,
         },

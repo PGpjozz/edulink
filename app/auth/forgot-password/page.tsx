@@ -5,6 +5,7 @@ import Link from 'next/link';
 import {
     Box, Button, Container, Paper, TextField, Typography, Alert,
 } from '@mui/material';
+import BrandLogo from '@/app/components/BrandLogo';
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState('');
@@ -32,6 +33,9 @@ export default function ForgotPasswordPage() {
     return (
         <Container maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', minHeight: '100vh' }}>
             <Paper sx={{ p: 4, width: '100%', borderRadius: 3 }}>
+                <Box display="flex" justifyContent="center" mb={3}>
+                    <BrandLogo variant="full" height={48} />
+                </Box>
                 <Typography variant="h5" fontWeight="bold" gutterBottom>
                     Reset password
                 </Typography>

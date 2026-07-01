@@ -17,7 +17,8 @@ import {
     useTheme,
     alpha,
 } from '@mui/material';
-import { Print, Verified, School, CalendarMonth } from '@mui/icons-material';
+import { Print, Verified, CalendarMonth } from '@mui/icons-material';
+import { BRAND } from '@/lib/branding';
 
 interface ReportCardProps {
     data: any;
@@ -63,10 +64,15 @@ export default function ReportCard({ data }: ReportCardProps) {
 
             <Box display="flex" justifyContent="space-between" alignItems="flex-start" mb={6} sx={{ position: 'relative', zIndex: 1 }}>
                 <Box>
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                        <School color="primary" sx={{ fontSize: 32 }} />
-                        <Typography variant="h6" fontWeight="800" letterSpacing={1} color="text.secondary">
-                            BRIGHTCAMPUS
+                    <Box display="flex" alignItems="center" gap={1.5} mb={1}>
+                        <Box
+                            component="img"
+                            src={BRAND.logoIconUrl}
+                            alt={`${BRAND.name} logo`}
+                            sx={{ height: 36, width: 36, objectFit: 'contain' }}
+                        />
+                        <Typography variant="h6" fontWeight="800" letterSpacing={0.5} color="text.secondary">
+                            {BRAND.name.toUpperCase()}
                         </Typography>
                     </Box>
                     <Typography variant="h3" fontWeight="900" color="text.primary" sx={{ mb: 1 }}>

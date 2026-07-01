@@ -12,6 +12,10 @@ export const BRAND = {
     providerPortalTitle: 'BrightCampus Provider Portal',
     studyAdvisorLabel: 'BrightCampus Study Advisor',
     dataHubLabel: 'BrightCampus Data Hub',
+    /** Full horizontal logo (icon + wordmark + tagline) */
+    logoUrl: '/brightcampus-logo.png',
+    /** Square mark for sidebar, favicons, and compact UI */
+    logoIconUrl: '/brightcampus-icon.png',
 } as const;
 
 export const BRAND_DEFAULTS = {

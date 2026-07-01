@@ -8,9 +8,16 @@
   "theme_color": "#f59e0b",
   "icons": [
     {
+      "src": "/brightcampus-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

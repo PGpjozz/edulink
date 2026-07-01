@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import {
     Container, Typography, Box, Paper, TextField, Button, Alert, Stack, FormControlLabel, Checkbox,
 } from '@mui/material';
+import BrandLogo from '@/app/components/BrandLogo';
 
 export default function AcceptInvitePage() {
     const params = useParams();
@@ -80,6 +81,9 @@ export default function AcceptInvitePage() {
     return (
         <Container maxWidth="sm" sx={{ mt: 8, mb: 4 }}>
             <Paper sx={{ p: 4 }}>
+                <Box display="flex" justifyContent="center" mb={3}>
+                    <BrandLogo variant="full" height={48} />
+                </Box>
                 <Typography variant="h5" fontWeight="bold" gutterBottom>
                     Join {invite?.school?.name ?? 'your school'}
                 </Typography>

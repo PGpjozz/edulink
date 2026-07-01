@@ -11,8 +11,11 @@ export const metadata: Metadata = {
     title: BRAND.shortName,
   },
   icons: {
+    icon: [
+      { url: '/brightcampus-icon.png', sizes: '512x512', type: 'image/png' },
+    ],
     apple: '/icon-512x512.png',
-  }
+  },
 };
 
 export const viewport: Viewport = {

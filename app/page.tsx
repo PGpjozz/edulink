@@ -2,26 +2,24 @@
 
 import Link from 'next/link';
 import { Box, Button, Container, Typography, Grid, Paper } from '@mui/material';
-import { School, Groups, Assignment, Message, Lightbulb } from '@mui/icons-material';
+import { School, Groups, Assignment, Message } from '@mui/icons-material';
 import { BRAND } from '@/lib/branding';
+import BrandLogo from '@/app/components/BrandLogo';
 
 export default function Home() {
     return (
         <Box minHeight="100vh" bgcolor="background.default">
             <Box
                 sx={{
-                    background: 'linear-gradient(145deg, #f59e0b 0%, #d97706 35%, #4338ca 100%)',
+                    background: 'linear-gradient(145deg, #f59e0b 0%, #d97706 35%, #1e3a5f 100%)',
                     color: 'white',
                     py: { xs: 8, md: 12 },
                     px: 2,
                 }}
             >
                 <Container maxWidth="lg">
-                    <Box display="flex" alignItems="center" gap={1} mb={1}>
-                        <Lightbulb sx={{ fontSize: 28 }} />
-                        <Typography variant="overline" sx={{ opacity: 0.9, letterSpacing: 2 }}>
-                            {BRAND.name.toUpperCase()}
-                        </Typography>
+                    <Box mb={3}>
+                        <BrandLogo variant="full" height={72} onDark />
                     </Box>
                     <Typography variant="h2" fontWeight="bold" sx={{ mt: 1, mb: 1, maxWidth: 720 }}>
                         {BRAND.tagline}

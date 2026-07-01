@@ -1,5 +1,6 @@
 import { Container, Typography, Box, Paper } from '@mui/material';
 import { BRAND } from '@/lib/branding';
+import BrandLogo from '@/app/components/BrandLogo';
 
 export const metadata = {
     title: `Privacy Policy — ${BRAND.name}`,
@@ -9,6 +10,9 @@ export default function PrivacyPage() {
     return (
         <Container maxWidth="md" sx={{ py: 6 }}>
             <Paper sx={{ p: { xs: 3, md: 5 }, borderRadius: 3 }}>
+                <Box mb={3}>
+                    <BrandLogo variant="full" height={48} />
+                </Box>
                 <Typography variant="h4" fontWeight="bold" gutterBottom>
                     Privacy Policy (POPIA)
                 </Typography>

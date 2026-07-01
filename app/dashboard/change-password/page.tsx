@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
     Box, Button, Container, Paper, TextField, Typography, Alert,
 } from '@mui/material';
+import BrandLogo from '@/app/components/BrandLogo';
 
 export default function ChangePasswordPage() {
     const { data: session, update } = useSession();
@@ -51,6 +52,9 @@ export default function ChangePasswordPage() {
     return (
         <Container maxWidth="sm" sx={{ mt: 8 }}>
             <Paper sx={{ p: 4, borderRadius: 3 }}>
+                <Box display="flex" justifyContent="center" mb={3}>
+                    <BrandLogo variant="full" height={44} />
+                </Box>
                 <Typography variant="h5" fontWeight="bold" gutterBottom>
                     Change your password
                 </Typography>

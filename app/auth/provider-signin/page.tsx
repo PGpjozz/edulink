@@ -14,6 +14,7 @@ import {
     CircularProgress
 } from '@mui/material';
 import { BRAND, BRAND_DEFAULTS } from '@/lib/branding';
+import BrandLogo from '@/app/components/BrandLogo';
 import { motion } from 'framer-motion';
 
 function ProviderSignInInner() {
@@ -57,12 +58,9 @@ function ProviderSignInInner() {
                 elevation={3}
                 sx={{ p: 4, width: '100%', borderRadius: 4 }}
             >
-                <Typography variant="h4" component="h1" gutterBottom align="center" fontWeight="bold" color="primary">
-                    {BRAND.name}
-                </Typography>
-                <Typography variant="body2" align="center" color="text.secondary" gutterBottom>
-                    {BRAND.tagline}
-                </Typography>
+                <Box display="flex" justifyContent="center" mb={2}>
+                    <BrandLogo variant="full" height={56} />
+                </Box>
                 <Typography variant="body1" align="center" color="text.secondary" gutterBottom>
                     SaaS Provider Sign In
                 </Typography>

@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { Box, Button, Typography, IconButton, Paper, Slide } from '@mui/material';
-import { Close, DownloadForOffline, InstallMobile } from '@mui/icons-material';
+import { Close } from '@mui/icons-material';
+import { BRAND } from '@/lib/branding';
 
 export default function InstallPWA() {
     const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
@@ -51,7 +52,12 @@ export default function InstallPWA() {
                     boxShadow: 10
                 }}
             >
-                <InstallMobile />
+                <Box
+                    component="img"
+                    src={BRAND.logoIconUrl}
+                    alt=""
+                    sx={{ width: 40, height: 40, borderRadius: 1, bgcolor: 'white', objectFit: 'contain' }}
+                />
                 <Box>
                     <Typography variant="subtitle2" fontWeight="bold">BrightCampus is better in-app</Typography>
                     <Typography variant="caption" sx={{ opacity: 0.9 }}>Add to your home screen for instant access.</Typography>

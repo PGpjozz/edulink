@@ -9,7 +9,6 @@ import {
     ListItemIcon,
     ListItemText,
     Typography,
-    Avatar,
     Divider,
     useTheme,
     useMediaQuery,
@@ -44,7 +43,8 @@ import {
 } from '@mui/icons-material';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
-import { BRAND_DEFAULTS } from '@/lib/branding';
+import { BRAND, BRAND_DEFAULTS } from '@/lib/branding';
+import BrandLogo from '@/app/components/BrandLogo';
 import { useThemeContext } from '@/app/theme/ThemeContext';
 import { useEffect, useState } from 'react';
 import RoleSwitcher from '@/app/components/RoleSwitcher';
@@ -225,9 +225,14 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box p={3} display="flex" alignItems="center" gap={2}>
                 {logoUrl ? (
-                    <Box component="img" src={logoUrl} alt="School Logo" sx={{ width: 40, height: 40, borderRadius: 1 }} />
+                    <Box component="img" src={logoUrl} alt="School logo" sx={{ width: 40, height: 40, borderRadius: 1, objectFit: 'contain' }} />
                 ) : (
-                    <Avatar sx={{ bgcolor: theme.palette.primary.main }}>{BRAND_DEFAULTS.initials}</Avatar>
+                    <Box
+                        component="img"
+                        src={BRAND.logoIconUrl}
+                        alt={`${BRAND_DEFAULTS.appName} logo`}
+                        sx={{ width: 40, height: 40, borderRadius: 1, objectFit: 'contain' }}
+                    />
                 )}
                 <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main' }} noWrap>
                     {schoolName || BRAND_DEFAULTS.appName}
