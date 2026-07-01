@@ -63,4 +63,22 @@ describe('Dashboard roles', () => {
             true
         );
     });
+
+    it('school owner gets principal dashboard in switcher', () => {
+        const roles = resolveAvailableDashboards({
+            primaryRole: 'SCHOOL_OWNER',
+            hasTeacherProfile: false,
+            leadsDepartment: false,
+        });
+        assert.deepEqual(roles, ['SCHOOL_OWNER', 'PRINCIPAL']);
+    });
+
+    it('school admin with teacher profile gets teacher dashboard', () => {
+        const roles = resolveAvailableDashboards({
+            primaryRole: 'SCHOOL_ADMIN',
+            hasTeacherProfile: true,
+            leadsDepartment: false,
+        });
+        assert.deepEqual(roles, ['SCHOOL_ADMIN', 'TEACHER']);
+    });
 });

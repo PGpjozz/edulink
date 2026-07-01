@@ -76,7 +76,7 @@ async function main() {
         }
     });
 
-    await prisma.user.upsert({
+    const principalUser = await prisma.user.upsert({
         where: { email: 'principal@demo.com' },
         update: { id: 'mock-principal-1', role: 'PRINCIPAL', schoolId: school.id, firstName: 'John', lastName: 'Smith', isActive: true },
         create: {
@@ -89,6 +89,12 @@ async function main() {
             schoolId: school.id,
             isActive: true
         }
+    });
+
+    await prisma.teacherProfile.upsert({
+        where: { userId: principalUser.id },
+        update: {},
+        create: { userId: principalUser.id, qualifications: 'BEd' },
     });
 
     const teacherUser = await prisma.user.upsert({
@@ -130,7 +136,7 @@ async function main() {
         }
     });
 
-    await prisma.user.upsert({
+    const adminUser = await prisma.user.upsert({
         where: { email: 'admin@demo.com' },
         update: { id: 'mock-admin-1', role: 'SCHOOL_ADMIN', schoolId: school.id, firstName: 'Admin', lastName: 'User', isActive: true },
         create: {
@@ -143,6 +149,12 @@ async function main() {
             schoolId: school.id,
             isActive: true
         }
+    });
+
+    await prisma.teacherProfile.upsert({
+        where: { userId: adminUser.id },
+        update: {},
+        create: { userId: adminUser.id, qualifications: 'BEd' },
     });
 
     const learnerUser = await prisma.user.upsert({

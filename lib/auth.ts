@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { getNextAuthSecret } from "./env";
 import {
     type DashboardRole,
+    buildDashboardRoleInput,
     defaultDashboardRole,
     resolveAvailableDashboards,
 } from "./dashboard-roles";
@@ -26,11 +27,7 @@ async function loadRoleContext(userId: string) {
 
     const primaryRole = user.role;
     const hasTeacherProfile = Boolean(user.teacherProfile);
-    const availableRoles = resolveAvailableDashboards({
-        primaryRole,
-        hasTeacherProfile,
-        leadsDepartment: user.departmentsLed.length > 0,
-    });
+    const availableRoles = resolveAvailableDashboards(buildDashboardRoleInput(user));
     const activeRole = defaultDashboardRole(primaryRole, availableRoles);
 
     return {
@@ -122,12 +119,17 @@ export const authOptions: NextAuthOptions = {
                     token.permissions = ctx.permissions;
                 }
                 token.id = user.id;
-            } else if (!token.availableRoles && token.id) {
+            } else if (token.id) {
                 const ctx = await loadRoleContext(token.id as string);
                 if (ctx) {
                     token.primaryRole = ctx.primaryRole;
-                    token.activeRole = token.activeRole ?? ctx.activeRole;
-                    token.availableRoles = ctx.availableRoles;
+                    const available = ctx.availableRoles;
+                    const currentActive = token.activeRole as DashboardRole | undefined;
+                    token.activeRole =
+                        currentActive && available.includes(currentActive)
+                            ? currentActive
+                            : ctx.activeRole;
+                    token.availableRoles = available;
                     token.role = ctx.primaryRole;
                     token.hasTeacherProfile = ctx.hasTeacherProfile;
                     token.permissions = ctx.permissions;

@@ -35,6 +35,7 @@ interface LearnerOption {
 }
 
 const GRADES = ['8', '9', '10', '11', '12'];
+const ALSO_TEACHES_ROLES = ['SCHOOL_ADMIN'] as const;
 
 export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalProps) {
     const [firstName, setFirstName] = useState('');
@@ -71,6 +72,7 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
     const reset = () => {
         setFirstName(''); setLastName(''); setEmail(''); setIdNumber('');
         setGrade('8'); setLearnerProfileId(''); setPassword(''); setRole('TEACHER');
+        setAlsoTeaches(false);
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -98,7 +100,9 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
                     password: finalPassword,
                     grade: role === 'LEARNER' ? grade : undefined,
                     learnerProfileId: role === 'PARENT' && learnerProfileId ? learnerProfileId : undefined,
-                    alsoTeaches: role === 'SCHOOL_ADMIN' ? alsoTeaches : undefined,
+                    alsoTeaches: ALSO_TEACHES_ROLES.includes(role as typeof ALSO_TEACHES_ROLES[number])
+                        ? alsoTeaches
+                        : undefined,
                 }),
             });
 
@@ -159,7 +163,7 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
 
                         <FormControl fullWidth margin="dense" sx={{ mt: 2 }}>
                             <InputLabel>Role</InputLabel>
-                            <Select value={role} label="Role" onChange={(e) => { setRole(e.target.value); setError(''); }}>
+                            <Select value={role} label="Role" onChange={(e) => { setRole(e.target.value); setAlsoTeaches(false); setError(''); }}>
                                 <MenuItem value="TEACHER">Teacher</MenuItem>
                                 <MenuItem value="HOD">Head of Department (HOD)</MenuItem>
                                 <MenuItem value="LEARNER">Learner</MenuItem>
@@ -168,7 +172,7 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
                             </Select>
                         </FormControl>
 
-                        {role === 'SCHOOL_ADMIN' && (
+                        {ALSO_TEACHES_ROLES.includes(role as typeof ALSO_TEACHES_ROLES[number]) && (
                             <Box sx={{ mt: 1 }}>
                                 <Typography variant="body2" color="text.secondary">
                                     <label>
@@ -177,7 +181,7 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
                                             checked={alsoTeaches}
                                             onChange={(e) => setAlsoTeaches(e.target.checked)}
                                         />{' '}
-                                        This admin also teaches classes
+                                        This staff member also teaches classes
                                     </label>
                                 </Typography>
                             </Box>
