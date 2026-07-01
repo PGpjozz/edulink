@@ -3,6 +3,46 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { getNextAuthSecret } from "./env";
+import {
+    type DashboardRole,
+    defaultDashboardRole,
+    resolveAvailableDashboards,
+} from "./dashboard-roles";
+
+async function loadRoleContext(userId: string) {
+    const user = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+            role: true,
+            schoolId: true,
+            mustChangePassword: true,
+            permissions: true,
+            teacherProfile: { select: { id: true } },
+            departmentsLed: { select: { id: true } },
+        },
+    });
+
+    if (!user) return null;
+
+    const primaryRole = user.role;
+    const hasTeacherProfile = Boolean(user.teacherProfile);
+    const availableRoles = resolveAvailableDashboards({
+        primaryRole,
+        hasTeacherProfile,
+        leadsDepartment: user.departmentsLed.length > 0,
+    });
+    const activeRole = defaultDashboardRole(primaryRole, availableRoles);
+
+    return {
+        primaryRole,
+        activeRole,
+        availableRoles,
+        schoolId: user.schoolId,
+        mustChangePassword: user.mustChangePassword,
+        hasTeacherProfile,
+        permissions: user.permissions ?? [],
+    };
+}
 
 export const authOptions: NextAuthOptions = {
     providers: [
@@ -36,6 +76,7 @@ export const authOptions: NextAuthOptions = {
                         mustChangePassword: true,
                         permissions: true,
                         teacherProfile: { select: { id: true } },
+                        departmentsLed: { select: { id: true } },
                         school: { select: { isActive: true, name: true } },
                     }
                 });
@@ -67,21 +108,49 @@ export const authOptions: NextAuthOptions = {
         })
     ],
     callbacks: {
-        async jwt({ token, user }) {
-            if (user) {
+        async jwt({ token, user, trigger, session }) {
+            if (user?.id) {
+                const ctx = await loadRoleContext(user.id);
+                if (ctx) {
+                    token.primaryRole = ctx.primaryRole;
+                    token.activeRole = ctx.activeRole;
+                    token.availableRoles = ctx.availableRoles;
+                    token.role = ctx.primaryRole;
+                    token.schoolId = ctx.schoolId;
+                    token.mustChangePassword = ctx.mustChangePassword;
+                    token.hasTeacherProfile = ctx.hasTeacherProfile;
+                    token.permissions = ctx.permissions;
+                }
                 token.id = user.id;
-                token.role = user.role;
-                token.schoolId = user.schoolId;
-                token.mustChangePassword = user.mustChangePassword ?? false;
-                token.hasTeacherProfile = user.hasTeacherProfile ?? false;
-                token.permissions = user.permissions ?? [];
+            } else if (!token.availableRoles && token.id) {
+                const ctx = await loadRoleContext(token.id as string);
+                if (ctx) {
+                    token.primaryRole = ctx.primaryRole;
+                    token.activeRole = token.activeRole ?? ctx.activeRole;
+                    token.availableRoles = ctx.availableRoles;
+                    token.role = ctx.primaryRole;
+                    token.hasTeacherProfile = ctx.hasTeacherProfile;
+                    token.permissions = ctx.permissions;
+                }
             }
+
+            if (trigger === 'update' && session?.activeRole) {
+                const requested = session.activeRole as DashboardRole;
+                const available = (token.availableRoles as DashboardRole[]) ?? [];
+                if (available.includes(requested)) {
+                    token.activeRole = requested;
+                }
+            }
+
             return token;
         },
         async session({ session, token }) {
             if (session.user) {
                 session.user.id = token.id as string;
-                session.user.role = token.role as string;
+                session.user.primaryRole = (token.primaryRole as string) ?? (token.role as string);
+                session.user.activeRole = (token.activeRole as string) ?? session.user.primaryRole;
+                session.user.availableRoles = (token.availableRoles as string[]) ?? [session.user.primaryRole];
+                session.user.role = session.user.primaryRole;
                 session.user.schoolId = token.schoolId as string | null;
                 session.user.mustChangePassword = Boolean(token.mustChangePassword);
                 session.user.hasTeacherProfile = Boolean(token.hasTeacherProfile);

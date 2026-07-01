@@ -4,6 +4,7 @@ import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { CircularProgress, Box } from '@mui/material';
+import { type DashboardRole, dashboardHomePath } from '@/lib/dashboard-roles';
 
 export default function DashboardPage() {
     const { data: session, status } = useSession();
@@ -22,34 +23,8 @@ export default function DashboardPage() {
             return;
         }
 
-        const { role } = session.user;
-
-        switch (role) {
-            case 'PROVIDER':
-                router.push('/dashboard/provider');
-                break;
-            case 'SCHOOL_OWNER':
-                router.push('/dashboard/school-owner');
-                break;
-            case 'PRINCIPAL':
-            case 'SCHOOL_ADMIN':
-                router.push('/dashboard/principal');
-                break;
-            case 'HOD':
-                router.push('/dashboard/hod');
-                break;
-            case 'TEACHER':
-                router.push('/dashboard/teacher');
-                break;
-            case 'LEARNER':
-                router.push('/dashboard/learner');
-                break;
-            case 'PARENT':
-                router.push('/dashboard/parent');
-                break;
-            default:
-                router.push('/unauthorized');
-        }
+        const activeRole = (session.user.activeRole ?? session.user.primaryRole) as DashboardRole;
+        router.push(dashboardHomePath(activeRole));
     }, [session, status, router]);
 
     return (

@@ -46,6 +46,8 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { useThemeContext } from '@/app/theme/ThemeContext';
 import { useEffect, useState } from 'react';
+import RoleSwitcher from '@/app/components/RoleSwitcher';
+import { DASHBOARD_ROLE_LABELS, type DashboardRole, roleForNav } from '@/lib/dashboard-roles';
 
 const DRAWER_WIDTH = 280;
 
@@ -137,28 +139,9 @@ const NAV_ITEMS: Record<string, { label: string; icon: React.ReactNode; path: st
     ]
 };
 
-function getNavItems(role: string, hasTeacherProfile: boolean) {
-    const base = NAV_ITEMS[role] || [];
-    const shared = [{ label: 'Messages', icon: <Message />, path: '/dashboard/messages' }];
-
-    if ((role === 'PRINCIPAL' || role === 'SCHOOL_ADMIN' || role === 'SCHOOL_OWNER') && hasTeacherProfile) {
-        return [
-            ...base,
-            { label: '— Teaching —', icon: <Book />, path: '/dashboard/teacher' },
-            ...TEACHING_NAV.filter((i) => i.path !== '/dashboard/teacher'),
-            ...shared.filter((s) => !base.some((b) => b.path === s.path)),
-        ];
-    }
-
-    if (role === 'HOD' && hasTeacherProfile) {
-        return [
-            ...base,
-            { label: '— My classes —', icon: <Book />, path: '/dashboard/teacher' },
-            ...TEACHING_NAV.filter((i) => i.path !== '/dashboard/teacher'),
-        ];
-    }
-
-    return base;
+function getNavItems(activeRole: string, primaryRole: string) {
+    const navRole = roleForNav(activeRole as DashboardRole, primaryRole);
+    return NAV_ITEMS[navRole] || NAV_ITEMS[activeRole] || [];
 }
 
 interface SidebarProps {
@@ -191,8 +174,9 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
 
     if (!session) return null;
 
-    const role = session.user.role;
-    const items = getNavItems(role, Boolean(session.user.hasTeacherProfile));
+    const primaryRole = session.user.primaryRole ?? session.user.role;
+    const activeRole = session.user.activeRole ?? primaryRole;
+    const items = getNavItems(activeRole, primaryRole);
 
     const drawerContent = (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
@@ -209,10 +193,14 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
 
             <Divider sx={{ mb: 2 }} />
 
+            <RoleSwitcher />
+
             <Box px={2} mb={4}>
                 <Box p={2} sx={{ bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', borderRadius: 2 }}>
                     <Typography variant="subtitle2" fontWeight="bold">{session.user.name}</Typography>
-                    <Typography variant="caption" color="text.secondary">{session.user.role}</Typography>
+                    <Typography variant="caption" color="text.secondary">
+                        {DASHBOARD_ROLE_LABELS[activeRole as DashboardRole] ?? activeRole}
+                    </Typography>
                 </Box>
             </Box>
 

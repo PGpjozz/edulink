@@ -4,7 +4,12 @@ declare module "next-auth" {
     interface Session {
         user: {
             id: string;
+            /** Primary role stored on the user account (used for API permissions). */
             role: string;
+            primaryRole: string;
+            /** Currently selected dashboard role. */
+            activeRole: string;
+            availableRoles: string[];
             schoolId: string | null;
             mustChangePassword: boolean;
             hasTeacherProfile: boolean;
@@ -25,6 +30,9 @@ declare module "next-auth/jwt" {
     interface JWT {
         id: string;
         role: string;
+        primaryRole: string;
+        activeRole: string;
+        availableRoles: string[];
         schoolId: string | null;
         mustChangePassword: boolean;
         hasTeacherProfile: boolean;

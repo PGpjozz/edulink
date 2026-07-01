@@ -5,6 +5,7 @@ import { Box, AppBar, Toolbar, IconButton, Typography, useMediaQuery, useTheme }
 import { Menu as MenuIcon, Brightness4, Brightness7 } from '@mui/icons-material';
 import { useThemeContext } from '@/app/theme/ThemeContext';
 import Sidebar from '@/app/components/Sidebar';
+import DashboardPathGuard from '@/app/components/DashboardPathGuard';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const theme = useTheme();
@@ -78,6 +79,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     width: { md: `calc(100% - 280px)` },
                 }}
             >
+                <DashboardPathGuard />
                 {children}
             </Box>
         </Box>

@@ -2,6 +2,7 @@ import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateSaId, normalizeSaId } from '../../lib/sa-id';
 import { validatePassword, generateTemporaryPassword } from '../../lib/password';
+import { resolveAvailableDashboards, canAccessDashboardPath } from '../../lib/dashboard-roles';
 
 describe('SA ID validation', () => {
     it('accepts a valid test ID', () => {
@@ -33,5 +34,33 @@ describe('Password policy', () => {
         const pw = generateTemporaryPassword();
         assert.ok(pw.length >= 12);
         assert.equal(validatePassword(pw), null);
+    });
+});
+
+describe('Dashboard roles', () => {
+    it('principal with teacher profile gets teacher dashboard', () => {
+        const roles = resolveAvailableDashboards({
+            primaryRole: 'PRINCIPAL',
+            hasTeacherProfile: true,
+            leadsDepartment: false,
+        });
+        assert.deepEqual(roles, ['PRINCIPAL', 'TEACHER']);
+    });
+
+    it('teacher leading a department gets HOD dashboard', () => {
+        const roles = resolveAvailableDashboards({
+            primaryRole: 'TEACHER',
+            hasTeacherProfile: true,
+            leadsDepartment: true,
+        });
+        assert.ok(roles.includes('TEACHER'));
+        assert.ok(roles.includes('HOD'));
+    });
+
+    it('school owner can access principal paths', () => {
+        assert.equal(
+            canAccessDashboardPath('/dashboard/principal/finance', ['SCHOOL_OWNER']),
+            true
+        );
     });
 });
