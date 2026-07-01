@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { calculateSchoolBill, type BillingTier } from '@/lib/provider-pricing';
 import { writeAuditLog } from '@/lib/api-auth';
-import { calendarBillingPeriod } from '@/lib/subscription';
+import { calendarBillingPeriod, isLatestBillingOverdue } from '@/lib/subscription';
 import { sendEmail, subscriptionInvoiceEmailHtml } from '@/lib/email';
 import { BRAND } from '@/lib/branding';
 
@@ -192,13 +192,28 @@ export async function processOverdueSuspensions(providerUserId: string) {
 
     const overdue = await prisma.billing.findMany({
         where: { status: 'PAST_DUE', createdAt: { lte: cutoff } },
-        include: { school: { select: { id: true, name: true, isActive: true } } },
+        include: {
+            school: {
+                select: {
+                    id: true,
+                    name: true,
+                    isActive: true,
+                    billings: {
+                        orderBy: [{ periodEnd: 'desc' }, { createdAt: 'desc' }],
+                        take: 1,
+                        select: { id: true, status: true, createdAt: true },
+                    },
+                },
+            },
+        },
     });
 
     const suspended: string[] = [];
 
     for (const bill of overdue) {
         if (!bill.school.isActive) continue;
+        const latestBilling = bill.school.billings[0];
+        if (!isLatestBillingOverdue(bill, latestBilling, cutoff)) continue;
         await suspendSchoolForOverdue(bill.schoolId);
         await writeAuditLog({
             schoolId: bill.schoolId,

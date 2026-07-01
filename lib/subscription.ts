@@ -28,6 +28,25 @@ export function calendarBillingPeriod(reference: Date = new Date()) {
     return { periodStart, periodEnd };
 }
 
+type BillingLifecycleRecord = {
+    id: string;
+    status: string;
+    createdAt: Date;
+};
+
+export function isLatestBillingOverdue(
+    candidate: BillingLifecycleRecord,
+    latestBilling: BillingLifecycleRecord | null | undefined,
+    cutoff: Date,
+): boolean {
+    return Boolean(
+        latestBilling &&
+            candidate.id === latestBilling.id &&
+            latestBilling.status === 'PAST_DUE' &&
+            latestBilling.createdAt <= cutoff,
+    );
+}
+
 export function formatBillingPeriod(start: Date, end: Date): string {
     const fmt = (d: Date) =>
         d.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });

@@ -149,6 +149,30 @@ describe('Tuition vs SaaS fees', () => {
         assert.equal(getTuitionFee({ tuitionFee: 2000 }), 2000);
         assert.equal(getTuitionFee({ tuitionFee: 0 }), 1500);
     });
+
+    it('only treats the latest bill as suspension-eligible', () => {
+        const { isLatestBillingOverdue } = require('../../lib/subscription');
+        const cutoff = new Date('2026-03-01T00:00:00Z');
+        const stalePastDue = {
+            id: 'jan',
+            status: 'PAST_DUE',
+            createdAt: new Date('2026-01-31T00:00:00Z'),
+        };
+        const latestPaid = {
+            id: 'feb',
+            status: 'ACTIVE',
+            createdAt: new Date('2026-02-28T00:00:00Z'),
+        };
+        const latestPastDue = {
+            id: 'mar',
+            status: 'PAST_DUE',
+            createdAt: new Date('2026-01-30T00:00:00Z'),
+        };
+
+        assert.equal(isLatestBillingOverdue(stalePastDue, latestPaid, cutoff), false);
+        assert.equal(isLatestBillingOverdue(stalePastDue, latestPastDue, cutoff), false);
+        assert.equal(isLatestBillingOverdue(latestPastDue, latestPastDue, cutoff), true);
+    });
 });
 
 describe('Impersonation tokens', () => {
