@@ -35,7 +35,11 @@ const PAGE_TITLES: Record<string, string> = {
     '/dashboard/announcements/new': 'New Announcement',
     '/dashboard/school-owner': 'Overview',
     '/dashboard/school-owner/invites': 'Invites',
-    '/dashboard/provider': 'Provider',
+    '/dashboard/provider': 'Overview',
+    '/dashboard/provider/onboard': 'Onboard School',
+    '/dashboard/provider/schools': 'Schools',
+    '/dashboard/provider/billing': 'Billing',
+    '/dashboard/provider/audit': 'Audit',
     '/dashboard/change-password': 'Change Password',
 };
 

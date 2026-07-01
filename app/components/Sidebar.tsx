@@ -96,7 +96,11 @@ const OWNER_NAV = [
 
 const NAV_ITEMS: Record<string, { label: string; icon: React.ReactNode; path: string }[]> = {
     PROVIDER: [
-        { label: 'Dashboard', icon: <Dashboard />, path: '/dashboard/provider' }
+        { label: 'Overview', icon: <Dashboard />, path: '/dashboard/provider' },
+        { label: 'Onboard', icon: <AppRegistration />, path: '/dashboard/provider/onboard' },
+        { label: 'Schools', icon: <School />, path: '/dashboard/provider/schools' },
+        { label: 'Billing', icon: <ReceiptLong />, path: '/dashboard/provider/billing' },
+        { label: 'Audit', icon: <HistoryIcon />, path: '/dashboard/provider/audit' },
     ],
     SCHOOL_OWNER: OWNER_NAV,
     PRINCIPAL: [

@@ -102,3 +102,38 @@ export function passwordResetTempEmailHtml(params: { tempPassword: string; signI
         <p><a href="${params.signInUrl}">Sign in to ${BRAND.name}</a></p>
     `);
 }
+
+export function onboardWelcomeEmailHtml(params: {
+    schoolName: string;
+    role: string;
+    email: string;
+    tempPassword: string;
+    signInUrl: string;
+    firstName?: string;
+}) {
+    const name = params.firstName?.trim() || 'there';
+    return emailLayout(`
+        <p>Hi ${name},</p>
+        <p>Welcome to <strong>${params.schoolName}</strong> on ${BRAND.name}! Your ${params.role} account is ready.</p>
+        <p><strong>Email:</strong> ${params.email}<br/>
+        <strong>Temporary password:</strong> ${params.tempPassword}</p>
+        <p>Please sign in and change your password immediately:</p>
+        <p><a href="${params.signInUrl}">Sign in to ${BRAND.name}</a></p>
+    `);
+}
+
+export function billingReminderEmailHtml(params: {
+    schoolName: string;
+    contactName: string;
+    amount: number;
+    daysOverdue: number;
+    payUrl: string;
+}) {
+    return emailLayout(`
+        <p>Hi ${params.contactName},</p>
+        <p>This is a friendly reminder that the <strong>${params.schoolName}</strong> subscription on ${BRAND.name} is overdue by <strong>${params.daysOverdue} day(s)</strong>.</p>
+        <p><strong>Amount due:</strong> R ${params.amount.toFixed(2)}</p>
+        <p><a href="${params.payUrl}">View subscription and pay now</a></p>
+        <p>If you've already paid, you can ignore this message.</p>
+    `);
+}

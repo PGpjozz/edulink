@@ -30,6 +30,7 @@ export const BRAND_DEFAULTS = {
     /** Dev route secrets */
     seedSecret: 'brightcampus-seed-2026',
     setupSecret: 'brightcampus-setup-2026',
+    billingCronSecret: 'brightcampus-billing-cron-2026',
 } as const;
 
 export function brandEmailFrom(): string {

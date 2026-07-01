@@ -14,6 +14,7 @@ declare module "next-auth" {
             mustChangePassword: boolean;
             hasTeacherProfile: boolean;
             permissions: string[];
+            impersonatedBy?: string;
         } & DefaultSession["user"];
     }
 
@@ -23,6 +24,7 @@ declare module "next-auth" {
         mustChangePassword?: boolean;
         hasTeacherProfile?: boolean;
         permissions?: string[];
+        impersonatedBy?: string;
     }
 }
 
@@ -37,5 +39,6 @@ declare module "next-auth/jwt" {
         mustChangePassword: boolean;
         hasTeacherProfile: boolean;
         permissions: string[];
+        impersonatedBy?: string;
     }
 }

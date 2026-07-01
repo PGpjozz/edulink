@@ -118,3 +118,33 @@ describe('Dashboard roles', () => {
         );
     });
 });
+
+describe('Provider pricing', () => {
+    it('uses school monthly fee for billing base', () => {
+        const { calculateSchoolBill, getTierDefaultFee } = require('../../lib/provider-pricing');
+        const bill = calculateSchoolBill({ tier: 'SMALL', monthlyFee: 3000 }, 50);
+        assert.equal(bill.baseAmount, 3000);
+        assert.equal(bill.totalAmount, 3000);
+        assert.equal(getTierDefaultFee('MEDIUM'), 5500);
+    });
+
+    it('applies learner overage above tier limit', () => {
+        const { calculateSchoolBill } = require('../../lib/provider-pricing');
+        const bill = calculateSchoolBill({ tier: 'SMALL', monthlyFee: 2500 }, 220);
+        assert.equal(bill.extraLearners, 20);
+        assert.equal(bill.extraAmount, 300);
+        assert.equal(bill.totalAmount, 2800);
+    });
+});
+
+describe('Impersonation tokens', () => {
+    it('creates and verifies provider impersonation token', () => {
+        process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-secret-for-smoke-tests-32chars';
+        const { createImpersonationToken, verifyImpersonationToken } = require('../../lib/impersonation-token');
+        const token = createImpersonationToken('provider-1', 'user-2');
+        const parsed = verifyImpersonationToken(token);
+        assert.ok(parsed);
+        assert.equal(parsed?.providerUserId, 'provider-1');
+        assert.equal(parsed?.targetUserId, 'user-2');
+    });
+});

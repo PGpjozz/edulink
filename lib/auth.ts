@@ -3,11 +3,59 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { prisma } from "./prisma";
 import bcrypt from "bcryptjs";
 import { getNextAuthSecret } from "./env";
+import { verifyImpersonationToken } from "./impersonation-token";
 import {
     type DashboardRole,
     defaultDashboardRole,
     resolveAvailableDashboards,
 } from "./dashboard-roles";
+
+async function authorizeImpersonation(impersonationToken: string) {
+    const parsed = verifyImpersonationToken(impersonationToken);
+    if (!parsed) throw new Error("Invalid or expired impersonation link");
+
+    const provider = await prisma.user.findUnique({
+        where: { id: parsed.providerUserId },
+        select: { id: true, role: true, isActive: true },
+    });
+    if (!provider?.isActive || provider.role !== 'PROVIDER') {
+        throw new Error("Invalid impersonation session");
+    }
+
+    const user = await prisma.user.findUnique({
+        where: { id: parsed.targetUserId },
+        select: {
+            id: true,
+            email: true,
+            firstName: true,
+            lastName: true,
+            role: true,
+            schoolId: true,
+            isActive: true,
+            mustChangePassword: true,
+            permissions: true,
+            teacherProfile: { select: { id: true } },
+            departmentsLed: { select: { id: true } },
+            school: { select: { isActive: true, name: true } },
+        },
+    });
+
+    if (!user || !user.isActive || user.role === 'PROVIDER') {
+        throw new Error("Cannot impersonate this user");
+    }
+
+    return {
+        id: user.id,
+        name: `${user.firstName} ${user.lastName}`,
+        email: user.email || '',
+        role: user.role,
+        schoolId: user.schoolId,
+        mustChangePassword: user.mustChangePassword,
+        hasTeacherProfile: !!user.teacherProfile,
+        permissions: user.permissions ?? [],
+        impersonatedBy: provider.id,
+    };
+}
 
 async function loadRoleContext(userId: string) {
     const user = await prisma.user.findUnique({
@@ -50,9 +98,14 @@ export const authOptions: NextAuthOptions = {
             name: "Credentials",
             credentials: {
                 identifier: { label: "Email or ID Number", type: "text" },
-                password: { label: "Password", type: "password" }
+                password: { label: "Password", type: "password" },
+                impersonationToken: { label: "Impersonation Token", type: "text" },
             },
             async authorize(credentials) {
+                if (credentials?.impersonationToken) {
+                    return authorizeImpersonation(credentials.impersonationToken);
+                }
+
                 if (!credentials?.identifier || !credentials?.password) {
                     throw new Error("Missing credentials");
                 }
@@ -122,6 +175,9 @@ export const authOptions: NextAuthOptions = {
                     token.permissions = ctx.permissions;
                 }
                 token.id = user.id;
+                if ((user as { impersonatedBy?: string }).impersonatedBy) {
+                    token.impersonatedBy = (user as { impersonatedBy?: string }).impersonatedBy;
+                }
             } else if (!token.availableRoles && token.id) {
                 const ctx = await loadRoleContext(token.id as string);
                 if (ctx) {
@@ -155,6 +211,7 @@ export const authOptions: NextAuthOptions = {
                 session.user.mustChangePassword = Boolean(token.mustChangePassword);
                 session.user.hasTeacherProfile = Boolean(token.hasTeacherProfile);
                 session.user.permissions = (token.permissions as string[]) ?? [];
+                session.user.impersonatedBy = token.impersonatedBy as string | undefined;
             }
             return session;
         }

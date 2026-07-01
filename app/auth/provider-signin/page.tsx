@@ -16,6 +16,7 @@ import {
 import { BRAND, BRAND_DEFAULTS } from '@/lib/branding';
 import BrandLogo from '@/app/components/BrandLogo';
 import { motion } from 'framer-motion';
+import { signOut } from 'next-auth/react';
 
 function ProviderSignInInner() {
     const router = useRouter();
@@ -41,6 +42,15 @@ function ProviderSignInInner() {
 
         if (res?.error) {
             setError('Invalid credentials');
+            setLoading(false);
+            return;
+        }
+
+        const sessionRes = await fetch('/api/auth/session');
+        const session = await sessionRes.json();
+        if (session?.user?.primaryRole !== 'PROVIDER' && session?.user?.role !== 'PROVIDER') {
+            await signOut({ redirect: false });
+            setError('This page is for BrightCampus platform providers only.');
             setLoading(false);
             return;
         }

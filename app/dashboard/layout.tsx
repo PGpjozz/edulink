@@ -11,6 +11,7 @@ import ParentMobileNav from '@/app/components/ParentMobileNav';
 import ParentChildBar from '@/app/components/ParentChildBar';
 import TeacherMobileNav from '@/app/components/TeacherMobileNav';
 import PrivacyConsentGate from '@/app/components/PrivacyConsentGate';
+import ImpersonationBanner from '@/app/components/ImpersonationBanner';
 import NotificationDropdown from '@/app/components/NotificationDropdown';
 import { getPageTitle } from '@/lib/page-titles';
 import { BRAND_DEFAULTS } from '@/lib/branding';
@@ -98,6 +99,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
             >
                 <DashboardPathGuard />
                 <PrivacyConsentGate />
+                {session?.user?.impersonatedBy && <ImpersonationBanner />}
                 {!isMobile && (
                     <Box display="flex" justifyContent="flex-end" alignItems="center" gap={1} mb={2}>
                         <NotificationDropdown />

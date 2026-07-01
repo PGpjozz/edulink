@@ -1,8 +1,9 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
+import { requireAuth } from '@/lib/api-auth';
+import { getEffectiveMonthlyFee, type BillingTier } from '@/lib/provider-pricing';
 
-export async function GET(req: Request) {
+export async function GET() {
     const auth = await requireAuth({ roles: ['PROVIDER'] });
     if (auth instanceof NextResponse) return auth;
 
@@ -10,52 +11,50 @@ export async function GET(req: Request) {
         const schools = await prisma.school.findMany({
             orderBy: { createdAt: 'desc' },
             include: {
+                owner: { select: { id: true, email: true, firstName: true, lastName: true } },
+                billings: {
+                    orderBy: { createdAt: 'desc' },
+                    take: 1,
+                    select: { id: true, status: true, totalAmount: true, createdAt: true },
+                },
                 _count: {
-                    select: { users: true, classes: true }
-                }
-            }
+                    select: {
+                        users: true,
+                        classes: true,
+                    },
+                },
+            },
         });
 
-        return NextResponse.json(schools);
+        const learnerCounts = await prisma.user.groupBy({
+            by: ['schoolId'],
+            where: { role: 'LEARNER', isActive: true, schoolId: { not: null } },
+            _count: true,
+        });
+        const learnerMap = new Map(learnerCounts.map((r) => [r.schoolId!, r._count]));
+
+        const enriched = schools.map((school) => ({
+            ...school,
+            learnerCount: learnerMap.get(school.id) ?? 0,
+            latestBilling: school.billings[0] ?? null,
+            effectiveMonthlyFee: getEffectiveMonthlyFee({
+                tier: school.tier as BillingTier,
+                monthlyFee: school.monthlyFee,
+            }),
+        }));
+
+        return NextResponse.json(enriched);
     } catch (error) {
         console.error('Error fetching schools:', error);
-        return new NextResponse('Internal Error', { status: 500 });
+        return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
     }
 }
 
-export async function POST(req: Request) {
-    const auth = await requireAuth({ roles: ['PROVIDER'] });
-    if (auth instanceof NextResponse) return auth;
-
-    try {
-        const body = await readJson<{ name?: string; contactEmail?: string; tier?: string }>(req);
-        if (body instanceof NextResponse) return body;
-        const { name, contactEmail, tier } = body;
-
-        if (!name || !contactEmail || !tier) {
-            return new NextResponse('Missing required fields', { status: 400 });
-        }
-
-        const school = await prisma.school.create({
-            data: {
-                name,
-                contactEmail,
-                tier: tier as any,
-            }
-        });
-
-        await writeAuditLog({
-            schoolId: school.id,
-            userId: auth.userId,
-            action: 'CREATE_SCHOOL',
-            entity: 'SCHOOL',
-            entityId: school.id,
-            details: { name, tier, contactEmail }
-        });
-
-        return NextResponse.json(school);
-    } catch (error) {
-        console.error('Error creating school:', error);
-        return new NextResponse('Internal Error', { status: 500 });
-    }
+export async function POST() {
+    return NextResponse.json(
+        {
+            error: 'Quick school creation is disabled. Use the full onboard flow at /dashboard/provider/onboard.',
+        },
+        { status: 410 },
+    );
 }

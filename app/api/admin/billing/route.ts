@@ -1,32 +1,26 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
-type BillingTier = 'SMALL' | 'MEDIUM' | 'LARGE';
-
-const TIER_PRICES: Record<BillingTier, number> = {
-    SMALL: 500,
-    MEDIUM: 1500,
-    LARGE: 5000
-};
-
-const TIER_LIMITS: Record<BillingTier, number> = {
-    SMALL: 100,
-    MEDIUM: 500,
-    LARGE: Infinity
-};
+import { createBillForSchool } from '@/lib/provider-billing';
 
 export async function GET(req: Request) {
     const auth = await requireAuth({ roles: ['PROVIDER'] });
     if (auth instanceof NextResponse) return auth;
 
     try {
+        const { searchParams } = new URL(req.url);
+        const status = searchParams.get('status');
+
         const billingHistory = await prisma.billing.findMany({
-            include: { school: true },
-            orderBy: { createdAt: 'desc' }
+            where: status ? { status: status as 'ACTIVE' | 'PAST_DUE' | 'CANCELLED' } : undefined,
+            include: { school: { select: { id: true, name: true, tier: true } } },
+            orderBy: { createdAt: 'desc' },
+            take: 500,
         });
         return NextResponse.json(billingHistory);
     } catch (error) {
-        return new NextResponse('Internal Error', { status: 500 });
+        console.error('billing GET', error);
+        return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
     }
 }
 
@@ -40,48 +34,17 @@ export async function POST(req: Request) {
         const { schoolId } = body;
 
         if (!schoolId) {
-            return new NextResponse('Missing schoolId', { status: 400 });
+            return NextResponse.json({ error: 'Missing schoolId' }, { status: 400 });
         }
 
-        const school = await prisma.school.findUnique({
-            where: { id: schoolId },
-            include: { _count: { select: { users: { where: { role: 'LEARNER' } } } } }
-        });
+        const result = await createBillForSchool(schoolId, auth.userId);
+        if (!result.ok) {
+            return NextResponse.json({ error: result.error }, { status: 404 });
+        }
 
-        if (!school) return new NextResponse('School not found', { status: 404 });
-
-        const learnerCount = school._count.users;
-        const basePrice = TIER_PRICES[school.tier as BillingTier];
-        const limit = TIER_LIMITS[school.tier as BillingTier];
-        const extraLearners = Math.max(0, learnerCount - limit);
-        const extraAmount = extraLearners * 10;
-        const totalAmount = basePrice + extraAmount;
-
-        const billing = await prisma.billing.create({
-            data: {
-                schoolId,
-                periodStart: new Date(), // Simulating monthly bill from now
-                periodEnd: new Date(new Date().setMonth(new Date().getMonth() + 1)),
-                baseAmount: basePrice,
-                extraLearners,
-                extraAmount,
-                totalAmount,
-                status: 'PAST_DUE'
-            }
-        });
-
-        // Create Audit Log
-        await writeAuditLog({
-            schoolId,
-            userId: auth.userId,
-            action: 'GENERATE_BILL',
-            entity: 'BILLING',
-            entityId: billing.id,
-            details: { totalAmount, learnerCount }
-        });
-
-        return NextResponse.json(billing);
+        return NextResponse.json(result.billing);
     } catch (error) {
-        return new NextResponse('Internal Error', { status: 500 });
+        console.error('billing POST', error);
+        return NextResponse.json({ error: 'Internal Error' }, { status: 500 });
     }
 }
