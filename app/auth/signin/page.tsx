@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { signIn, signOut, getSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Box,
     Button,
@@ -16,19 +16,43 @@ import {
     Grid,
     useTheme,
     useMediaQuery,
+    Avatar,
 } from '@mui/material';
 import { School, Lock, Email } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import { useThemeContext } from '@/app/theme/ThemeContext';
 
-export default function SignIn() {
+function SignInInner() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const { setPrimaryColor, setLogoUrl } = useThemeContext();
     const [tabIndex, setTabIndex] = useState(0);
     const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+    const [branding, setBranding] = useState<{ name: string | null; logoUrl: string | null; primaryColor: string | null }>({
+        name: null,
+        logoUrl: null,
+        primaryColor: null,
+    });
+
+    useEffect(() => {
+        const subdomain = searchParams.get('school') || 'westview';
+        fetch(`/api/school/branding/public?subdomain=${encodeURIComponent(subdomain)}`)
+            .then((r) => r.json())
+            .then((data) => {
+                setBranding(data);
+                if (data.primaryColor) setPrimaryColor(data.primaryColor);
+                if (data.logoUrl) setLogoUrl(data.logoUrl);
+            })
+            .catch(() => {});
+    }, [searchParams, setPrimaryColor, setLogoUrl]);
+
+    const schoolLabel = branding.name ?? 'EduLink';
+    const portalTitle = branding.name ? `${branding.name} portal` : 'Your school, connected';
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -67,6 +91,25 @@ export default function SignIn() {
         setPassword('');
         setError('');
     };
+
+    const brandPanel = (
+        <Box maxWidth={400}>
+            {branding.logoUrl ? (
+                <Avatar src={branding.logoUrl} alt={schoolLabel} sx={{ width: 64, height: 64, mb: 2 }} />
+            ) : (
+                <School sx={{ fontSize: 56, mb: 2, opacity: 0.9 }} />
+            )}
+            <Typography variant="h3" fontWeight="bold" gutterBottom>
+                {schoolLabel}
+            </Typography>
+            <Typography variant="h6" sx={{ opacity: 0.9, mb: 3, fontWeight: 400 }}>
+                {portalTitle}
+            </Typography>
+            <Typography variant="body2" sx={{ opacity: 0.75 }}>
+                Parents, teachers, and learners stay in sync with real-time updates from your school.
+            </Typography>
+        </Box>
+    );
 
     const formPanel = (
         <Paper
@@ -148,8 +191,19 @@ export default function SignIn() {
 
     if (isMobile) {
         return (
-            <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center" p={2} bgcolor="background.default">
-                {formPanel}
+            <Box minHeight="100vh" display="flex" flexDirection="column" bgcolor="background.default">
+                <Box
+                    sx={{
+                        p: 3,
+                        background: `linear-gradient(145deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                        color: 'primary.contrastText',
+                    }}
+                >
+                    {brandPanel}
+                </Box>
+                <Box flex={1} display="flex" alignItems="center" justifyContent="center" p={2}>
+                    {formPanel}
+                </Box>
             </Box>
         );
     }
@@ -168,18 +222,7 @@ export default function SignIn() {
                     color: 'primary.contrastText',
                 }}
             >
-                <Box maxWidth={400}>
-                    <School sx={{ fontSize: 56, mb: 2, opacity: 0.9 }} />
-                    <Typography variant="h3" fontWeight="bold" gutterBottom>
-                        EduLink
-                    </Typography>
-                    <Typography variant="h6" sx={{ opacity: 0.9, mb: 3, fontWeight: 400 }}>
-                        Your school, connected — attendance, grades, messages, and more in one place.
-                    </Typography>
-                    <Typography variant="body2" sx={{ opacity: 0.75 }}>
-                        Parents, teachers, and learners stay in sync with real-time updates from your school.
-                    </Typography>
-                </Box>
+                {brandPanel}
             </Grid>
             <Grid
                 size={{ xs: 12, md: 6 }}
@@ -194,5 +237,13 @@ export default function SignIn() {
                 {formPanel}
             </Grid>
         </Grid>
+    );
+}
+
+export default function SignIn() {
+    return (
+        <Suspense fallback={<Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center"><CircularProgress /></Box>}>
+            <SignInInner />
+        </Suspense>
     );
 }

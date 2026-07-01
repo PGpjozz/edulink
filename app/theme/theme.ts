@@ -119,7 +119,26 @@ export const getTheme = (mode: 'light' | 'dark', primaryColor: string = '#4338ca
               borderRadius: 10,
               '&.Mui-focused fieldset': {
                 borderWidth: 2,
+                borderColor: primaryColor,
               },
+            },
+          },
+        },
+      },
+      MuiSelect: {
+        styleOverrides: {
+          root: {
+            borderRadius: 10,
+          },
+        },
+      },
+      MuiOutlinedInput: {
+        styleOverrides: {
+          root: {
+            borderRadius: 10,
+            '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+              borderWidth: 2,
+              borderColor: primaryColor,
             },
           },
         },
@@ -178,6 +197,16 @@ export const getTheme = (mode: 'light' | 'dark', primaryColor: string = '#4338ca
         styleOverrides: {
           root: {
             borderRadius: 10,
+            '&.Mui-selected': {
+              bgcolor: alpha(primaryColor, isDark ? 0.18 : 0.1),
+              color: primaryColor,
+              '&:hover': {
+                bgcolor: alpha(primaryColor, isDark ? 0.22 : 0.14),
+              },
+              '& .MuiListItemIcon-root': {
+                color: primaryColor,
+              },
+            },
           },
         },
       },

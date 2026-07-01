@@ -14,6 +14,8 @@ interface ThemeContextType {
     setPrimaryColor: (color: string) => void;
     logoUrl: string;
     setLogoUrl: (url: string) => void;
+    schoolName: string;
+    setSchoolName: (name: string) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -36,6 +38,7 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
         return saved ?? '#4338ca';
     });
     const [logoUrl, setLogoUrl] = useState('');
+    const [schoolName, setSchoolName] = useState('');
     const { data: session } = useSession();
 
     // Fetch school-specific branding when session is available
@@ -54,6 +57,9 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
                     }
                     if (data.logoUrl) {
                         setLogoUrl(data.logoUrl);
+                    }
+                    if (data.name) {
+                        setSchoolName(data.name);
                     }
                 })
                 .catch(() => { });
@@ -98,8 +104,10 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
         primaryColor,
         setPrimaryColor: handleSetPrimaryColor,
         logoUrl,
-        setLogoUrl
-    }), [mode, toggleTheme, primaryColor, handleSetPrimaryColor, logoUrl, setLogoUrl]);
+        setLogoUrl,
+        schoolName,
+        setSchoolName,
+    }), [mode, toggleTheme, primaryColor, handleSetPrimaryColor, logoUrl, setLogoUrl, schoolName, setSchoolName]);
 
     return (
         <ThemeContext.Provider value={value}>

@@ -46,6 +46,7 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
 import { useThemeContext } from '@/app/theme/ThemeContext';
 import { useEffect, useState } from 'react';
+import RoleChip from '@/app/components/ui/RoleChip';
 
 const DRAWER_WIDTH = 280;
 
@@ -176,7 +177,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
     const router = useRouter();
     const { data: session } = useSession();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-    const { mode, toggleTheme, logoUrl } = useThemeContext();
+    const { mode, toggleTheme, logoUrl, schoolName } = useThemeContext();
     const [unreadCount, setUnreadCount] = useState(0);
     const [unreadMessages, setUnreadMessages] = useState(0);
 
@@ -218,8 +219,8 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                 ) : (
                     <Avatar sx={{ bgcolor: theme.palette.primary.main }}>EL</Avatar>
                 )}
-                <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main' }}>
-                    EduLink
+                <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main' }} noWrap>
+                    {schoolName || 'EduLink'}
                 </Typography>
             </Box>
 
@@ -228,7 +229,9 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
             <Box px={2} mb={4}>
                 <Box p={2} sx={{ bgcolor: mode === 'dark' ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)', borderRadius: 2 }}>
                     <Typography variant="subtitle2" fontWeight="bold">{session.user.name}</Typography>
-                    <Typography variant="caption" color="text.secondary">{session.user.role}</Typography>
+                    <Box mt={0.5}>
+                        <RoleChip role={role} />
+                    </Box>
                 </Box>
             </Box>
 
@@ -256,6 +259,7 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                     return (
                         <ListItem key={item.path} disablePadding sx={{ mb: 1 }}>
                             <ListItemButton
+                                selected={isActive}
                                 onClick={() => {
                                     router.push(item.path);
                                     requestAnimationFrame(() => (document.activeElement as HTMLElement | null)?.blur?.());
@@ -264,15 +268,10 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                                 sx={{
                                     borderRadius: 2,
                                     mx: 2,
-                                    bgcolor: isActive ? 'action.selected' : 'transparent',
-                                    color: isActive ? 'primary.main' : 'inherit',
                                     fontWeight: isActive ? 700 : 500,
                                     borderLeft: isActive ? 3 : 0,
                                     borderColor: 'primary.main',
                                     pl: isActive ? 1.5 : 2,
-                                    '&:hover': {
-                                        bgcolor: isActive ? 'action.selected' : 'action.hover',
-                                    },
                                 }}
                             >
                                 <ListItemIcon sx={{ color: isActive ? 'inherit' : 'gray' }}>

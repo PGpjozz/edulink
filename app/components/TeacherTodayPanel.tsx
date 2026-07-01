@@ -1,9 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Paper, Typography, Box, Stack, Chip, Button, Skeleton } from '@mui/material';
-import { Assignment, EventAvailable } from '@mui/icons-material';
+import { Typography, Box, Stack, Chip, Button } from '@mui/material';
+import { Assignment, EventAvailable, Schedule } from '@mui/icons-material';
 import Link from 'next/link';
+import ContentPanel from '@/app/components/ui/ContentPanel';
+import LoadingSkeleton from '@/app/components/ui/LoadingSkeleton';
 
 type HomeworkItem = {
     id: string;
@@ -23,10 +25,12 @@ export default function TeacherTodayPanel() {
         Promise.all([
             fetch('/api/homework').then((r) => r.json()),
             fetch('/api/classes').then((r) => r.json()),
-        ]).then(([hw, cls]) => {
-            setHomework(Array.isArray(hw) ? hw : []);
-            setClasses(Array.isArray(cls) ? cls : []);
-        }).finally(() => setLoading(false));
+        ])
+            .then(([hw, cls]) => {
+                setHomework(Array.isArray(hw) ? hw : []);
+                setClasses(Array.isArray(cls) ? cls : []);
+            })
+            .finally(() => setLoading(false));
     }, []);
 
     const now = Date.now();
@@ -38,29 +42,35 @@ export default function TeacherTodayPanel() {
     const needsGrading = homework.filter((h) => (h._count?.submissions ?? 0) > 0);
 
     if (loading) {
-        return <Skeleton variant="rounded" height={120} sx={{ mb: 3 }} />;
-    }
-
-    if (dueSoon.length === 0 && needsGrading.length === 0 && classes.length === 0) {
-        return null;
+        return <LoadingSkeleton variant="list" count={1} />;
     }
 
     return (
-        <Paper variant="outlined" sx={{ p: 2, mb: 3, borderRadius: 2 }}>
-            <Typography variant="subtitle1" fontWeight="bold" gutterBottom>Today</Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} flexWrap="wrap">
+        <ContentPanel
+            title="Today's focus"
+            subtitle="Quick actions for your classes and homework"
+            sx={{
+                mb: 3,
+                bgcolor: 'action.hover',
+                borderColor: 'primary.light',
+            }}
+        >
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} flexWrap="wrap">
                 {classes.length > 0 && (
-                    <Box>
-                        <Typography variant="caption" color="text.secondary">Attendance</Typography>
-                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 0.5 }}>
-                            {classes.slice(0, 3).map((c) => (
+                    <Box flex={1} minWidth={200}>
+                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                            TAKE ATTENDANCE
+                        </Typography>
+                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
+                            {classes.slice(0, 4).map((c) => (
                                 <Button
                                     key={c.id}
-                                    size="small"
-                                    variant="outlined"
+                                    size="medium"
+                                    variant="contained"
                                     component={Link}
                                     href={`/dashboard/teacher/class/${c.id}/attendance`}
                                     startIcon={<EventAvailable />}
+                                    sx={{ minHeight: 44 }}
                                 >
                                     {c.name}
                                 </Button>
@@ -69,26 +79,48 @@ export default function TeacherTodayPanel() {
                     </Box>
                 )}
                 {dueSoon.length > 0 && (
-                    <Box>
-                        <Typography variant="caption" color="text.secondary">Due this week</Typography>
-                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 0.5 }}>
+                    <Box flex={1} minWidth={200}>
+                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                            DUE THIS WEEK
+                        </Typography>
+                        <Stack direction="row" spacing={1} flexWrap="wrap" sx={{ mt: 1 }}>
                             {dueSoon.slice(0, 3).map((h) => (
-                                <Chip key={h.id} size="small" label={`${h.title} · ${new Date(h.dueDate).toLocaleDateString()}`} />
+                                <Chip
+                                    key={h.id}
+                                    size="small"
+                                    color="warning"
+                                    label={`${h.title} · ${new Date(h.dueDate).toLocaleDateString()}`}
+                                />
                             ))}
                         </Stack>
                     </Box>
                 )}
                 {needsGrading.length > 0 && (
-                    <Box>
-                        <Typography variant="caption" color="text.secondary">Submissions to review</Typography>
-                        <Box sx={{ mt: 0.5 }}>
-                            <Button size="small" variant="contained" component={Link} href="/dashboard/teacher/homework" startIcon={<Assignment />}>
-                                {needsGrading.length} homework item{needsGrading.length > 1 ? 's' : ''}
+                    <Box flex={1} minWidth={200}>
+                        <Typography variant="caption" color="text.secondary" fontWeight="bold">
+                            REVIEW SUBMISSIONS
+                        </Typography>
+                        <Box sx={{ mt: 1 }}>
+                            <Button
+                                size="medium"
+                                variant="outlined"
+                                component={Link}
+                                href="/dashboard/teacher/homework"
+                                startIcon={<Assignment />}
+                                sx={{ minHeight: 44 }}
+                            >
+                                {needsGrading.length} to grade
                             </Button>
                         </Box>
                     </Box>
                 )}
+                {classes.length === 0 && dueSoon.length === 0 && needsGrading.length === 0 && (
+                    <Box display="flex" alignItems="center" gap={1} color="text.secondary">
+                        <Schedule fontSize="small" />
+                        <Typography variant="body2">No urgent tasks today — you&apos;re all caught up.</Typography>
+                    </Box>
+                )}
             </Stack>
-        </Paper>
+        </ContentPanel>
     );
 }

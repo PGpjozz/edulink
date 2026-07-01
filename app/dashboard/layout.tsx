@@ -1,19 +1,25 @@
 'use client';
 import { ReactNode, Suspense, useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { Box, AppBar, Toolbar, IconButton, Typography, useMediaQuery, useTheme } from '@mui/material';
 import { Menu as MenuIcon, Brightness4, Brightness7 } from '@mui/icons-material';
 import { useThemeContext } from '@/app/theme/ThemeContext';
 import Sidebar from '@/app/components/Sidebar';
+import ParentMobileNav from '@/app/components/ParentMobileNav';
+import ParentChildBar from '@/app/components/ParentChildBar';
 import { getPageTitle } from '@/lib/page-titles';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [mobileOpen, setMobileOpen] = useState(false);
-    const { mode, toggleTheme, logoUrl } = useThemeContext();
+    const { mode, toggleTheme, logoUrl, schoolName } = useThemeContext();
     const pathname = usePathname();
     const pageTitle = getPageTitle(pathname);
+    const { data: session } = useSession();
+    const isParent = session?.user?.role === 'PARENT';
+    const showParentChrome = isParent && pathname.startsWith('/dashboard/parent');
 
     useEffect(() => {
         setMobileOpen(false);
@@ -74,12 +80,14 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     flexGrow: 1,
                     p: { xs: 2, sm: 3 },
                     mt: { xs: 7, md: 0 },
+                    mb: isParent && isMobile ? 8 : 0,
                     width: { md: `calc(100% - 280px)` },
                     minWidth: 0,
                 }}
             >
                 {children}
             </Box>
+            {isParent && <ParentMobileNav />}
         </Box>
     );
 }

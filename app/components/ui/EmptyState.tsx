@@ -1,6 +1,7 @@
 'use client';
 
 import { Box, Typography, Button } from '@mui/material';
+import Link from 'next/link';
 import { ReactNode } from 'react';
 
 interface EmptyStateProps {
@@ -18,6 +19,7 @@ export default function EmptyState({
     description,
     actionLabel,
     onAction,
+    actionHref,
 }: EmptyStateProps) {
     return (
         <Box
@@ -44,10 +46,16 @@ export default function EmptyState({
                     {description}
                 </Typography>
             )}
-            {actionLabel && onAction && (
-                <Button variant="contained" onClick={onAction} sx={{ mt: 1 }}>
-                    {actionLabel}
-                </Button>
+            {actionLabel && (onAction || actionHref) && (
+                actionHref ? (
+                    <Button variant="contained" component={Link} href={actionHref} sx={{ mt: 1 }}>
+                        {actionLabel}
+                    </Button>
+                ) : (
+                    <Button variant="contained" onClick={onAction} sx={{ mt: 1 }}>
+                        {actionLabel}
+                    </Button>
+                )
             )}
         </Box>
     );

@@ -15,6 +15,7 @@ import PageTransition from '@/app/components/ui/PageTransition';
 import LoadingSkeleton from '@/app/components/ui/LoadingSkeleton';
 import EmptyState from '@/app/components/ui/EmptyState';
 import ContentPanel from '@/app/components/ui/ContentPanel';
+import ParentChildBar from '@/app/components/ParentChildBar';
 
 function ParentDashboardInner() {
     const { children, selected, loading, setChildId } = useParentChild();
@@ -61,6 +62,7 @@ function ParentDashboardInner() {
             {unread > 0 && (
                 <Alert
                     severity="warning"
+                    variant="filled"
                     sx={{ mb: 3, borderRadius: 3 }}
                     action={
                         <Button component={Link} href={`/dashboard/parent/notifications${childQ}`} color="inherit" size="small">
@@ -72,38 +74,51 @@ function ParentDashboardInner() {
                 </Alert>
             )}
 
-            <ContentPanel title="Select child" subtitle="Choose a child to view their progress" sx={{ mb: 3 }}>
-                <ToggleButtonGroup
-                    value={selected?.id ?? ''}
-                    exclusive
-                    onChange={(_, val) => val && setChildId(val)}
-                    sx={{ flexWrap: 'wrap', gap: 1 }}
-                >
-                    {children.map((child) => (
-                        <ToggleButton
-                            key={child.id}
-                            value={child.id}
-                            sx={{
-                                borderRadius: '12px !important',
-                                px: 2,
-                                py: 1.5,
-                                textTransform: 'none',
-                                border: '1px solid !important',
-                            }}
-                        >
-                            <Avatar sx={{ width: 32, height: 32, mr: 1.5, bgcolor: 'primary.main' }}>
-                                {child.name[0]}
-                            </Avatar>
-                            <Box textAlign="left">
-                                <Typography variant="body2" fontWeight="bold">{child.name}</Typography>
-                                <Typography variant="caption" color="text.secondary">
-                                    Grade {child.grade} · {child.className}
-                                </Typography>
-                            </Box>
-                        </ToggleButton>
-                    ))}
-                </ToggleButtonGroup>
-            </ContentPanel>
+            <ParentChildBar />
+
+            {children.length > 1 && (
+                <ContentPanel title="Select child" subtitle="Choose a child to view their progress" sx={{ mb: 3, display: { xs: 'none', md: 'block' } }}>
+                    <ToggleButtonGroup
+                        value={selected?.id ?? ''}
+                        exclusive
+                        onChange={(_, val) => val && setChildId(val)}
+                        sx={{ flexWrap: 'wrap', gap: 1 }}
+                    >
+                        {children.map((child) => (
+                            <ToggleButton
+                                key={child.id}
+                                value={child.id}
+                                sx={{
+                                    borderRadius: '12px !important',
+                                    px: 2,
+                                    py: 1.5,
+                                    textTransform: 'none',
+                                    border: '1px solid !important',
+                                }}
+                            >
+                                <Avatar sx={{ width: 32, height: 32, mr: 1.5, bgcolor: 'primary.main' }}>
+                                    {child.name[0]}
+                                </Avatar>
+                                <Box textAlign="left">
+                                    <Typography variant="body2" fontWeight="bold">{child.name}</Typography>
+                                    <Typography variant="caption" color="text.secondary">
+                                        Grade {child.grade} · {child.className}
+                                    </Typography>
+                                </Box>
+                            </ToggleButton>
+                        ))}
+                    </ToggleButtonGroup>
+                </ContentPanel>
+            )}
+
+            {children.length === 1 && (
+                <ContentPanel title="Your child" sx={{ mb: 3, display: { xs: 'none', md: 'block' } }}>
+                    <Typography fontWeight="bold">{children[0].name}</Typography>
+                    <Typography variant="body2" color="text.secondary">
+                        Grade {children[0].grade} · {children[0].className}
+                    </Typography>
+                </ContentPanel>
+            )}
 
             <Grid container spacing={1} sx={{ mb: 3 }}>
                 <Grid size="auto">

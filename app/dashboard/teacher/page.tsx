@@ -30,6 +30,7 @@ import LoadingSkeleton from '@/app/components/ui/LoadingSkeleton';
 import EmptyState from '@/app/components/ui/EmptyState';
 import StatCard from '@/app/components/ui/StatCard';
 import ContentPanel from '@/app/components/ui/ContentPanel';
+import { getTimeGreeting } from '@/lib/greeting';
 
 type ClassInfo = { id: string; name: string; grade: string; _count?: { learners?: number }; timetable?: unknown };
 type SubjectSummary = { id: string; name: string; grade: string; code?: string; _count?: { assessments?: number } };
@@ -73,6 +74,7 @@ export default function TeacherDashboard() {
     }, [session?.user?.role]);
 
     const firstName = session?.user?.name?.split(' ')[0] ?? 'Teacher';
+    const greeting = getTimeGreeting();
     const totalLearners = classes.reduce((sum, c) => sum + (c._count?.learners ?? 0), 0);
     const totalAssessments = subjects.reduce((sum, s) => sum + (s._count?.assessments ?? 0), 0);
 
@@ -88,7 +90,7 @@ export default function TeacherDashboard() {
         <PageTransition>
             <Container maxWidth="xl">
                 <PageHeader
-                    title={`Good day, ${firstName}`}
+                    title={`${greeting}, ${firstName}`}
                     subtitle={
                         session?.user?.role === 'HOD' && departmentName
                             ? `Head of ${departmentName} · ${subjects.length} subjects · ${classes.length} classes`
