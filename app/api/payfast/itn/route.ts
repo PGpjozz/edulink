@@ -19,14 +19,26 @@ async function fulfillCheckout(checkoutId: string, pfPaymentId: string) {
         });
 
         if (checkout.type === 'SCHOOL_SUBSCRIPTION' && checkout.billingId) {
+            const billing = await tx.billing.findUnique({ where: { id: checkout.billingId } });
             await tx.billing.update({
                 where: { id: checkout.billingId },
                 data: { status: 'ACTIVE' },
             });
-            await tx.school.update({
-                where: { id: checkout.schoolId },
-                data: { isActive: true },
-            });
+            if (billing) {
+                await tx.school.update({
+                    where: { id: checkout.schoolId },
+                    data: {
+                        isActive: true,
+                        subscriptionStatus: 'ACTIVE',
+                        currentPeriodEnd: billing.periodEnd,
+                    },
+                });
+            } else {
+                await tx.school.update({
+                    where: { id: checkout.schoolId },
+                    data: { isActive: true, subscriptionStatus: 'ACTIVE' },
+                });
+            }
         }
 
         if (checkout.type === 'PARENT_FEE' && checkout.invoiceId) {

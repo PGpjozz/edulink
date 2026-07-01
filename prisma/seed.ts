@@ -71,8 +71,10 @@ async function main() {
             tier: 'SMALL',
             isActive: true,
             gradesOffered: ['8', '9', '10', '11', '12'],
-            monthlyFee: 1000,
-            primaryColor: '#2563eb'
+            monthlyFee: 2500,
+            tuitionFee: 1500,
+            subscriptionStatus: 'ACTIVE',
+            primaryColor: '#f59e0b'
         }
     });
 

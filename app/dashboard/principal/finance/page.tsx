@@ -13,7 +13,8 @@ import {
     Divider,
     Alert,
     CircularProgress,
-    Stack
+    Stack,
+    TextField,
 } from '@mui/material';
 import {
     Autorenew,
@@ -30,6 +31,8 @@ export default function PrincipalFinance() {
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
     const [message, setMessage] = useState('');
+    const [tuitionFee, setTuitionFee] = useState('');
+    const [savingFee, setSavingFee] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -68,6 +71,10 @@ export default function PrincipalFinance() {
 
     useEffect(() => {
         fetchData();
+        fetch('/api/school/fees')
+            .then((r) => r.json())
+            .then((d) => setTuitionFee(String(d.configuredTuitionFee || d.tuitionFee || '')))
+            .catch(() => {});
     }, []);
 
     const columns: GridColDef[] = [
@@ -96,6 +103,40 @@ export default function PrincipalFinance() {
             </Box>
 
             {message && <Alert severity="success" sx={{ mb: 4 }}>{message}</Alert>}
+
+            <Paper sx={{ p: 3, mb: 4, borderRadius: 3 }}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Parent tuition fee
+                </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                    Monthly amount charged to parents per learner. This is separate from your BrightCampus platform subscription.
+                </Typography>
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems={{ sm: 'center' }}>
+                    <TextField
+                        label="Tuition per learner (ZAR/month)"
+                        type="number"
+                        value={tuitionFee}
+                        onChange={(e) => setTuitionFee(e.target.value)}
+                        sx={{ maxWidth: 280 }}
+                    />
+                    <Button
+                        variant="outlined"
+                        disabled={savingFee}
+                        onClick={async () => {
+                            setSavingFee(true);
+                            const res = await fetch('/api/school/fees', {
+                                method: 'PATCH',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ tuitionFee: Number(tuitionFee) }),
+                            });
+                            setSavingFee(false);
+                            if (res.ok) setMessage('Tuition fee updated.');
+                        }}
+                    >
+                        {savingFee ? 'Saving…' : 'Save tuition fee'}
+                    </Button>
+                </Stack>
+            </Paper>
 
             <Grid container spacing={3} mb={4}>
                 <Grid size={{ xs: 12, md: 3 }}>

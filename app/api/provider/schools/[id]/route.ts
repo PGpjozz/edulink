@@ -83,6 +83,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
             staffCount,
             hasOwner: Boolean(school.ownerId),
             latestBillStatus: latestBill?.status ?? null,
+            subscriptionStatus: school.subscriptionStatus,
             daysSinceLastBill,
             subdomain: school.subdomain,
         });

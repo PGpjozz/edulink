@@ -128,12 +128,26 @@ describe('Provider pricing', () => {
         assert.equal(getTierDefaultFee('MEDIUM'), 5500);
     });
 
+    it('treats legacy unset SaaS fee as tier default', () => {
+        const { getEffectiveMonthlyFee } = require('../../lib/provider-pricing');
+        assert.equal(getEffectiveMonthlyFee({ tier: 'SMALL', monthlyFee: 1000 }), 2500);
+        assert.equal(getEffectiveMonthlyFee({ tier: 'SMALL', monthlyFee: 0 }), 2500);
+    });
+
     it('applies learner overage above tier limit', () => {
         const { calculateSchoolBill } = require('../../lib/provider-pricing');
         const bill = calculateSchoolBill({ tier: 'SMALL', monthlyFee: 2500 }, 220);
         assert.equal(bill.extraLearners, 20);
         assert.equal(bill.extraAmount, 300);
         assert.equal(bill.totalAmount, 2800);
+    });
+});
+
+describe('Tuition vs SaaS fees', () => {
+    it('uses tuitionFee when set', () => {
+        const { getTuitionFee } = require('../../lib/subscription');
+        assert.equal(getTuitionFee({ tuitionFee: 2000 }), 2000);
+        assert.equal(getTuitionFee({ tuitionFee: 0 }), 1500);
     });
 });
 

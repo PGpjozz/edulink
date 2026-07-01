@@ -137,3 +137,31 @@ export function billingReminderEmailHtml(params: {
         <p>If you've already paid, you can ignore this message.</p>
     `);
 }
+
+export function subscriptionInvoiceEmailHtml(params: {
+    schoolName: string;
+    contactName: string;
+    periodStart: Date;
+    periodEnd: Date;
+    baseAmount: number;
+    extraLearners: number;
+    extraAmount: number;
+    totalAmount: number;
+    payUrl: string;
+    invoiceUrl: string;
+}) {
+    const period = `${params.periodStart.toLocaleDateString('en-ZA')} – ${params.periodEnd.toLocaleDateString('en-ZA')}`;
+    const overage =
+        params.extraLearners > 0
+            ? `<p>Learner overage: ${params.extraLearners} × R${(params.extraAmount / params.extraLearners).toFixed(0)} = <strong>R ${params.extraAmount.toFixed(2)}</strong></p>`
+            : '';
+
+    return emailLayout(`
+        <p>Hi ${params.contactName},</p>
+        <p>Your <strong>${params.schoolName}</strong> ${BRAND.name} subscription invoice for <strong>${period}</strong> is ready.</p>
+        <p>Platform fee: <strong>R ${params.baseAmount.toFixed(2)}</strong></p>
+        ${overage}
+        <p><strong>Total due: R ${params.totalAmount.toFixed(2)}</strong></p>
+        <p><a href="${params.payUrl}">Pay subscription</a> · <a href="${params.invoiceUrl}">View invoice</a></p>
+    `);
+}

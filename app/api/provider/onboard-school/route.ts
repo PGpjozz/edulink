@@ -6,6 +6,7 @@ import { validatePassword } from '@/lib/password';
 import { getTierDefaultFee, type BillingTier } from '@/lib/provider-pricing';
 import { sendEmail, onboardWelcomeEmailHtml } from '@/lib/email';
 import { BRAND_DEFAULTS } from '@/lib/branding';
+import { trialEndDate } from '@/lib/subscription';
 
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
 
@@ -108,6 +109,8 @@ export async function POST(req: Request) {
                     subdomain: subdomainValue,
                     isActive: true,
                     gradesOffered: ['8', '9', '10', '11', '12'],
+                    subscriptionStatus: 'TRIALING',
+                    trialEndsAt: trialEndDate(),
                 },
             });
 

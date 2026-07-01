@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 import bcrypt from 'bcryptjs';
+import { checkLearnerCapacity } from '@/lib/school-subscription';
 import { validateSaId, normalizeSaId } from '@/lib/sa-id';
 import { validatePassword, generateTemporaryPassword } from '@/lib/password';
 import { isProduction } from '@/lib/env';
@@ -75,6 +76,11 @@ export async function POST(req: Request) {
         }
 
         if (role === 'LEARNER') {
+            const capacity = await checkLearnerCapacity(auth.schoolId as string);
+            if (!capacity.allowed) {
+                return NextResponse.json({ error: capacity.message }, { status: 403 });
+            }
+
             const idCheck = validateSaId(idNumber);
             if (!idCheck.valid) {
                 return new NextResponse(idCheck.error || 'Invalid SA ID number', { status: 400 });

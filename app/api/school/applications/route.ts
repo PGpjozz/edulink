@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { generateTemporaryPassword } from '@/lib/password';
 import { validateSaId, normalizeSaId } from '@/lib/sa-id';
 import { sendEmail } from '@/lib/email';
+import { checkLearnerCapacity } from '@/lib/school-subscription';
 import { BRAND } from '@/lib/branding';
 
 export async function GET() {
@@ -89,6 +90,11 @@ export async function PATCH(req: Request) {
             const existingId = await prisma.user.findFirst({ where: { idNumber: saId } });
             if (existingId) {
                 return new NextResponse('A learner with this ID number already exists', { status: 409 });
+            }
+
+            const capacity = await checkLearnerCapacity(application.schoolId);
+            if (!capacity.allowed) {
+                return NextResponse.json({ error: capacity.message }, { status: 403 });
             }
 
             const newUser = await prisma.user.create({

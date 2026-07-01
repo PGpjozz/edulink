@@ -1,3 +1,5 @@
+import { isUnsetSaasFee } from './subscription';
+
 export type BillingTier = 'SMALL' | 'MEDIUM' | 'LARGE';
 
 export type PlanFeature =
@@ -51,7 +53,7 @@ export function getTierDefaultFee(tier: BillingTier): number {
 
 export function getEffectiveMonthlyFee(school: { tier: BillingTier; monthlyFee: number }): number {
     const custom = Number(school.monthlyFee);
-    if (Number.isFinite(custom) && custom > 0) return custom;
+    if (!isUnsetSaasFee(custom)) return custom;
     return getTierDefaultFee(school.tier);
 }
 

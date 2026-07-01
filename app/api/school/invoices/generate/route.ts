@@ -4,6 +4,8 @@ import { requireAuth, writeAuditLog } from '@/lib/api-auth';
 import { canManageFinance } from '@/lib/permissions';
 import { sendEmail } from '@/lib/email';
 import { invoiceIssuedEmailHtml } from '@/lib/notifications-delivery';
+import { getTuitionFee } from '@/lib/subscription';
+import { requireSchoolFeature } from '@/lib/school-subscription';
 
 export async function POST() {
     const auth = await requireAuth({ requireSchoolId: true });
@@ -11,6 +13,11 @@ export async function POST() {
 
     if (!canManageFinance(auth)) {
         return new NextResponse('Forbidden', { status: 403 });
+    }
+
+    const feature = await requireSchoolFeature(auth.schoolId as string, 'finance');
+    if (!feature.ok) {
+        return NextResponse.json({ error: feature.message }, { status: 403 });
     }
 
     try {
@@ -32,6 +39,7 @@ export async function POST() {
 
         if (!school) return new NextResponse('School not found', { status: 404 });
 
+        const tuitionAmount = getTuitionFee(school);
         const currentMonth = new Date().toLocaleString('default', { month: 'long', year: 'numeric' });
         const title = `Monthly Tuition Fee - ${currentMonth}`;
         const dueDate = new Date();
@@ -59,7 +67,7 @@ export async function POST() {
                     schoolId: school.id,
                     learnerId: learnerUser.learnerProfile.id,
                     title,
-                    amount: school.monthlyFee,
+                    amount: tuitionAmount,
                     dueDate,
                     status: 'PENDING',
                 },
@@ -83,7 +91,7 @@ export async function POST() {
                         parentName: parent.firstName,
                         learnerName: `${learnerUser.firstName} ${learnerUser.lastName}`,
                         title,
-                        amount: school.monthlyFee,
+                        amount: tuitionAmount,
                         dueDate: dueDate.toLocaleDateString('en-ZA'),
                         billingUrl: `${baseUrl}/dashboard/parent/billing`,
                     }),

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { guardDevRoute } from '@/lib/dev-routes';
 import { BRAND_DEFAULTS } from '@/lib/branding';
-import { generateBillsForAllSchools } from '@/lib/provider-billing';
+import { generateBillsForAllSchools, processOverdueSuspensions } from '@/lib/provider-billing';
 
 /** Cron-friendly monthly billing — POST ?secret=brightcampus-billing-cron-2026 or authenticated provider session */
 export async function POST(req: Request) {
@@ -34,6 +34,7 @@ export async function POST(req: Request) {
 
     try {
         const results = await generateBillsForAllSchools(providerUserId);
+        const suspended = await processOverdueSuspensions(providerUserId);
         return NextResponse.json({
             ok: true,
             automated,
@@ -41,8 +42,10 @@ export async function POST(req: Request) {
                 created: results.filter((r) => r.status === 'created').length,
                 skipped: results.filter((r) => r.status === 'skipped').length,
                 errors: results.filter((r) => r.status === 'error').length,
+                suspended: suspended.length,
             },
             results,
+            suspendedSchools: suspended,
         });
     } catch (error) {
         console.error('cron billing', error);

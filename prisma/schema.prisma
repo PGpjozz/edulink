@@ -30,6 +30,14 @@ enum BillingStatus {
   CANCELLED
 }
 
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  SUSPENDED
+  CANCELLED
+}
+
 // Models
 
 model School {
@@ -57,7 +65,11 @@ model School {
   ptmSessions    PTMSession[]
   applications   Application[]
   assets         Asset[]
-  monthlyFee     Float         @default(1000)
+  monthlyFee           Float              @default(0)
+  tuitionFee           Float              @default(0)
+  subscriptionStatus   SubscriptionStatus @default(TRIALING)
+  trialEndsAt          DateTime?
+  currentPeriodEnd     DateTime?
   departments    Department[]
   ownerId        String?       @unique
   owner          User?         @relation("SchoolOwner", fields: [ownerId], references: [id], onDelete: SetNull)
