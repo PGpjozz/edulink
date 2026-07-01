@@ -5,6 +5,7 @@ import { readJson } from '@/lib/api-auth';
 import {
     DASHBOARD_ROLES,
     type DashboardRole,
+    buildDashboardRoleInput,
     dashboardHomePath,
     resolveAvailableDashboards,
 } from '@/lib/dashboard-roles';
@@ -37,11 +38,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    const availableRoles = resolveAvailableDashboards({
-        primaryRole: user.role,
-        hasTeacherProfile: Boolean(user.teacherProfile),
-        leadsDepartment: user.departmentsLed.length > 0,
-    });
+    const availableRoles = resolveAvailableDashboards(buildDashboardRoleInput(user));
 
     if (!availableRoles.includes(requested)) {
         return NextResponse.json({ error: 'Role not available for this account' }, { status: 403 });

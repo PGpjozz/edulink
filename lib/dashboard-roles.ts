@@ -22,16 +22,34 @@ export const DASHBOARD_ROLE_LABELS: Record<DashboardRole, string> = {
     PARENT: 'Parent',
 };
 
-export function resolveAvailableDashboards(input: {
+export type DashboardRoleInput = {
     primaryRole: string;
     hasTeacherProfile: boolean;
     leadsDepartment: boolean;
-}): DashboardRole[] {
+};
+
+export function buildDashboardRoleInput(user: {
+    role: string;
+    teacherProfile: { id: string } | null;
+    departmentsLed: { id: string }[];
+}): DashboardRoleInput {
+    return {
+        primaryRole: user.role,
+        hasTeacherProfile: Boolean(user.teacherProfile),
+        leadsDepartment: user.departmentsLed.length > 0,
+    };
+}
+
+export function resolveAvailableDashboards(input: DashboardRoleInput): DashboardRole[] {
     const roles = new Set<DashboardRole>();
     const primary = input.primaryRole as DashboardRole;
 
     if (DASHBOARD_ROLES.includes(primary)) {
         roles.add(primary);
+    }
+
+    if (primary === 'SCHOOL_OWNER') {
+        roles.add('PRINCIPAL');
     }
 
     if (input.leadsDepartment && primary !== 'HOD') {
