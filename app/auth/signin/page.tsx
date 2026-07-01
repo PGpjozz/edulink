@@ -6,20 +6,25 @@ import { useRouter } from 'next/navigation';
 import {
     Box,
     Button,
-    Container,
     TextField,
     Typography,
     Paper,
     Tabs,
     Tab,
     Alert,
-    CircularProgress
+    CircularProgress,
+    Grid,
+    useTheme,
+    useMediaQuery,
 } from '@mui/material';
+import { School, Lock, Email } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
 export default function SignIn() {
     const router = useRouter();
-    const [tabIndex, setTabIndex] = useState(0); // 0: Email, 1: ID Number
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+    const [tabIndex, setTabIndex] = useState(0);
     const [identifier, setIdentifier] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -37,7 +42,7 @@ export default function SignIn() {
         });
 
         if (res?.error) {
-            setError('Invalid credentials');
+            setError('Invalid credentials. Please check your email or ID number and password.');
             setLoading(false);
         } else {
             const session = await getSession();
@@ -63,75 +68,131 @@ export default function SignIn() {
         setError('');
     };
 
+    const formPanel = (
+        <Paper
+            component={motion.div}
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            elevation={0}
+            sx={{
+                p: { xs: 3, sm: 4 },
+                width: '100%',
+                maxWidth: 440,
+                borderRadius: 4,
+                border: '1px solid',
+                borderColor: 'divider',
+            }}
+        >
+            <Typography variant="h5" fontWeight="bold" gutterBottom>
+                Sign in
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                {tabIndex === 0 ? 'Staff and parents use email' : 'Learners use ID number'}
+            </Typography>
+
+            <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
+                <Tabs value={tabIndex} onChange={handleTabChange} variant="fullWidth">
+                    <Tab label="Staff & Parents" />
+                    <Tab label="Learners" />
+                </Tabs>
+            </Box>
+
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+
+            <Box component="form" onSubmit={handleSubmit}>
+                <TextField
+                    fullWidth
+                    label={tabIndex === 0 ? 'Email address' : 'ID number'}
+                    type="text"
+                    value={identifier}
+                    onChange={(e) => setIdentifier(e.target.value)}
+                    margin="normal"
+                    required
+                    InputProps={{ startAdornment: <Email sx={{ mr: 1, color: 'text.secondary' }} /> }}
+                    placeholder={tabIndex === 0 ? 'you@school.edu.za' : 'Your learner ID'}
+                />
+                <TextField
+                    fullWidth
+                    label="Password"
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    margin="normal"
+                    required
+                    InputProps={{ startAdornment: <Lock sx={{ mr: 1, color: 'text.secondary' }} /> }}
+                />
+
+                <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    type="submit"
+                    sx={{ mt: 3, mb: 1, py: 1.25 }}
+                    disabled={loading}
+                >
+                    {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign in'}
+                </Button>
+            </Box>
+
+            <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 2 }}>
+                <a href="/auth/forgot-password" style={{ color: theme.palette.primary.main }}>Forgot password?</a>
+            </Typography>
+            <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 1 }}>
+                EduLink provider?{' '}
+                <a href="/auth/provider-signin" style={{ color: theme.palette.primary.main, fontWeight: 600 }}>
+                    Provider portal
+                </a>
+            </Typography>
+        </Paper>
+    );
+
+    if (isMobile) {
+        return (
+            <Box minHeight="100vh" display="flex" alignItems="center" justifyContent="center" p={2} bgcolor="background.default">
+                {formPanel}
+            </Box>
+        );
+    }
+
     return (
-        <Container maxWidth="sm" sx={{ display: 'flex', alignItems: 'center', minHeight: '100vh' }}>
-            <Paper
-                component={motion.div}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                elevation={3}
-                sx={{ p: 4, width: '100%', borderRadius: 4 }}
+        <Grid container minHeight="100vh">
+            <Grid
+                size={{ xs: 12, md: 6 }}
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    p: 6,
+                    background: `linear-gradient(145deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                    color: 'primary.contrastText',
+                }}
             >
-                <Typography variant="h4" component="h1" gutterBottom align="center" fontWeight="bold" color="primary">
-                    EduLink
-                </Typography>
-                <Typography variant="body1" align="center" color="text.secondary" gutterBottom>
-                    Sign in to your account
-                </Typography>
-
-                <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 3 }}>
-                    <Tabs value={tabIndex} onChange={handleTabChange} variant="fullWidth">
-                        <Tab label="Staff & Parents" />
-                        <Tab label="Learners" />
-                    </Tabs>
+                <Box maxWidth={400}>
+                    <School sx={{ fontSize: 56, mb: 2, opacity: 0.9 }} />
+                    <Typography variant="h3" fontWeight="bold" gutterBottom>
+                        EduLink
+                    </Typography>
+                    <Typography variant="h6" sx={{ opacity: 0.9, mb: 3, fontWeight: 400 }}>
+                        Your school, connected — attendance, grades, messages, and more in one place.
+                    </Typography>
+                    <Typography variant="body2" sx={{ opacity: 0.75 }}>
+                        Parents, teachers, and learners stay in sync with real-time updates from your school.
+                    </Typography>
                 </Box>
-
-                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
-
-                <Box component="form" onSubmit={handleSubmit}>
-                    <TextField
-                        fullWidth
-                        label={tabIndex === 0 ? "Email Address" : "ID Number"}
-                        type="text"
-                        value={identifier}
-                        onChange={(e) => setIdentifier(e.target.value)}
-                        margin="normal"
-                        required
-                        placeholder={tabIndex === 0 ? "Enter your email" : "Enter your ID number"}
-                    />
-                    <TextField
-                        fullWidth
-                        label="Password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        margin="normal"
-                        required
-                    />
-
-                    <Button
-                        fullWidth
-                        variant="contained"
-                        size="large"
-                        type="submit"
-                        sx={{ mt: 3, mb: 2 }}
-                        disabled={loading}
-                    >
-                        {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
-                    </Button>
-                </Box>
-
-                <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 2 }}>
-                    <a href="/auth/forgot-password" style={{ color: 'inherit' }}>Forgot password?</a>
-                </Typography>
-
-                <Typography variant="body2" align="center" color="text.secondary" sx={{ mt: 2 }}>
-                    EduLink provider?{' '}
-                    <a href="/auth/provider-signin" style={{ color: 'inherit', fontWeight: 600 }}>
-                        Sign in at the provider portal
-                    </a>
-                </Typography>
-            </Paper>
-        </Container>
+            </Grid>
+            <Grid
+                size={{ xs: 12, md: 6 }}
+                sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    p: 4,
+                    bgcolor: 'background.default',
+                }}
+            >
+                {formPanel}
+            </Grid>
+        </Grid>
     );
 }

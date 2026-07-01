@@ -81,6 +81,17 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
 
     const theme = useMemo(() => getTheme(mode, primaryColor), [mode, primaryColor]);
 
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+        let meta = document.querySelector('meta[name="theme-color"]');
+        if (!meta) {
+            meta = document.createElement('meta');
+            meta.setAttribute('name', 'theme-color');
+            document.head.appendChild(meta);
+        }
+        meta.setAttribute('content', primaryColor);
+    }, [primaryColor]);
+
     const value = useMemo(() => ({
         mode,
         toggleTheme,

@@ -77,7 +77,6 @@ const ADMIN_NAV = [
 const HOD_NAV = [
     { label: 'Department', icon: <Dashboard />, path: '/dashboard/hod' },
     { label: 'Department Analytics', icon: <BarChartIcon />, path: '/dashboard/hod/analytics' },
-    { label: 'Behavior', icon: <EmojiEventsIcon />, path: '/dashboard/teacher/behavior' },
     { label: 'Messages', icon: <Message />, path: '/dashboard/messages' },
 ];
 
@@ -265,11 +264,15 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                                 sx={{
                                     borderRadius: 2,
                                     mx: 2,
-                                    bgcolor: isActive ? 'primary.light' : 'transparent',
-                                    color: isActive ? 'primary.contrastText' : 'inherit',
+                                    bgcolor: isActive ? 'action.selected' : 'transparent',
+                                    color: isActive ? 'primary.main' : 'inherit',
+                                    fontWeight: isActive ? 700 : 500,
+                                    borderLeft: isActive ? 3 : 0,
+                                    borderColor: 'primary.main',
+                                    pl: isActive ? 1.5 : 2,
                                     '&:hover': {
-                                        bgcolor: isActive ? 'primary.main' : (mode === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)')
-                                    }
+                                        bgcolor: isActive ? 'action.selected' : 'action.hover',
+                                    },
                                 }}
                             >
                                 <ListItemIcon sx={{ color: isActive ? 'inherit' : 'gray' }}>

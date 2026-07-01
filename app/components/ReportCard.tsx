@@ -33,7 +33,7 @@ export default function ReportCard({ data }: ReportCardProps) {
                 boxShadow: '0 12px 48px rgba(0,0,0,0.1)',
                 maxWidth: 1000,
                 mx: 'auto',
-                bgcolor: 'white',
+                bgcolor: 'background.paper',
                 position: 'relative',
                 overflow: 'hidden',
                 border: '1px solid rgba(0,0,0,0.05)'
@@ -70,7 +70,7 @@ export default function ReportCard({ data }: ReportCardProps) {
                     <Typography variant="h6" color="text.secondary">Grade {data.learner.grade} &bull; {data.learner.className}</Typography>
                 </Grid>
                 <Grid size={{ xs: 12, md: 5 }}>
-                    <Box sx={{ bgcolor: '#f8fafc', p: 3, borderRadius: 3, border: '1px solid #e2e8f0' }}>
+                    <Box sx={{ bgcolor: 'action.hover', p: 3, borderRadius: 3, border: 1, borderColor: 'divider' }}>
                         <Stack spacing={1}>
                             <Box display="flex" justifyContent="space-between">
                                 <Typography variant="body2" color="text.secondary">Attendance Rate</Typography>

@@ -5,32 +5,31 @@ import {
     Box,
     Container,
     Typography,
-    Card,
-    CardContent,
     List,
     ListItem,
     ListItemText,
     ListItemIcon,
     IconButton,
     Chip,
-    Divider,
     Button,
-    CircularProgress,
     Stack,
-    Tooltip
+    Tooltip,
 } from '@mui/material';
 import {
     Notifications as NotificationsIcon,
     Circle,
     CheckCircle,
-    Delete,
     AccessTime,
     ErrorOutline,
     EmojiEvents,
     AttachMoney,
-    Settings
+    Settings,
 } from '@mui/icons-material';
-import { motion, AnimatePresence } from 'framer-motion';
+import PageHeader from '@/app/components/ui/PageHeader';
+import PageTransition from '@/app/components/ui/PageTransition';
+import ContentPanel from '@/app/components/ui/ContentPanel';
+import LoadingSkeleton from '@/app/components/ui/LoadingSkeleton';
+import EmptyState from '@/app/components/ui/EmptyState';
 
 interface Notification {
     id: string;
@@ -105,28 +104,28 @@ export default function ParentNotifications() {
         ? notifications
         : notifications.filter(n => n.type === filter);
 
-    if (loading) return <Box display="flex" justifyContent="center" py={10}><CircularProgress /></Box>;
+    if (loading) {
+        return (
+            <Container maxWidth="md" sx={{ mt: 4 }}>
+                <LoadingSkeleton variant="list" count={5} />
+            </Container>
+        );
+    }
 
     return (
-        <Container maxWidth="md" sx={{ mt: 4, mb: 4 }} component={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                <Box>
-                    <Typography variant="h4" fontWeight="bold" sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <NotificationsIcon color="primary" fontSize="large" />
-                        Alerts & Notifications
-                    </Typography>
-                    <Typography color="text.secondary">Stay updated with your children's school life.</Typography>
-                </Box>
-                {notifications.some(n => !n.isRead) && (
-                    <Button
-                        size="small"
-                        variant="outlined"
-                        onClick={markAllAsRead}
-                    >
-                        Mark all as read
-                    </Button>
-                )}
-            </Box>
+        <PageTransition>
+        <Container maxWidth="md" sx={{ mb: 4 }}>
+            <PageHeader
+                title="Alerts & notifications"
+                subtitle="Stay updated with your children's school life."
+                actions={
+                    notifications.some(n => !n.isRead) ? (
+                        <Button size="small" variant="outlined" onClick={markAllAsRead}>
+                            Mark all as read
+                        </Button>
+                    ) : undefined
+                }
+            />
 
             <Stack direction="row" spacing={1} mb={3} sx={{ overflowX: 'auto', pb: 1 }}>
                 {['ALL', 'ATTENDANCE', 'BEHAVIOR', 'BILLING', 'ACADEMIC'].map((f) => (
@@ -141,24 +140,16 @@ export default function ParentNotifications() {
                 ))}
             </Stack>
 
-            <Card sx={{ borderRadius: 3, boxShadow: '0 8px 32px rgba(0,0,0,0.08)', border: '1px solid rgba(0,0,0,0.05)' }}>
-                <CardContent sx={{ p: 0 }}>
-                    <List disablePadding>
-                        <AnimatePresence mode="popLayout" initial={false}>
-                            {filteredNotifications.map((n, index) => (
-                                <ListItem
-                                    key={n.id}
-                                    divider={index !== filteredNotifications.length - 1}
-                                    component={motion.div}
-                                    layout
-                                    initial={{ opacity: 0, scale: 0.95 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.95 }}
-                                    sx={{
-                                        bgcolor: n.isRead ? 'transparent' : 'rgba(37, 99, 235, 0.04)',
-                                        transition: '0.3s',
-                                        '&:hover': { bgcolor: 'rgba(0, 0, 0, 0.02)' }
-                                    }}
+            <ContentPanel noPadding>
+                <List disablePadding>
+                    {filteredNotifications.map((n, index) => (
+                        <ListItem
+                            key={n.id}
+                            divider={index !== filteredNotifications.length - 1}
+                            sx={{
+                                bgcolor: n.isRead ? 'transparent' : 'action.hover',
+                                '&:hover': { bgcolor: 'action.selected' },
+                            }}
                                     secondaryAction={
                                         <Box>
                                             {!n.isRead && (
@@ -211,26 +202,22 @@ export default function ParentNotifications() {
                                             </Box>
                                         }
                                     />
-                                </ListItem>
-                            ))}
-                        </AnimatePresence>
+                        </ListItem>
+                    ))}
 
-                        {filteredNotifications.length === 0 && (
-                            <Box py={12} textAlign="center">
-                                <motion.div
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                >
-                                    <NotificationsIcon sx={{ fontSize: 80, color: 'grey.200', mb: 2 }} />
-                                    <Typography variant="h6" color="text.secondary" fontWeight="bold">All caught up!</Typography>
-                                    <Typography color="text.secondary">No {filter !== 'ALL' ? filter.toLowerCase() : ''} notifications at the moment.</Typography>
-                                </motion.div>
-                            </Box>
-                        )}
-                    </List>
-                </CardContent>
-            </Card>
+                    {filteredNotifications.length === 0 && (
+                        <Box p={3}>
+                            <EmptyState
+                                icon={<NotificationsIcon sx={{ fontSize: 56 }} />}
+                                title="All caught up!"
+                                description={`No ${filter !== 'ALL' ? filter.toLowerCase() : ''} notifications at the moment.`}
+                            />
+                        </Box>
+                    )}
+                </List>
+            </ContentPanel>
         </Container>
+        </PageTransition>
     );
 }
 

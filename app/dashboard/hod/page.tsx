@@ -1,17 +1,21 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import {
-    Box, Container, Typography, Grid, Card, CardContent, Chip, CircularProgress, Alert, Button,
-} from '@mui/material';
+import { Container, Grid, Button } from '@mui/material';
+import { School, Groups, MenuBook } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import PageHeader from '@/app/components/ui/PageHeader';
+import PageTransition from '@/app/components/ui/PageTransition';
+import StatCard from '@/app/components/ui/StatCard';
+import ContentPanel from '@/app/components/ui/ContentPanel';
+import EmptyState from '@/app/components/ui/EmptyState';
+import LoadingSkeleton from '@/app/components/ui/LoadingSkeleton';
 
 type Department = {
     id: string;
     name: string;
     code?: string;
-    hod?: { firstName: string; lastName: string };
     _count?: { subjects: number; teachers: number };
 };
 
@@ -38,93 +42,76 @@ export default function HodDashboard() {
 
     if (loading) {
         return (
-            <Box display="flex" justifyContent="center" py={10}>
-                <CircularProgress />
-            </Box>
+            <Container maxWidth="xl">
+                <LoadingSkeleton variant="page" />
+            </Container>
         );
     }
 
     const myDept = departments[0];
 
     return (
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-            <Box display="flex" justifyContent="space-between" alignItems="flex-start" flexWrap="wrap" gap={2} mb={4}>
-                <Box>
-                    <Typography variant="h4" fontWeight="bold" gutterBottom>
-                        Department overview
-                    </Typography>
-                    <Typography color="text.secondary">
-                        Monitor your department&apos;s subjects, staff, and learner performance.
-                    </Typography>
-                </Box>
-                {session?.user?.hasTeacherProfile && (
-                    <Button variant="contained" onClick={() => router.push('/dashboard/teacher')}>
-                        Go to my classroom
-                    </Button>
+        <PageTransition>
+            <Container maxWidth="xl">
+                <PageHeader
+                    title="Department overview"
+                    subtitle="Monitor subjects, staff, and learner performance in your department."
+                    breadcrumbs={[
+                        { label: 'My Classroom', href: '/dashboard/teacher' },
+                        { label: 'Department' },
+                    ]}
+                    actions={
+                        session?.user?.hasTeacherProfile ? (
+                            <Button variant="outlined" onClick={() => router.push('/dashboard/teacher')}>
+                                My Classroom
+                            </Button>
+                        ) : undefined
+                    }
+                />
+
+                {!myDept ? (
+                    <EmptyState
+                        icon={<School sx={{ fontSize: 56 }} />}
+                        title="No department assigned"
+                        description="Ask your principal to assign you as HOD in Departments."
+                        actionLabel={session?.user?.hasTeacherProfile ? 'Go to My Classroom' : undefined}
+                        onAction={session?.user?.hasTeacherProfile ? () => router.push('/dashboard/teacher') : undefined}
+                    />
+                ) : (
+                    <>
+                        <Grid container spacing={2} sx={{ mb: 4 }}>
+                            <Grid size={{ xs: 12, md: 4 }}>
+                                <StatCard label="Department" value={myDept.name} icon={<School />} variant="primary" />
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 4 }}>
+                                <StatCard label="Subjects" value={myDept._count?.subjects ?? subjects.length} icon={<MenuBook />} />
+                            </Grid>
+                            <Grid size={{ xs: 12, md: 4 }}>
+                                <StatCard label="Teachers" value={myDept._count?.teachers ?? 0} icon={<Groups />} />
+                            </Grid>
+                        </Grid>
+
+                        <ContentPanel title="Department subjects" subtitle={`All subjects in ${myDept.name}`}>
+                            {subjects.length === 0 ? (
+                                <EmptyState title="No subjects yet" description="Subjects in your department will appear here." />
+                            ) : (
+                                <Grid container spacing={2}>
+                                    {subjects.map((s) => (
+                                        <Grid size={{ xs: 12, sm: 6, md: 4 }} key={s.id}>
+                                            <StatCard
+                                                label={`Grade ${s.grade}`}
+                                                value={s.name}
+                                                subtitle={s.code || undefined}
+                                                variant="default"
+                                            />
+                                        </Grid>
+                                    ))}
+                                </Grid>
+                            )}
+                        </ContentPanel>
+                    </>
                 )}
-            </Box>
-
-            {!myDept && (
-                <Alert severity="info" sx={{ mb: 3 }}>
-                    No department is assigned to you yet. Ask your principal to assign you as HOD in Departments.
-                    {session?.user?.hasTeacherProfile && (
-                        <> You can still access your classes from <strong>My Classroom</strong> in the sidebar.</>
-                    )}
-                </Alert>
-            )}
-
-            {myDept && (
-                <Grid container spacing={3} sx={{ mb: 4 }}>
-                    <Grid size={{ xs: 12, md: 4 }}>
-                        <Card>
-                            <CardContent>
-                                <Typography color="text.secondary">Department</Typography>
-                                <Typography variant="h5" fontWeight="bold">{myDept.name}</Typography>
-                                {myDept.code && <Chip label={myDept.code} size="small" sx={{ mt: 1 }} />}
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid size={{ xs: 6, md: 4 }}>
-                        <Card>
-                            <CardContent>
-                                <Typography color="text.secondary">Subjects</Typography>
-                                <Typography variant="h4" fontWeight="bold">{myDept._count?.subjects ?? subjects.length}</Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                    <Grid size={{ xs: 6, md: 4 }}>
-                        <Card>
-                            <CardContent>
-                                <Typography color="text.secondary">Teachers</Typography>
-                                <Typography variant="h4" fontWeight="bold">{myDept._count?.teachers ?? 0}</Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                </Grid>
-            )}
-
-            <Typography variant="h6" fontWeight="bold" gutterBottom>
-                Department subjects
-            </Typography>
-            <Grid container spacing={2}>
-                {subjects.map((s) => (
-                    <Grid size={{ xs: 12, sm: 6, md: 4 }} key={s.id}>
-                        <Card variant="outlined">
-                            <CardContent>
-                                <Typography fontWeight="bold">{s.name}</Typography>
-                                <Typography variant="body2" color="text.secondary">
-                                    Grade {s.grade} · {s.code || '—'}
-                                </Typography>
-                            </CardContent>
-                        </Card>
-                    </Grid>
-                ))}
-                {subjects.length === 0 && (
-                    <Grid size={{ xs: 12 }}>
-                        <Typography color="text.secondary">No subjects in your department scope yet.</Typography>
-                    </Grid>
-                )}
-            </Grid>
-        </Container>
+            </Container>
+        </PageTransition>
     );
 }

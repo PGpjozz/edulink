@@ -1,16 +1,23 @@
 'use client';
 
-import { Container, Typography, Box } from '@mui/material';
+import { Container } from '@mui/material';
 import MessagingInterface from '@/app/components/MessagingInterface';
+import PageHeader from '@/app/components/ui/PageHeader';
+import PageTransition from '@/app/components/ui/PageTransition';
+import ContentPanel from '@/app/components/ui/ContentPanel';
 
 export default function MessagesPage() {
     return (
-        <Container maxWidth="xl" sx={{ mt: 4 }}>
-            <Box mb={4}>
-                <Typography variant="h4" fontWeight="bold">My Messages</Typography>
-                <Typography color="text.secondary">Contact teachers, parents, or administration.</Typography>
-            </Box>
-            <MessagingInterface />
-        </Container>
+        <PageTransition>
+            <Container maxWidth="xl">
+                <PageHeader
+                    title="Messages"
+                    subtitle="Contact teachers, parents, or school staff directly."
+                />
+                <ContentPanel noPadding>
+                    <MessagingInterface />
+                </ContentPanel>
+            </Container>
+        </PageTransition>
     );
 }

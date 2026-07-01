@@ -1,8 +1,12 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Box, Container, Typography, Paper, CircularProgress, Alert } from '@mui/material';
+import { Box, Container, Paper, CircularProgress, Alert } from '@mui/material';
 import AnalyticsChart from '@/app/components/AnalyticsChart';
+import PageHeader from '@/app/components/ui/PageHeader';
+import PageTransition from '@/app/components/ui/PageTransition';
+import ContentPanel from '@/app/components/ui/ContentPanel';
+import LoadingSkeleton from '@/app/components/ui/LoadingSkeleton';
 
 export default function HodAnalyticsPage() {
     const [data, setData] = useState<{ name: string; value: number }[]>([]);
@@ -33,24 +37,28 @@ export default function HodAnalyticsPage() {
     }, []);
 
     return (
-        <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }}>
-            <Typography variant="h4" fontWeight="bold" gutterBottom>
-                Department analytics
-            </Typography>
-            <Typography color="text.secondary" sx={{ mb: 4 }}>
-                Performance trends for subjects in your department.
-            </Typography>
-            <Paper sx={{ p: 3, borderRadius: 3 }}>
-                {loading ? (
-                    <Box display="flex" justifyContent="center" py={6}><CircularProgress /></Box>
-                ) : error ? (
-                    <Alert severity="warning">{error}</Alert>
-                ) : data.length === 0 ? (
-                    <Alert severity="info">No performance data available yet for your department.</Alert>
-                ) : (
-                    <AnalyticsChart data={data} title="Average grade by month" xKey="name" yKey="value" />
-                )}
-            </Paper>
-        </Container>
+        <PageTransition>
+            <Container maxWidth="xl">
+                <PageHeader
+                    title="Department analytics"
+                    subtitle="Performance trends for subjects in your department."
+                    breadcrumbs={[
+                        { label: 'Department', href: '/dashboard/hod' },
+                        { label: 'Analytics' },
+                    ]}
+                />
+                <ContentPanel>
+                    {loading ? (
+                        <LoadingSkeleton variant="list" count={4} />
+                    ) : error ? (
+                        <Alert severity="warning">{error}</Alert>
+                    ) : data.length === 0 ? (
+                        <Alert severity="info">No performance data available yet for your department.</Alert>
+                    ) : (
+                        <AnalyticsChart data={data} title="Average grade by month" xKey="name" yKey="value" />
+                    )}
+                </ContentPanel>
+            </Container>
+        </PageTransition>
     );
 }
