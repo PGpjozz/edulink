@@ -7,9 +7,9 @@ async function createProvider() {
     try {
         const provider = await prisma.user.create({
             data: {
-                email: 'provider@edulink.com',
+                email: 'provider@brightcampus.com',
                 password: '$2b$10$Ds.AVNyxHeHMzZipwLAQFu//J3RNUD0b999nmY4t4h/svqRb31/S4.',
-                firstName: 'EduLink',
+                firstName: 'BrightCampus',
                 lastName: 'Provider',
                 role: 'PROVIDER',
                 schoolId: null,
@@ -18,7 +18,7 @@ async function createProvider() {
         });
 
         console.log('✅ Provider account created successfully!');
-        console.log('Email: provider@edulink.com');
+        console.log('Email: provider@brightcampus.com');
         console.log('Password: provider123');
     } catch (error) {
         if (error.code === 'P2002') {

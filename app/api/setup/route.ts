@@ -2,40 +2,42 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { guardDevRoute } from '@/lib/dev-routes';
+import { BRAND, BRAND_DEFAULTS } from '@/lib/branding';
 
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
-    const blocked = guardDevRoute('edulink-setup-2026', searchParams.get('secret'));
+    const blocked = guardDevRoute(BRAND_DEFAULTS.setupSecret, searchParams.get('secret'));
     if (blocked) return blocked;
 
     try {
         const hash = await bcrypt.hash('provider123', 10);
 
         const existing = await prisma.user.findFirst({
-            where: { email: 'provider@edulink.com' }
+            where: { email: BRAND_DEFAULTS.providerEmail }
         });
 
         if (existing) {
             await prisma.user.update({
                 where: { id: existing.id },
-                data: { password: hash }
+                data: { password: hash, firstName: BRAND.name }
             });
-            return NextResponse.json({ status: 'password_updated', email: 'provider@edulink.com' });
+            return NextResponse.json({ status: 'password_updated', email: BRAND_DEFAULTS.providerEmail });
         }
 
         const user = await prisma.user.create({
             data: {
-                email: 'provider@edulink.com',
+                email: BRAND_DEFAULTS.providerEmail,
                 password: hash,
                 role: 'PROVIDER',
-                firstName: 'Provider',
-                lastName: 'Admin',
+                firstName: BRAND.name,
+                lastName: 'Provider',
                 isActive: true,
             }
         });
 
         return NextResponse.json({ status: 'created', email: user.email });
-    } catch (e: any) {
-        return NextResponse.json({ error: e.message }, { status: 500 });
+    } catch (error) {
+        console.error(error);
+        return NextResponse.json({ error: 'Setup failed' }, { status: 500 });
     }
 }

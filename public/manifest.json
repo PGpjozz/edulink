@@ -1,36 +1,16 @@
 ﻿{
-  "name": "EduLink Intelligence",
-  "short_name": "EduLink",
-  "description": "Premium School Management & Learning Ecosystem",
+  "name": "BrightCampus",
+  "short_name": "BrightCampus",
+  "description": "Brighter Schools. Smarter Management.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#2563eb",
-  "orientation": "portrait",
-  "categories": [
-    "education",
-    "productivity"
-  ],
+  "theme_color": "#f59e0b",
   "icons": [
     {
       "src": "/icon-512x512.png",
       "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
-  "shortcuts": [
-    {
-      "name": "View Alerts",
-      "short_name": "Alerts",
-      "description": "View your latest notifications",
-      "url": "/dashboard/parent/notifications",
-      "icons": [
-        {
-          "src": "/icon-512x512.png",
-          "sizes": "512x512"
-        }
-      ]
+      "type": "image/png"
     }
   ]
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = 'edulink-cache-v2';
+const CACHE_NAME = 'brightcampus-cache-v2';
 const STATIC_ASSETS = [
     '/',
     '/manifest.json',

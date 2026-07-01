@@ -26,7 +26,7 @@ const hash = await bcrypt.hash('provider123', 10);
 try {
     const res = await sql`
         INSERT INTO "User" (id, email, password, "firstName", "lastName", role, "schoolId", "isActive", "createdAt", "updatedAt")
-        VALUES (gen_random_uuid(), 'provider@edulink.com', ${hash}, 'EduLink', 'Provider', 'PROVIDER', NULL, true, NOW(), NOW())
+        VALUES (gen_random_uuid(), 'provider@brightcampus.com', ${hash}, 'BrightCampus', 'Provider', 'PROVIDER', NULL, true, NOW(), NOW())
         ON CONFLICT (email) DO UPDATE SET password = EXCLUDED.password, "isActive" = true
         RETURNING id, email, role
     `;

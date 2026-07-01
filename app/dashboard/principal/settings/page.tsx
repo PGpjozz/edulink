@@ -30,7 +30,7 @@ export default function BrandingSettings() {
             .then(data => {
                 setBranding({
                     logoUrl: data.logoUrl || '',
-                    primaryColor: data.primaryColor || '#4338ca'
+                    primaryColor: data.primaryColor || '#f59e0b'
                 });
                 setLoading(false);
             })
@@ -69,7 +69,7 @@ export default function BrandingSettings() {
         <Container maxWidth="md" sx={{ mt: 4 }}>
             <Box mb={4}>
                 <Typography variant="h4" fontWeight="bold">School Branding</Typography>
-                <Typography color="text.secondary">Customize how EduLink looks for your staff and parents.</Typography>
+                <Typography color="text.secondary">Customize how BrightCampus looks for your staff and parents.</Typography>
             </Box>
 
             {message.text && (

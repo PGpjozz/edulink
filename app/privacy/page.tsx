@@ -1,7 +1,8 @@
 import { Container, Typography, Box, Paper } from '@mui/material';
+import { BRAND } from '@/lib/branding';
 
 export const metadata = {
-    title: 'Privacy Policy — EduLink',
+    title: `Privacy Policy — ${BRAND.name}`,
 };
 
 export default function PrivacyPage() {
@@ -11,6 +12,9 @@ export default function PrivacyPage() {
                 <Typography variant="h4" fontWeight="bold" gutterBottom>
                     Privacy Policy (POPIA)
                 </Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                    {BRAND.name} — {BRAND.tagline}
+                </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
                     Version 2026-01 · Last updated June 2026
                 </Typography>
@@ -18,8 +22,8 @@ export default function PrivacyPage() {
                 <Box component="section" sx={{ mb: 4 }}>
                     <Typography variant="h6" fontWeight="bold" gutterBottom>1. Who we are</Typography>
                     <Typography paragraph>
-                        EduLink is a school management platform. Each school using EduLink is the responsible party
-                        for learner and parent personal information. EduLink (the platform operator) processes data
+                        {BRAND.name} is a school management platform. Each school using {BRAND.name} is the responsible party
+                        for learner and parent personal information. {BRAND.name} (the platform operator) processes data
                         on behalf of schools as a service provider under the Protection of Personal Information Act (POPIA).
                     </Typography>
                 </Box>
@@ -67,7 +71,7 @@ export default function PrivacyPage() {
                     <Typography variant="h6" fontWeight="bold" gutterBottom>6. Retention</Typography>
                     <Typography paragraph>
                         Schools determine retention periods for academic records in line with departmental requirements.
-                        When a school leaves EduLink, data export can be arranged before account closure.
+                        When a school leaves {BRAND.name}, data export can be arranged before account closure.
                     </Typography>
                 </Box>
 

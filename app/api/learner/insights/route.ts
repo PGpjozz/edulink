@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth } from '@/lib/api-auth';
 import { resolveLearnerAccess } from '@/lib/parent-access';
+import { BRAND } from '@/lib/branding';
 
 export async function GET(req: Request) {
     const auth = await requireAuth({ requireSchoolId: true });
@@ -45,7 +46,7 @@ export async function GET(req: Request) {
             recommendation: weakSubjects.length > 0
                 ? `Focus additional study hours on ${weakSubjects[0]} and consider booking a PTM with the teacher.`
                 : 'Great job! Challenge yourself with advanced resources in the Learning Hub.',
-            generatedBy: 'EduLink Study Advisor',
+            generatedBy: BRAND.studyAdvisorLabel,
         };
 
         await prisma.aIInsight.create({

@@ -13,7 +13,7 @@ const outfit = Outfit({
   variable: '--font-outfit',
 });
 
-export const getTheme = (mode: 'light' | 'dark', primaryColor: string = '#4338ca') => {
+export const getTheme = (mode: 'light' | 'dark', primaryColor: string = '#f59e0b') => {
   const isDark = mode === 'dark';
 
   const themeOptions: ThemeOptions = {
@@ -33,8 +33,8 @@ export const getTheme = (mode: 'light' | 'dark', primaryColor: string = '#4338ca
       mode,
       primary: {
         main: primaryColor,
-        light: isDark ? alpha(primaryColor, 0.8) : '#6366f1',
-        dark: isDark ? alpha(primaryColor, 0.6) : '#312e81',
+        light: isDark ? alpha(primaryColor, 0.8) : '#fbbf24',
+        dark: isDark ? alpha(primaryColor, 0.6) : '#d97706',
         contrastText: '#ffffff',
       },
       secondary: {

@@ -1,6 +1,5 @@
 -- Create SaaS Provider Account
 -- Run this in PostgreSQL (pgAdmin or psql)
--- Database: edulink
 
 INSERT INTO users (
     id,
@@ -15,9 +14,9 @@ INSERT INTO users (
     "updatedAt"
 ) VALUES (
     gen_random_uuid(),
-    'provider@edulink.com',
+    'provider@brightcampus.com',
     '$2b$10$Ds.AVNyxHeHMzZipwLAQFu//J3RNUD0b999nmY4t4h/svqRb31/S4.',
-    'EduLink',
+    'BrightCampus',
     'Provider',
     'PROVIDER',
     NULL,
@@ -27,5 +26,5 @@ INSERT INTO users (
 );
 
 -- Provider Login Credentials:
--- Email: provider@edulink.com
+-- Email: provider@brightcampus.com
 -- Password: provider123

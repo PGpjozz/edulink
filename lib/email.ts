@@ -1,3 +1,5 @@
+import { BRAND, brandEmailFrom } from './branding';
+
 type SendEmailParams = {
     to: string;
     subject: string;
@@ -7,7 +9,7 @@ type SendEmailParams = {
 
 export async function sendEmail(params: SendEmailParams): Promise<{ sent: boolean; error?: string }> {
     const apiKey = process.env.RESEND_API_KEY;
-    const from = process.env.EMAIL_FROM ?? 'EduLink <onboarding@resend.dev>';
+    const from = brandEmailFrom();
 
     if (!apiKey) {
         return { sent: false, error: 'RESEND_API_KEY not configured' };
@@ -52,7 +54,7 @@ export function inviteEmailHtml(params: {
     const roleLabel = params.role.replace(/_/g, ' ').toLowerCase();
     return `
         <p>Hi ${name},</p>
-        <p>You've been invited to join <strong>${params.schoolName}</strong> on EduLink as <strong>${roleLabel}</strong>.</p>
+        <p>You've been invited to join <strong>${params.schoolName}</strong> on ${BRAND.name} as <strong>${roleLabel}</strong>.</p>
         <p><a href="${params.acceptUrl}">Accept your invite and set your password</a></p>
         <p>This link expires in 7 days.</p>
         <p>If you didn't expect this email, you can ignore it.</p>
@@ -61,7 +63,7 @@ export function inviteEmailHtml(params: {
 
 export function passwordResetEmailHtml(params: { resetUrl: string }) {
     return `
-        <p>We received a request to reset your EduLink password.</p>
+        <p>We received a request to reset your ${BRAND.name} password.</p>
         <p><a href="${params.resetUrl}">Reset your password</a></p>
         <p>This link expires in 1 hour. If you didn't request this, you can ignore this email.</p>
     `;
@@ -69,17 +71,17 @@ export function passwordResetEmailHtml(params: { resetUrl: string }) {
 
 export function passwordResetConfirmEmailHtml(params: { signInUrl: string }) {
     return `
-        <p>Your EduLink password was changed successfully.</p>
-        <p><a href="${params.signInUrl}">Sign in to EduLink</a></p>
+        <p>Your ${BRAND.name} password was changed successfully.</p>
+        <p><a href="${params.signInUrl}">Sign in to ${BRAND.name}</a></p>
     `;
 }
 
 /** @deprecated Use passwordResetEmailHtml with reset link */
 export function passwordResetTempEmailHtml(params: { tempPassword: string; signInUrl: string }) {
     return `
-        <p>Your EduLink password was reset.</p>
+        <p>Your ${BRAND.name} password was reset.</p>
         <p>Sign in with this temporary password: <strong>${params.tempPassword}</strong></p>
         <p>You will be asked to change it immediately after signing in.</p>
-        <p><a href="${params.signInUrl}">Sign in to EduLink</a></p>
+        <p><a href="${params.signInUrl}">Sign in to ${BRAND.name}</a></p>
     `;
 }

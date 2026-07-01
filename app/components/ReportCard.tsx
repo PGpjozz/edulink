@@ -66,7 +66,7 @@ export default function ReportCard({ data }: ReportCardProps) {
                     <Box display="flex" alignItems="center" gap={1} mb={1}>
                         <School color="primary" sx={{ fontSize: 32 }} />
                         <Typography variant="h6" fontWeight="800" letterSpacing={1} color="text.secondary">
-                            EDULINK INTELLIGENCE
+                            BRIGHTCAMPUS
                         </Typography>
                     </Box>
                     <Typography variant="h3" fontWeight="900" color="text.primary" sx={{ mb: 1 }}>

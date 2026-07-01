@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { BRAND } from '@/lib/branding';
 import bcrypt from 'bcryptjs';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
@@ -65,7 +66,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (body.sendWelcomeEmail !== false) {
         const result = await sendEmail({
             to: email,
-            subject: `You're the owner of ${school.name} on EduLink`,
+            subject: `You're the owner of ${school.name} on ${BRAND.name}`,
             html: `
                 <p>Hi ${owner.firstName},</p>
                 <p>Your school owner account for <strong>${school.name}</strong> is ready.</p>

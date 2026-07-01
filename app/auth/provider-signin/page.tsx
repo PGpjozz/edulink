@@ -13,6 +13,7 @@ import {
     Alert,
     CircularProgress
 } from '@mui/material';
+import { BRAND, BRAND_DEFAULTS } from '@/lib/branding';
 import { motion } from 'framer-motion';
 
 function ProviderSignInInner() {
@@ -57,7 +58,10 @@ function ProviderSignInInner() {
                 sx={{ p: 4, width: '100%', borderRadius: 4 }}
             >
                 <Typography variant="h4" component="h1" gutterBottom align="center" fontWeight="bold" color="primary">
-                    EduLink
+                    {BRAND.name}
+                </Typography>
+                <Typography variant="body2" align="center" color="text.secondary" gutterBottom>
+                    {BRAND.tagline}
                 </Typography>
                 <Typography variant="body1" align="center" color="text.secondary" gutterBottom>
                     SaaS Provider Sign In
@@ -74,7 +78,7 @@ function ProviderSignInInner() {
                         onChange={(e) => setEmail(e.target.value)}
                         margin="normal"
                         required
-                        placeholder="provider@edulink.com"
+                        placeholder={BRAND_DEFAULTS.providerEmail}
                         autoComplete="email"
                     />
                     <TextField

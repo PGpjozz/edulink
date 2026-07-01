@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server';
+import { BRAND } from '@/lib/branding';
 import crypto from 'crypto';
+import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson } from '@/lib/api-auth';
 import {
@@ -51,7 +52,7 @@ export async function POST(req: Request) {
     const baseUrl = process.env.NEXTAUTH_URL ?? 'http://localhost:3000';
     const mPaymentId = crypto.randomUUID();
     let amount = 0;
-    let itemName = 'EduLink payment';
+    let itemName = `${BRAND.name} payment`;
     let billingId: string | undefined;
     let invoiceId: string | undefined;
 
@@ -71,7 +72,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Invoice already paid' }, { status: 400 });
         }
         amount = billing.totalAmount;
-        itemName = `EduLink subscription — ${billing.school.name}`;
+        itemName = `${BRAND.name} subscription — ${billing.school.name}`;
         billingId = billing.id;
     } else if (type === 'PARENT_FEE') {
         if (auth.role !== 'PARENT') {

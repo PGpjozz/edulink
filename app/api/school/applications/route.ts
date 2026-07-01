@@ -6,6 +6,7 @@ import bcrypt from 'bcryptjs';
 import { generateTemporaryPassword } from '@/lib/password';
 import { validateSaId, normalizeSaId } from '@/lib/sa-id';
 import { sendEmail } from '@/lib/email';
+import { BRAND } from '@/lib/branding';
 
 export async function GET() {
     const auth = await requireAuth({ requireSchoolId: true });
@@ -118,7 +119,7 @@ export async function PATCH(req: Request) {
                     <p>Dear ${application.firstName},</p>
                     <p>Your application to <strong>${application.school.name}</strong> has been approved.</p>
                     <p>Sign in with your SA ID <strong>${saId}</strong> and temporary password <strong>${tempPassword}</strong>.</p>
-                    <p><a href="${baseUrl}/auth/signin?school=${application.school.subdomain}">Sign in to EduLink</a></p>
+                    <p><a href="${baseUrl}/auth/signin?school=${application.school.subdomain}">Sign in to ${BRAND.name}</a></p>
                     <p>You will be asked to change your password on first login.</p>
                 `,
             });

@@ -1,4 +1,5 @@
 import { sendEmail } from './email';
+import { BRAND } from './branding';
 
 type ParentAlertParams = {
     phoneNumber?: string | null;
@@ -61,7 +62,7 @@ export async function notifyParent(params: ParentAlertParams): Promise<void> {
             html: `
                 <p>Hi ${params.parentName},</p>
                 <p>${params.message}</p>
-                ${params.link ? `<p><a href="${params.link}">View in EduLink</a></p>` : ''}
+                ${params.link ? `<p><a href="${params.link}">View in ${BRAND.name}</a></p>` : ''}
             `,
             text: smsBody,
         });
@@ -80,6 +81,6 @@ export function invoiceIssuedEmailHtml(params: {
         <p>Hi ${params.parentName},</p>
         <p>A new school fee invoice has been issued for <strong>${params.learnerName}</strong>.</p>
         <p><strong>${params.title}</strong><br/>Amount: R ${params.amount.toFixed(2)}<br/>Due: ${params.dueDate}</p>
-        <p><a href="${params.billingUrl}">View and pay in EduLink</a></p>
+        <p><a href="${params.billingUrl}">View and pay in ${BRAND.name}</a></p>
     `;
 }

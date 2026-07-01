@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { BRAND } from '@/lib/branding';
 import { useSession } from 'next-auth/react';
 import {
   Dialog,
@@ -58,7 +59,7 @@ export default function PrivacyConsentGate() {
       <DialogTitle>Privacy &amp; data protection (POPIA)</DialogTitle>
       <DialogContent>
         <Typography variant="body2" color="text.secondary" paragraph>
-          EduLink processes personal information to provide school services. Please read our{' '}
+          {BRAND.name} processes personal information to provide school services. Please read our{' '}
           <Link href="/privacy" target="_blank">privacy policy</Link> before continuing.
         </Typography>
         <FormControlLabel

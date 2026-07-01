@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { readJson } from '@/lib/api-auth';
 import { prisma } from '@/lib/prisma';
+import { BRAND } from '@/lib/branding';
 import { sendEmail, passwordResetEmailHtml } from '@/lib/email';
 import { createPasswordResetToken } from '@/lib/password-reset-token';
 import { checkRateLimit, getClientIp } from '@/lib/rate-limit';
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
 
     const emailResult = await sendEmail({
         to: user.email!,
-        subject: 'Reset your EduLink password',
+        subject: `Reset your ${BRAND.name} password`,
         html: passwordResetEmailHtml({ resetUrl }),
         text: `Reset your password: ${resetUrl}`,
     });

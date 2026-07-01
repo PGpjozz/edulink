@@ -53,7 +53,7 @@ export default function InstallPWA() {
             >
                 <InstallMobile />
                 <Box>
-                    <Typography variant="subtitle2" fontWeight="bold">EduLink is better in-app</Typography>
+                    <Typography variant="subtitle2" fontWeight="bold">BrightCampus is better in-app</Typography>
                     <Typography variant="caption" sx={{ opacity: 0.9 }}>Add to your home screen for instant access.</Typography>
                 </Box>
                 <Box display="flex" gap={1} ml="auto">

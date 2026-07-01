@@ -131,7 +131,7 @@ export default function SchoolSubscription() {
         <Container maxWidth="xl" sx={{ mt: 4, mb: 4 }} component={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <Box mb={4}>
                 <Typography variant="h4" fontWeight="bold">SaaS Subscription</Typography>
-                <Typography color="text.secondary">Manage your EduLink platform license and billing.</Typography>
+                <Typography color="text.secondary">Manage your BrightCampus platform license and billing.</Typography>
             </Box>
 
             {message && <Alert severity="success" sx={{ mb: 4 }} onClose={() => setMessage('')}>{message}</Alert>}
@@ -210,7 +210,7 @@ export default function SchoolSubscription() {
                 {/* Billing History */}
                 <Grid size={{ xs: 12 }}>
                     <Paper sx={{ p: 2 }}>
-                        <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ p: 1 }}>EduLink Invoices</Typography>
+                        <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ p: 1 }}>BrightCampus Invoices</Typography>
                         <Box sx={{ height: 400, width: '100%' }}>
                             <DataGrid
                                 rows={school.billings || []}

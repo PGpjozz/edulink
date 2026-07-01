@@ -1,14 +1,16 @@
+import { BRAND_DEFAULTS } from './branding';
+
 export const MOCK_USERS = [
     {
         id: 'mock-provider-1',
-        email: 'provider@edulink.com',
+        email: BRAND_DEFAULTS.providerEmail,
         password: 'provider123',
-        firstName: 'EduLink',
+        firstName: 'BrightCampus',
         lastName: 'Provider',
         role: 'PROVIDER',
         schoolId: null,
         membershipId: 'mock-membership-provider-1',
-        idNumber: null
+        idNumber: null,
     },
     {
         id: 'mock-principal-1',
@@ -19,7 +21,7 @@ export const MOCK_USERS = [
         role: 'PRINCIPAL',
         schoolId: 'mock-school-1',
         membershipId: 'mock-membership-principal-1',
-        idNumber: null
+        idNumber: null,
     },
     {
         id: 'mock-teacher-1',
@@ -30,7 +32,7 @@ export const MOCK_USERS = [
         role: 'TEACHER',
         schoolId: 'mock-school-1',
         membershipId: 'mock-membership-teacher-1',
-        idNumber: null
+        idNumber: null,
     },
     {
         id: 'mock-parent-1',
@@ -41,7 +43,7 @@ export const MOCK_USERS = [
         role: 'PARENT',
         schoolId: 'mock-school-1',
         membershipId: 'mock-membership-parent-1',
-        idNumber: null
+        idNumber: null,
     },
     {
         id: 'mock-learner-1',
@@ -52,7 +54,7 @@ export const MOCK_USERS = [
         role: 'LEARNER',
         schoolId: 'mock-school-1',
         membershipId: 'mock-membership-learner-1',
-        idNumber: 'L12345'
+        idNumber: 'L12345',
     },
     {
         id: 'mock-admin-1',
@@ -63,6 +65,13 @@ export const MOCK_USERS = [
         role: 'SCHOOL_ADMIN',
         schoolId: 'mock-school-1',
         membershipId: 'mock-membership-admin-1',
-        idNumber: null
-    }
+        idNumber: null,
+    },
 ];
+
+export const mockProvider = {
+    email: BRAND_DEFAULTS.providerEmail,
+    password: 'provider123',
+    firstName: 'BrightCampus',
+    lastName: 'Provider',
+};

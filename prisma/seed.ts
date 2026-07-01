@@ -28,19 +28,19 @@ async function main() {
     const hashedPassword = await bcrypt.hash('provider123', 10);
 
     await prisma.user.upsert({
-        where: { email: 'provider@edulink.com' },
+        where: { email: 'provider@brightcampus.com' },
         update: {
             password: hashedPassword,
-            firstName: 'EduLink',
+            firstName: 'BrightCampus',
             lastName: 'Provider',
             role: 'PROVIDER',
             schoolId: null,
             isActive: true
         },
         create: {
-            email: 'provider@edulink.com',
+            email: 'provider@brightcampus.com',
             password: hashedPassword,
-            firstName: 'EduLink',
+            firstName: 'BrightCampus',
             lastName: 'Provider',
             role: 'PROVIDER',
             schoolId: null, // Provider is not tied to any school
@@ -48,14 +48,14 @@ async function main() {
         }
     });
 
-    const providerUser = await prisma.user.findUnique({ where: { email: 'provider@edulink.com' } });
+    const providerUser = await prisma.user.findUnique({ where: { email: 'provider@brightcampus.com' } });
     if (!providerUser) {
         throw new Error('Failed to load provider user after upsert');
     }
 
     console.log('✅ SaaS Provider created successfully!');
     console.log('\n📝 Provider Credentials:');
-    console.log('Email: provider@edulink.com');
+    console.log('Email: provider@brightcampus.com');
     console.log('Password: provider123');
     console.log('\nℹ️  Log in to onboard your first school!');
 
@@ -66,7 +66,7 @@ async function main() {
         update: {},
         create: {
             id: 'mock-school-1',
-            name: 'EduLink Demo School',
+            name: 'BrightCampus Demo School',
             subdomain: 'demo',
             tier: 'SMALL',
             isActive: true,

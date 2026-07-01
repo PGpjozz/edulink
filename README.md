@@ -1,6 +1,8 @@
-# EduLink
+# BrightCampus
 
-School management platform for South African schools — learners, teachers, parents, billing, and academics in one place.
+**Brighter Schools. Smarter Management.**
+
+BrightCampus empowers schools with intelligent, secure, and easy-to-use technology that simplifies administration, enhances teaching, and improves learner success.
 
 ## Production readiness checklist
 
@@ -30,7 +32,7 @@ npm run dev
 
 ```bash
 # Start dev server, then:
-curl "http://localhost:3000/api/seed?secret=edulink-seed-2026"
+curl "http://localhost:3000/api/seed?secret=brightcampus-seed-2026"
 ```
 
 Learner login: ID `0801015001085` / `password123` (dev seed only).
@@ -38,8 +40,8 @@ Learner login: ID `0801015001085` / `password123` (dev seed only).
 ### Provider bootstrap (development only)
 
 ```bash
-curl "http://localhost:3000/api/setup?secret=edulink-setup-2026"
-# provider@edulink.com / provider123
+curl "http://localhost:3000/api/setup?secret=brightcampus-setup-2026"
+# provider@brightcampus.com / provider123
 ```
 
 ## Environment variables
@@ -47,7 +49,7 @@ curl "http://localhost:3000/api/setup?secret=edulink-setup-2026"
 | Variable | Required | Description |
 |----------|----------|-------------|
 | `NEXTAUTH_SECRET` | Production | Session signing secret (min 32 chars) |
-| `NEXTAUTH_URL` | Yes | App URL, e.g. `https://app.edulink.co.za` |
+| `NEXTAUTH_URL` | Yes | App URL, e.g. `https://app.brightcampus.co.za` |
 | `DATABASE_URL` | Yes | Pooled PostgreSQL connection (Neon) |
 | `DIRECT_URL` | Yes | Direct PostgreSQL URL for Prisma CLI |
 | `RESEND_API_KEY` | Production | Email delivery |

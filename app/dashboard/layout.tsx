@@ -13,6 +13,7 @@ import TeacherMobileNav from '@/app/components/TeacherMobileNav';
 import PrivacyConsentGate from '@/app/components/PrivacyConsentGate';
 import NotificationDropdown from '@/app/components/NotificationDropdown';
 import { getPageTitle } from '@/lib/page-titles';
+import { BRAND_DEFAULTS } from '@/lib/branding';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
     const theme = useTheme();
@@ -68,7 +69,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
                     </IconButton>
                     <Box sx={{ flexGrow: 1, minWidth: 0 }}>
                         <Typography variant="caption" color="text.secondary" display="block" lineHeight={1.2}>
-                            {schoolName || 'EduLink'}
+                            {schoolName || BRAND_DEFAULTS.appName}
                         </Typography>
                         <Typography variant="subtitle1" noWrap fontWeight="bold">
                             {pageTitle}

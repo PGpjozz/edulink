@@ -8,6 +8,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import bcrypt from 'bcryptjs';
 import { guardDevRoute } from '@/lib/dev-routes';
+import { BRAND_DEFAULTS } from '@/lib/branding';
 
 const rand = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
 const ref = () => `REF-${Math.random().toString(36).substring(2, 9).toUpperCase()}`;
@@ -16,7 +17,7 @@ const daysFromNow = (n: number) => { const d = new Date(); d.setDate(d.getDate()
 
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
-    const blocked = guardDevRoute('edulink-seed-2026', searchParams.get('secret'));
+    const blocked = guardDevRoute(BRAND_DEFAULTS.seedSecret, searchParams.get('secret'));
     if (blocked) return blocked;
 
     try {
@@ -615,7 +616,7 @@ export async function GET(req: Request) {
             notifDefs.push({ userId: lp.userId, title: 'New Quiz Available', message: 'A new quiz has been published for your subject. Complete it before the deadline.', type: 'ACADEMIC', link: '/dashboard/learner/quizzes' });
         }
         // System notification for principal
-        notifDefs.push({ userId: principal.id, title: 'System Update', message: 'EduLink has been updated with new features. Check the settings panel.', type: 'SYSTEM' });
+        notifDefs.push({ userId: principal.id, title: 'System Update', message: 'BrightCampus has been updated with new features. Check the settings panel.', type: 'SYSTEM' });
 
         for (const n of notifDefs) {
             await prisma.notification.create({

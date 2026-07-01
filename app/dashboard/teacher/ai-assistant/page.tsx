@@ -157,7 +157,7 @@ export default function AIAssistant() {
 
                     <Alert severity="info" sx={{ mt: 3, borderRadius: 3 }}>
                         <Typography variant="caption">
-                            <strong>Note:</strong> AI comments are based on recent quiz scores and attendance records from the EduLink Data Hub.
+                            <strong>Note:</strong> AI comments are based on recent quiz scores and attendance records from the BrightCampus Data Hub.
                         </Typography>
                     </Alert>
                 </Grid>

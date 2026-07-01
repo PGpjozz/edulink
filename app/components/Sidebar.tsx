@@ -44,6 +44,7 @@ import {
 } from '@mui/icons-material';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { signOut, useSession } from 'next-auth/react';
+import { BRAND_DEFAULTS } from '@/lib/branding';
 import { useThemeContext } from '@/app/theme/ThemeContext';
 import { useEffect, useState } from 'react';
 import RoleSwitcher from '@/app/components/RoleSwitcher';
@@ -226,10 +227,10 @@ export default function Sidebar({ mobileOpen = false, onClose }: SidebarProps) {
                 {logoUrl ? (
                     <Box component="img" src={logoUrl} alt="School Logo" sx={{ width: 40, height: 40, borderRadius: 1 }} />
                 ) : (
-                    <Avatar sx={{ bgcolor: theme.palette.primary.main }}>EL</Avatar>
+                    <Avatar sx={{ bgcolor: theme.palette.primary.main }}>{BRAND_DEFAULTS.initials}</Avatar>
                 )}
                 <Typography variant="h6" fontWeight="bold" sx={{ color: 'primary.main' }} noWrap>
-                    {schoolName || 'EduLink'}
+                    {schoolName || BRAND_DEFAULTS.appName}
                 </Typography>
             </Box>
 

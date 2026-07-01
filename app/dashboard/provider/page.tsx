@@ -27,6 +27,7 @@ import { motion } from 'framer-motion';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 import { useEffect } from 'react';
 import AddSchoolModal from '@/app/admin/dashboard/AddSchoolModal';
+import { BRAND } from '@/lib/branding';
 
 export default function ProviderDashboard() {
     const [activeTab, setActiveTab] = useState(0);
@@ -232,7 +233,7 @@ export default function ProviderDashboard() {
         <Container maxWidth="md" sx={{ mt: 4, mb: 4 }} component={motion.div} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <Box mb={4} textAlign="center">
                 <SchoolIcon sx={{ fontSize: 60, color: 'primary.main', mb: 2 }} />
-                <Typography variant="h3" fontWeight="bold">EduLink Provider Portal</Typography>
+                <Typography variant="h3" fontWeight="bold">{BRAND.providerPortalTitle}</Typography>
                 <Typography color="text.secondary" variant="h6">Manage your SaaS platform</Typography>
             </Box>
 

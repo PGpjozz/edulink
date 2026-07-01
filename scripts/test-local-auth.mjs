@@ -6,7 +6,7 @@ const cookies = csrfRes.headers.getSetCookie?.() ?? [];
 
 const body = new URLSearchParams({
   csrfToken,
-  identifier: process.argv[2] ?? 'provider@edulink.com',
+  identifier: process.argv[2] ?? 'provider@brightcampus.com',
   password: process.argv[3] ?? 'provider123',
   redirect: 'false',
   json: 'true',

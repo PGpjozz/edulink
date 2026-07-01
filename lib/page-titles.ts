@@ -1,3 +1,5 @@
+import { BRAND_DEFAULTS } from '@/lib/branding';
+
 const PAGE_TITLES: Record<string, string> = {
     '/dashboard/teacher': 'My Classroom',
     '/dashboard/teacher/homework': 'Homework',
@@ -50,5 +52,5 @@ export function getPageTitle(pathname: string): string {
     if (pathname.startsWith('/dashboard/learner')) return 'Learner';
     if (pathname.startsWith('/dashboard/hod')) return 'Department';
 
-    return 'EduLink';
+    return BRAND_DEFAULTS.appName;
 }

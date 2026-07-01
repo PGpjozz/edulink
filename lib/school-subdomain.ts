@@ -1,11 +1,13 @@
+import { BRAND_DEFAULTS } from './branding';
+
 const RESERVED = new Set(['www', 'app', 'api', 'admin', 'auth', 'localhost']);
 
-/** Base domain for multi-tenant subdomains (e.g. westview.edulink.co.za). */
-const TENANT_ROOT = process.env.NEXT_PUBLIC_TENANT_ROOT_DOMAIN ?? 'edulink.co.za';
+/** Base domain for multi-tenant subdomains (e.g. westview.brightcampus.co.za). */
+const TENANT_ROOT = process.env.NEXT_PUBLIC_TENANT_ROOT_DOMAIN ?? BRAND_DEFAULTS.tenantRootDomain;
 
 /**
  * Resolve school subdomain from hostname or path.
- * Examples: westview.edulink.co.za → westview; westview.localhost → westview
+ * Examples: westview.brightcampus.co.za → westview; westview.localhost → westview
  */
 export function getSchoolSubdomainFromHost(hostname: string): string | null {
     const host = hostname.split(':')[0].toLowerCase();

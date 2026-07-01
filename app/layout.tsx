@@ -1,13 +1,14 @@
 import type { Metadata, Viewport } from 'next';
 import ThemeRegistry from './theme/ThemeRegistry';
+import { BRAND } from '@/lib/branding';
 
 export const metadata: Metadata = {
-  title: 'EduLink Intelligence',
-  description: 'Premium Multiple School Management System',
+  title: `${BRAND.name} — ${BRAND.tagline}`,
+  description: BRAND.description,
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'EduLink',
+    title: BRAND.shortName,
   },
   icons: {
     apple: '/icon-512x512.png',
@@ -18,7 +19,7 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   maximumScale: 1,
-  themeColor: '#2563eb',
+  themeColor: '#f59e0b',
 };
 
 import AuthProvider from './AuthProvider';

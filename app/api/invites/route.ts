@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { BRAND } from '@/lib/branding';
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
@@ -100,14 +101,14 @@ export async function POST(req: Request) {
 
     const emailResult = await sendEmail({
         to: email,
-        subject: `You're invited to ${school?.name ?? 'EduLink'}`,
+        subject: `You're invited to ${school?.name ?? BRAND.name}`,
         html: inviteEmailHtml({
             schoolName: school?.name ?? 'your school',
             role: body.role,
             acceptUrl,
             firstName: body.firstName,
         }),
-        text: `You've been invited to ${school?.name ?? 'EduLink'}. Accept: ${acceptUrl}`,
+        text: `You've been invited to ${school?.name ?? BRAND.name}. Accept: ${acceptUrl}`,
     });
 
     return NextResponse.json({

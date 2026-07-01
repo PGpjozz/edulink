@@ -35,7 +35,7 @@ export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ 
     });
     const [primaryColor, setPrimaryColor] = useState(() => {
         const saved = typeof window !== 'undefined' ? localStorage.getItem('primaryColor') : null;
-        return saved ?? '#4338ca';
+        return saved ?? '#f59e0b';
     });
     const [logoUrl, setLogoUrl] = useState('');
     const [schoolName, setSchoolName] = useState('');

@@ -2,28 +2,35 @@
 
 import Link from 'next/link';
 import { Box, Button, Container, Typography, Grid, Paper } from '@mui/material';
-import { School, Groups, Assignment, Message } from '@mui/icons-material';
+import { School, Groups, Assignment, Message, Lightbulb } from '@mui/icons-material';
+import { BRAND } from '@/lib/branding';
 
 export default function Home() {
     return (
         <Box minHeight="100vh" bgcolor="background.default">
             <Box
                 sx={{
-                    background: 'linear-gradient(145deg, #4338ca 0%, #312e81 100%)',
+                    background: 'linear-gradient(145deg, #f59e0b 0%, #d97706 35%, #4338ca 100%)',
                     color: 'white',
                     py: { xs: 8, md: 12 },
                     px: 2,
                 }}
             >
                 <Container maxWidth="lg">
-                    <Typography variant="overline" sx={{ opacity: 0.85, letterSpacing: 2 }}>
-                        SCHOOL MANAGEMENT PLATFORM
+                    <Box display="flex" alignItems="center" gap={1} mb={1}>
+                        <Lightbulb sx={{ fontSize: 28 }} />
+                        <Typography variant="overline" sx={{ opacity: 0.9, letterSpacing: 2 }}>
+                            {BRAND.name.toUpperCase()}
+                        </Typography>
+                    </Box>
+                    <Typography variant="h2" fontWeight="bold" sx={{ mt: 1, mb: 1, maxWidth: 720 }}>
+                        {BRAND.tagline}
                     </Typography>
-                    <Typography variant="h2" fontWeight="bold" sx={{ mt: 1, mb: 2, maxWidth: 640 }}>
-                        EduLink — your school, connected
+                    <Typography variant="h6" sx={{ opacity: 0.92, mb: 3, maxWidth: 640, fontWeight: 400, lineHeight: 1.6 }}>
+                        {BRAND.mission}
                     </Typography>
-                    <Typography variant="h6" sx={{ opacity: 0.9, mb: 4, maxWidth: 520, fontWeight: 400 }}>
-                        Attendance, grades, messages, billing, and announcements — all in one calm, easy-to-use portal.
+                    <Typography variant="body1" sx={{ opacity: 0.85, mb: 4, maxWidth: 600, fontStyle: 'italic' }}>
+                        {BRAND.vision}
                     </Typography>
                     <Box display="flex" gap={2} flexWrap="wrap">
                         <Button component={Link} href="/auth/signin" variant="contained" size="large" sx={{ bgcolor: 'white', color: 'primary.main', '&:hover': { bgcolor: 'grey.100' } }}>
