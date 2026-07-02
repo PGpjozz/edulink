@@ -71,6 +71,7 @@ const ADMIN_NAV = [
     { label: 'Subjects', icon: <Book />, path: '/dashboard/principal/subjects' },
     { label: 'Departments', icon: <School />, path: '/dashboard/principal/departments' },
     { label: 'Admissions', icon: <AppRegistration />, path: '/dashboard/principal/admissions' },
+    { label: 'Report Cards', icon: <Assignment />, path: '/dashboard/principal/reports' },
     { label: 'Library & Assets', icon: <Inventory />, path: '/dashboard/principal/assets' },
     { label: 'Finance', icon: <Payments />, path: '/dashboard/principal/finance' },
     { label: 'Subscription', icon: <ReceiptLong />, path: '/dashboard/principal/subscription' },
@@ -132,12 +133,14 @@ const NAV_ITEMS: Record<string, { label: string; icon: React.ReactNode; path: st
         { label: 'Digital Library', icon: <Book />, path: '/dashboard/learner/library' },
         { label: 'Quizzes', icon: <QuestionAnswer />, path: '/dashboard/learner/quizzes' },
         { label: 'Academic Report', icon: <Assignment />, path: '/dashboard/learner/report' },
+        { label: 'Report Cards', icon: <ReceiptLong />, path: '/dashboard/learner/reports' },
         { label: 'House Points', icon: <EmojiEventsIcon />, path: '/dashboard/learner/badges' },
         { label: 'Messages', icon: <Message />, path: '/dashboard/messages' }
     ],
     PARENT: [
         { label: 'Children', icon: <Person />, path: '/dashboard/parent' },
         { label: 'Homework', icon: <Assignment />, path: '/dashboard/parent/homework' },
+        { label: 'Report Cards', icon: <ReceiptLong />, path: '/dashboard/parent/reports' },
         { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
         { label: 'Meetings', icon: <Event />, path: '/dashboard/parent/meetings' },
         { label: 'Billing', icon: <Payments />, path: '/dashboard/parent/billing' },
