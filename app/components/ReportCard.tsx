@@ -171,6 +171,17 @@ export default function ReportCard({ data }: ReportCardProps) {
                 </Table>
             </TableContainer>
 
+            {data.principalComment && (
+                <Box sx={{ mb: 6, p: 3, bgcolor: 'action.hover', borderRadius: 3, border: 1, borderColor: 'divider', position: 'relative', zIndex: 1 }}>
+                    <Typography variant="overline" color="primary" sx={{ fontWeight: 900, letterSpacing: 2 }}>
+                        Principal&apos;s Comment
+                    </Typography>
+                    <Typography variant="body1" sx={{ mt: 1, fontStyle: 'italic' }}>
+                        &ldquo;{data.principalComment}&rdquo;
+                    </Typography>
+                </Box>
+            )}
+
             <Box mt={10} display="flex" justifyContent="space-between" sx={{ position: 'relative', zIndex: 1 }}>
                 <Box borderTop={2} borderColor="divider" px={2} pt={2} width={220} textAlign="center">
                     <Typography variant="body2" fontWeight="bold">Class Teacher</Typography>

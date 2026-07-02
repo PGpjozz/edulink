@@ -21,7 +21,8 @@ import {
     AdminPanelSettings,
     AttachMoney,
     AccountBalanceWallet,
-    NotificationsActive
+    NotificationsActive,
+    Download,
 } from '@mui/icons-material';
 import { DataGrid, GridColDef } from '@mui/x-data-grid';
 
@@ -92,14 +93,24 @@ export default function PrincipalFinance() {
                     <Typography variant="h4" fontWeight="bold">Finance & Collections</Typography>
                     <Typography color="text.secondary">Automated monthly billing and revenue tracking.</Typography>
                 </Box>
-                <Button
-                    variant="contained"
-                    startIcon={<Autorenew />}
-                    disabled={generating}
-                    onClick={handleAutoGenerate}
-                >
-                    {generating ? 'Generating...' : 'Run Monthly Billing'}
-                </Button>
+                <Stack direction="row" spacing={2}>
+                    <Button
+                        variant="outlined"
+                        startIcon={<Download />}
+                        component="a"
+                        href="/api/school/finance/export"
+                    >
+                        Export CSV
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<Autorenew />}
+                        disabled={generating}
+                        onClick={handleAutoGenerate}
+                    >
+                        {generating ? 'Generating...' : 'Run Monthly Billing'}
+                    </Button>
+                </Stack>
             </Box>
 
             {message && <Alert severity="success" sx={{ mb: 4 }}>{message}</Alert>}

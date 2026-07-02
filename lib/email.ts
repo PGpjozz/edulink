@@ -165,3 +165,24 @@ export function subscriptionInvoiceEmailHtml(params: {
         <p><a href="${params.payUrl}">Pay subscription</a> · <a href="${params.invoiceUrl}">View invoice</a></p>
     `);
 }
+
+export function reportPublishedEmailHtml(params: {
+    schoolName: string;
+    learnerName: string;
+    termLabel: string;
+    overallAverage: number | null;
+    viewUrl: string;
+    recipientName?: string;
+}) {
+    const greeting = params.recipientName?.trim() || 'there';
+    const avg =
+        params.overallAverage != null
+            ? `<p>Overall average: <strong>${params.overallAverage}%</strong></p>`
+            : '';
+    return emailLayout(`
+        <p>Hi ${greeting},</p>
+        <p>The <strong>${params.termLabel}</strong> academic report for <strong>${params.learnerName}</strong> at ${params.schoolName} is now available on ${BRAND.name}.</p>
+        ${avg}
+        <p><a href="${params.viewUrl}">View the full report card</a></p>
+    `);
+}
