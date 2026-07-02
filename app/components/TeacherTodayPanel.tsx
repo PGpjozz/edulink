@@ -17,7 +17,8 @@ type HomeworkItem = {
 type ClassItem = { id: string; name: string };
 
 export default function TeacherTodayPanel() {
-    const [homework, setHomework] = useState<HomeworkItem[]>([]);
+    const [dueSoon, setDueSoon] = useState<HomeworkItem[]>([]);
+    const [needsGrading, setNeedsGrading] = useState<HomeworkItem[]>([]);
     const [classes, setClasses] = useState<ClassItem[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -27,19 +28,18 @@ export default function TeacherTodayPanel() {
             fetch('/api/classes').then((r) => r.json()),
         ])
             .then(([hw, cls]) => {
-                setHomework(Array.isArray(hw) ? hw : []);
+                const homework: HomeworkItem[] = Array.isArray(hw) ? hw : [];
+                const now = Date.now();
+                const weekMs = 7 * 24 * 60 * 60 * 1000;
+                setDueSoon(homework.filter((h) => {
+                    const due = new Date(h.dueDate).getTime();
+                    return due >= now && due <= now + weekMs;
+                }));
+                setNeedsGrading(homework.filter((h) => (h._count?.submissions ?? 0) > 0));
                 setClasses(Array.isArray(cls) ? cls : []);
             })
             .finally(() => setLoading(false));
     }, []);
-
-    const now = Date.now();
-    const weekMs = 7 * 24 * 60 * 60 * 1000;
-    const dueSoon = homework.filter((h) => {
-        const due = new Date(h.dueDate).getTime();
-        return due >= now && due <= now + weekMs;
-    });
-    const needsGrading = homework.filter((h) => (h._count?.submissions ?? 0) > 0);
 
     if (loading) {
         return <LoadingSkeleton variant="list" count={1} />;

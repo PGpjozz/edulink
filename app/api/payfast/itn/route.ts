@@ -12,11 +12,14 @@ async function fulfillCheckout(checkoutId: string, pfPaymentId: string) {
     const checkout = await prisma.payFastCheckout.findUnique({ where: { id: checkoutId } });
     if (!checkout || checkout.status === 'COMPLETED') return;
 
-    await prisma.$transaction(async (tx) => {
-        await tx.payFastCheckout.update({
-            where: { id: checkoutId },
+    const fulfilled = await prisma.$transaction(async (tx) => {
+        // Conditional update makes fulfillment idempotent: if a concurrent ITN
+        // already completed this checkout, skip payment creation entirely.
+        const claimed = await tx.payFastCheckout.updateMany({
+            where: { id: checkoutId, status: { not: 'COMPLETED' } },
             data: { status: 'COMPLETED', pfPaymentId },
         });
+        if (claimed.count === 0) return false;
 
         if (checkout.type === 'SCHOOL_SUBSCRIPTION' && checkout.billingId) {
             const billing = await tx.billing.findUnique({ where: { id: checkout.billingId } });
@@ -56,7 +59,11 @@ async function fulfillCheckout(checkoutId: string, pfPaymentId: string) {
                 data: { status: 'PAID' },
             });
         }
+
+        return true;
     });
+
+    if (!fulfilled) return;
 
     await writeAuditLog({
         schoolId: checkout.schoolId,

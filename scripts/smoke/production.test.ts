@@ -7,6 +7,9 @@ import { canMessage, isMessagingRole } from '../../lib/messaging';
 import { capsLevel, currentSchoolTerm } from '../../lib/caps';
 import { createPasswordResetToken, verifyPasswordResetToken } from '../../lib/password-reset-token';
 import { canManageAdmissions, hasPermission } from '../../lib/permissions';
+import { calculateSchoolBill, getTierDefaultFee, getEffectiveMonthlyFee } from '../../lib/provider-pricing';
+import { getTuitionFee } from '../../lib/subscription';
+import { createImpersonationToken, verifyImpersonationToken } from '../../lib/impersonation-token';
 
 describe('SA ID validation', () => {
     it('accepts a valid test ID', () => {
@@ -26,8 +29,9 @@ describe('SA ID validation', () => {
 
 describe('Password policy', () => {
     it('rejects weak default passwords', () => {
-        assert.ok(validatePassword('password123'));
-        assert.ok(validatePassword('principal123'));
+        // validatePassword returns an error message string when the password is rejected
+        assert.equal(typeof validatePassword('password123'), 'string');
+        assert.equal(typeof validatePassword('principal123'), 'string');
     });
 
     it('accepts strong passwords', () => {
@@ -121,7 +125,6 @@ describe('Dashboard roles', () => {
 
 describe('Provider pricing', () => {
     it('uses school monthly fee for billing base', () => {
-        const { calculateSchoolBill, getTierDefaultFee } = require('../../lib/provider-pricing');
         const bill = calculateSchoolBill({ tier: 'SMALL', monthlyFee: 3000 }, 50);
         assert.equal(bill.baseAmount, 3000);
         assert.equal(bill.totalAmount, 3000);
@@ -129,13 +132,11 @@ describe('Provider pricing', () => {
     });
 
     it('treats legacy unset SaaS fee as tier default', () => {
-        const { getEffectiveMonthlyFee } = require('../../lib/provider-pricing');
         assert.equal(getEffectiveMonthlyFee({ tier: 'SMALL', monthlyFee: 1000 }), 2500);
         assert.equal(getEffectiveMonthlyFee({ tier: 'SMALL', monthlyFee: 0 }), 2500);
     });
 
     it('applies learner overage above tier limit', () => {
-        const { calculateSchoolBill } = require('../../lib/provider-pricing');
         const bill = calculateSchoolBill({ tier: 'SMALL', monthlyFee: 2500 }, 220);
         assert.equal(bill.extraLearners, 20);
         assert.equal(bill.extraAmount, 300);
@@ -145,7 +146,6 @@ describe('Provider pricing', () => {
 
 describe('Tuition vs SaaS fees', () => {
     it('uses tuitionFee when set', () => {
-        const { getTuitionFee } = require('../../lib/subscription');
         assert.equal(getTuitionFee({ tuitionFee: 2000 }), 2000);
         assert.equal(getTuitionFee({ tuitionFee: 0 }), 1500);
     });
@@ -154,7 +154,6 @@ describe('Tuition vs SaaS fees', () => {
 describe('Impersonation tokens', () => {
     it('creates and verifies provider impersonation token', () => {
         process.env.NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'test-secret-for-smoke-tests-32chars';
-        const { createImpersonationToken, verifyImpersonationToken } = require('../../lib/impersonation-token');
         const token = createImpersonationToken('provider-1', 'user-2');
         const parsed = verifyImpersonationToken(token);
         assert.ok(parsed);

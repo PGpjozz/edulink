@@ -156,7 +156,7 @@ export async function PATCH(req: Request) {
             }
         }
 
-        const score = (earnedPoints / totalPoints) * 100;
+        const score = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
 
         const attempt = await prisma.quizAttempt.create({
             data: {

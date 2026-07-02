@@ -1,20 +1,20 @@
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
+import { requireAuth, readJson } from '@/lib/api-auth';
 
 export async function GET(
     req: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const session = await getServerSession(authOptions);
-    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const auth = await requireAuth({ requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
         const { id } = await params;
-        const quiz = await prisma.quiz.findUnique({
-            where: { id },
+        const quiz = await prisma.quiz.findFirst({
+            where: { id, subject: { schoolId: auth.schoolId as string } },
             include: {
+                subject: { select: { grade: true, schoolId: true } },
                 questions: {
                     include: { options: true }
                 }
@@ -23,13 +23,13 @@ export async function GET(
 
         if (!quiz) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 });
 
-        if (session.user.role === 'LEARNER') {
+        if (auth.role === 'LEARNER') {
             if (!quiz.isPublished) {
                 return NextResponse.json({ error: 'Quiz not available' }, { status: 403 });
             }
 
             const learnerProfile = await prisma.learnerProfile.findUnique({
-                where: { userId: session.user.id },
+                where: { userId: auth.userId },
                 include: { class: true }
             });
 
@@ -37,12 +37,7 @@ export async function GET(
                 return NextResponse.json({ error: 'Learner profile not found' }, { status: 404 });
             }
 
-            const quizSubject = await prisma.subject.findUnique({
-                where: { id: quiz.subjectId },
-                select: { grade: true, schoolId: true }
-            });
-
-            if (!quizSubject || quizSubject.schoolId !== session.user.schoolId || quizSubject.grade !== learnerProfile.class.grade) {
+            if (quiz.subject.grade !== learnerProfile.class.grade) {
                 return NextResponse.json({ error: 'Quiz not available for your grade' }, { status: 403 });
             }
 
@@ -55,6 +50,7 @@ export async function GET(
 
         return NextResponse.json(quiz);
     } catch (error) {
+        console.error('Quiz GET Error:', error);
         return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
     }
 }
@@ -63,18 +59,21 @@ export async function POST(
     req: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
-    const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'LEARNER') {
-        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
+    const auth = await requireAuth({ roles: ['LEARNER'], requireSchoolId: true });
+    if (auth instanceof NextResponse) return auth;
 
     try {
         const { id } = await params;
-        const { answers } = await req.json(); // { questionId: optionId }
+        const body = await readJson<{ answers?: Record<string, string> }>(req);
+        if (body instanceof NextResponse) return body;
+        const answers = body.answers ?? {}; // { questionId: optionId }
 
-        const quiz = await prisma.quiz.findUnique({
-            where: { id },
-            include: { questions: { include: { options: true } } }
+        const quiz = await prisma.quiz.findFirst({
+            where: { id, subject: { schoolId: auth.schoolId as string } },
+            include: {
+                subject: { select: { grade: true } },
+                questions: { include: { options: true } }
+            }
         });
 
         if (!quiz) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 });
@@ -84,7 +83,7 @@ export async function POST(
         }
 
         const learnerProfile = await prisma.learnerProfile.findUnique({
-            where: { userId: session.user.id },
+            where: { userId: auth.userId },
             include: { class: true }
         });
 
@@ -92,12 +91,7 @@ export async function POST(
             return NextResponse.json({ error: 'Learner profile not found' }, { status: 404 });
         }
 
-        const quizSubject = await prisma.subject.findUnique({
-            where: { id: quiz.subjectId },
-            select: { grade: true, schoolId: true }
-        });
-
-        if (!quizSubject || quizSubject.schoolId !== session.user.schoolId || quizSubject.grade !== learnerProfile.class?.grade) {
+        if (quiz.subject.grade !== learnerProfile.class?.grade) {
             return NextResponse.json({ error: 'Quiz not available for your grade' }, { status: 403 });
         }
 
@@ -124,7 +118,7 @@ export async function POST(
             }
         }
 
-        const scorePercentage = (earnedPoints / totalPoints) * 100;
+        const scorePercentage = totalPoints > 0 ? (earnedPoints / totalPoints) * 100 : 0;
 
         // 2. Save Attempt & Answers
         const attempt = await prisma.quizAttempt.create({

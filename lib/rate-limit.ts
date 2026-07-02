@@ -2,12 +2,22 @@ type Bucket = { count: number; resetAt: number };
 
 const buckets = new Map<string, Bucket>();
 
+/** Drop expired buckets so the map doesn't grow unbounded with unique IPs. */
+function pruneExpired(now: number) {
+    for (const [key, bucket] of buckets) {
+        if (now >= bucket.resetAt) buckets.delete(key);
+    }
+}
+
+const PRUNE_THRESHOLD = 10_000;
+
 export function checkRateLimit(
     key: string,
     limit: number,
     windowMs: number,
 ): { allowed: boolean; retryAfterSec: number } {
     const now = Date.now();
+    if (buckets.size > PRUNE_THRESHOLD) pruneExpired(now);
     const bucket = buckets.get(key);
 
     if (!bucket || now >= bucket.resetAt) {
