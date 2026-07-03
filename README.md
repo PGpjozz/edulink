@@ -14,7 +14,7 @@ Before onboarding a real school:
 - [ ] Configure Resend (`RESEND_API_KEY`, `EMAIL_FROM`) for invites and password reset
 - [ ] Configure PayFast (`PAYFAST_*` vars, `PAYFAST_SANDBOX=false`)
 - [ ] Do **not** set `ENABLE_DEV_ROUTES` in production
-- [ ] Run `npx prisma migrate deploy` (or `db push` for first deploy)
+- [ ] Run the manual database sync workflow (or `npm run db:sync` from a trusted environment) when schema changes need to be applied
 - [ ] Remove or rotate any demo seed credentials
 
 ## Local development
@@ -66,6 +66,7 @@ curl "http://localhost:3000/api/setup?secret=brightcampus-setup-2026"
 | Command | Description |
 |---------|-------------|
 | `npm run dev` | Start development server |
+| `npm run db:sync` | Manually sync Prisma schema to the configured database |
 | `npm run build` | Production build |
 | `npm run start` | Start production server |
 | `npm run lint` | ESLint |

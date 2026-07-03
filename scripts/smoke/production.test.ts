@@ -1,5 +1,7 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { validateSaId, normalizeSaId } from '../../lib/sa-id';
 import { validatePassword, generateTemporaryPassword } from '../../lib/password';
 import { resolveAvailableDashboards, canAccessDashboardPath } from '../../lib/dashboard-roles';
@@ -8,7 +10,7 @@ import { capsLevel, currentSchoolTerm } from '../../lib/caps';
 import { createPasswordResetToken, verifyPasswordResetToken } from '../../lib/password-reset-token';
 import { canManageAdmissions, hasPermission } from '../../lib/permissions';
 import { calculateSchoolBill, getTierDefaultFee, getEffectiveMonthlyFee } from '../../lib/provider-pricing';
-import { getTuitionFee } from '../../lib/subscription';
+import { getTuitionFee, hasActiveTrial } from '../../lib/subscription';
 import { createImpersonationToken, verifyImpersonationToken } from '../../lib/impersonation-token';
 
 describe('SA ID validation', () => {
@@ -148,6 +150,47 @@ describe('Tuition vs SaaS fees', () => {
     it('uses tuitionFee when set', () => {
         assert.equal(getTuitionFee({ tuitionFee: 2000 }), 2000);
         assert.equal(getTuitionFee({ tuitionFee: 0 }), 1500);
+    });
+});
+
+describe('Subscription trial state', () => {
+    it('requires a future trial end date to protect a trialing school from billing', () => {
+        const now = new Date('2026-07-03T11:00:00.000Z');
+
+        assert.equal(
+            hasActiveTrial({ subscriptionStatus: 'TRIALING', trialEndsAt: '2026-07-04T11:00:00.000Z' }, now),
+            true,
+        );
+        assert.equal(hasActiveTrial({ subscriptionStatus: 'TRIALING', trialEndsAt: null }, now), false);
+        assert.equal(
+            hasActiveTrial({ subscriptionStatus: 'TRIALING', trialEndsAt: '2026-07-02T11:00:00.000Z' }, now),
+            false,
+        );
+    });
+});
+
+describe('Production database safety', () => {
+    it('does not run Prisma db push during normal builds or main-branch pushes', () => {
+        const packageJson = JSON.parse(readFileSync(resolve(process.cwd(), 'package.json'), 'utf8'));
+        const workflow = readFileSync(resolve(process.cwd(), '.github/workflows/db-sync.yml'), 'utf8');
+
+        assert.doesNotMatch(packageJson.scripts.build, /prisma\s+db\s+push/);
+        assert.doesNotMatch(workflow, /branches:\s*\[main\]/);
+        assert.match(workflow, /workflow_dispatch:/);
+        assert.match(workflow, /inputs:/);
+    });
+
+    it('backfills legacy schools with no trial end date to active subscriptions', () => {
+        const schema = readFileSync(resolve(process.cwd(), 'prisma/schema.prisma'), 'utf8');
+        const migration = readFileSync(
+            resolve(process.cwd(), 'prisma/migrations/20260701120000_subscription_fields/migration.sql'),
+            'utf8',
+        );
+
+        assert.match(schema, /subscriptionStatus\s+SubscriptionStatus\s+@default\(ACTIVE\)/);
+        assert.match(migration, /SET "subscriptionStatus" = 'ACTIVE'/);
+        assert.match(migration, /"trialEndsAt" IS NULL/);
+        assert.match(migration, /ALTER COLUMN "subscriptionStatus" SET DEFAULT 'ACTIVE'/);
     });
 });
 
