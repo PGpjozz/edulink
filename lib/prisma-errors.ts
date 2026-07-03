@@ -8,7 +8,7 @@ export function prismaErrorResponse(error: unknown, logLabel: string): NextRespo
         return NextResponse.json(
             {
                 error:
-                    'Database schema is out of date. Redeploy the app or run `npx prisma db push` against the production database.',
+                    'Database schema is out of date. Run the manual database sync workflow or `npm run db:sync` against the production database.',
                 code: 'SCHEMA_OUT_OF_DATE',
             },
             { status: 503 },

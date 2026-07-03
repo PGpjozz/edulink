@@ -22,6 +22,17 @@ export function trialEndDate(from: Date = new Date()): Date {
     return end;
 }
 
+export function hasActiveTrial(
+    school: { subscriptionStatus?: string | null; trialEndsAt?: Date | string | null },
+    reference: Date = new Date(),
+): boolean {
+    if (school.subscriptionStatus !== 'TRIALING' || !school.trialEndsAt) return false;
+
+    const trialEndsAt =
+        school.trialEndsAt instanceof Date ? school.trialEndsAt : new Date(school.trialEndsAt);
+    return Number.isFinite(trialEndsAt.getTime()) && trialEndsAt > reference;
+}
+
 export function calendarBillingPeriod(reference: Date = new Date()) {
     const periodStart = new Date(reference.getFullYear(), reference.getMonth(), 1);
     const periodEnd = new Date(reference.getFullYear(), reference.getMonth() + 1, 0, 23, 59, 59, 999);

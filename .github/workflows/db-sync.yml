@@ -1,12 +1,15 @@
 name: Sync database schema
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: Type "sync" to apply Prisma schema changes to the configured database.
+        required: true
 
 jobs:
   db-push:
+    if: ${{ inputs.confirm == 'sync' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -22,4 +25,4 @@ jobs:
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
           DIRECT_URL: ${{ secrets.DIRECT_URL }}
-        run: npx prisma db push
+        run: npm run db:sync

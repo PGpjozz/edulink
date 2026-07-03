@@ -1,7 +1,7 @@
 import { prisma } from '@/lib/prisma';
 import { calculateSchoolBill, type BillingTier } from '@/lib/provider-pricing';
 import { writeAuditLog } from '@/lib/api-auth';
-import { calendarBillingPeriod } from '@/lib/subscription';
+import { calendarBillingPeriod, hasActiveTrial } from '@/lib/subscription';
 import { sendEmail, subscriptionInvoiceEmailHtml } from '@/lib/email';
 import { BRAND } from '@/lib/branding';
 
@@ -57,6 +57,7 @@ export async function createBillForSchool(
             isActive: true,
             contactEmail: true,
             subscriptionStatus: true,
+            trialEndsAt: true,
             owner: { select: { email: true, firstName: true } },
         },
     });
@@ -98,7 +99,7 @@ export async function createBillForSchool(
         },
     });
 
-    if (school.subscriptionStatus !== 'TRIALING') {
+    if (!hasActiveTrial(school)) {
         await markSchoolPastDue(schoolId, periodEnd);
     }
 
@@ -161,11 +162,7 @@ export async function generateBillsForAllSchools(providerUserId: string) {
     const now = new Date();
 
     for (const school of schools) {
-        if (
-            school.subscriptionStatus === 'TRIALING' &&
-            school.trialEndsAt &&
-            school.trialEndsAt > now
-        ) {
+        if (hasActiveTrial(school, now)) {
             results.push({ schoolId: school.id, schoolName: school.name, status: 'skipped' });
             continue;
         }

@@ -67,7 +67,7 @@ model School {
   assets         Asset[]
   monthlyFee           Float              @default(0)
   tuitionFee           Float              @default(0)
-  subscriptionStatus   SubscriptionStatus @default(TRIALING)
+  subscriptionStatus   SubscriptionStatus @default(ACTIVE)
   trialEndsAt          DateTime?
   currentPeriodEnd     DateTime?
   departments    Department[]
