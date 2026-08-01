@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
+import {
+    canRestrictedViewerAccessQuiz,
+    isRestrictedQuizViewer,
+    stripQuizAnswerKeys,
+} from '@/lib/quiz-access';
+import { getRestrictedQuizViewerGrades } from '@/lib/quiz-viewer-access';
 
 export async function GET(req: Request) {
     const auth = await requireAuth({ requireSchoolId: true });
@@ -15,12 +21,26 @@ export async function GET(req: Request) {
             const quiz = await prisma.quiz.findFirst({
                 where: { id: quizId, subject: { schoolId: auth.schoolId as string } },
                 include: {
+                    subject: { select: { grade: true } },
                     questions: {
                         include: { options: true }
                     }
                 }
             });
             if (!quiz) return new NextResponse('Quiz not found', { status: 404 });
+            if (isRestrictedQuizViewer(auth.role)) {
+                const viewerGrades = await getRestrictedQuizViewerGrades(auth);
+                if (!canRestrictedViewerAccessQuiz({
+                    role: auth.role,
+                    isPublished: quiz.isPublished,
+                    subjectGrade: quiz.subject.grade,
+                    viewerGrades,
+                })) {
+                    return new NextResponse('Quiz not available', { status: 403 });
+                }
+
+                stripQuizAnswerKeys(quiz);
+            }
             return NextResponse.json(quiz);
         }
 
@@ -32,8 +52,26 @@ export async function GET(req: Request) {
             if (!subject) return new NextResponse('Subject not found', { status: 404 });
         }
 
+        const where: {
+            subjectId?: string;
+            isPublished?: boolean;
+            subject: { schoolId: string; grade?: string | { in: string[] } };
+        } = subjectId
+            ? { subjectId, subject: { schoolId: auth.schoolId as string } }
+            : { subject: { schoolId: auth.schoolId as string } };
+
+        if (isRestrictedQuizViewer(auth.role)) {
+            const viewerGrades = await getRestrictedQuizViewerGrades(auth);
+            if (!viewerGrades.length) {
+                return NextResponse.json([]);
+            }
+
+            where.isPublished = true;
+            where.subject.grade = { in: viewerGrades };
+        }
+
         const quizzes = await prisma.quiz.findMany({
-            where: subjectId ? { subjectId } : { subject: { schoolId: auth.schoolId as string } },
+            where,
             include: { _count: { select: { questions: true, attempts: true } } },
             orderBy: { createdAt: 'desc' }
         });
@@ -130,10 +168,22 @@ export async function PATCH(req: Request) {
 
         const quiz = await prisma.quiz.findFirst({
             where: { id: quizId, subject: { schoolId: auth.schoolId as string } },
-            include: { questions: { include: { options: true } } }
+            include: {
+                subject: { select: { grade: true } },
+                questions: { include: { options: true } }
+            }
         });
 
         if (!quiz) return new NextResponse('Quiz not found', { status: 404 });
+        const viewerGrades = await getRestrictedQuizViewerGrades(auth);
+        if (!canRestrictedViewerAccessQuiz({
+            role: auth.role,
+            isPublished: quiz.isPublished,
+            subjectGrade: quiz.subject.grade,
+            viewerGrades,
+        })) {
+            return new NextResponse('Quiz not available', { status: 403 });
+        }
 
         // Calculate score
         let earnedPoints = 0;
