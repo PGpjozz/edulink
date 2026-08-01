@@ -10,6 +10,11 @@ import { canManageAdmissions, hasPermission } from '../../lib/permissions';
 import { calculateSchoolBill, getTierDefaultFee, getEffectiveMonthlyFee } from '../../lib/provider-pricing';
 import { getTuitionFee } from '../../lib/subscription';
 import { createImpersonationToken, verifyImpersonationToken } from '../../lib/impersonation-token';
+import {
+    canRestrictedViewerAccessQuiz,
+    normalizeQuizViewerGrades,
+    stripQuizAnswerKeys,
+} from '../../lib/quiz-access';
 
 describe('SA ID validation', () => {
     it('accepts a valid test ID', () => {
@@ -159,5 +164,68 @@ describe('Impersonation tokens', () => {
         assert.ok(parsed);
         assert.equal(parsed?.providerUserId, 'provider-1');
         assert.equal(parsed?.targetUserId, 'user-2');
+    });
+});
+
+describe('Quiz access controls', () => {
+    it('removes answer keys for restricted quiz viewers', () => {
+        const quiz = {
+            questions: [
+                {
+                    options: [
+                        { id: 'a', text: 'A', isCorrect: true },
+                        { id: 'b', text: 'B', isCorrect: false },
+                    ],
+                },
+            ],
+        };
+
+        stripQuizAnswerKeys(quiz);
+
+        assert.equal('isCorrect' in quiz.questions[0].options[0], false);
+        assert.equal('isCorrect' in quiz.questions[0].options[1], false);
+    });
+
+    it('only lets learners and parents view published quizzes for their own grades', () => {
+        assert.equal(
+            canRestrictedViewerAccessQuiz({
+                role: 'LEARNER',
+                isPublished: true,
+                subjectGrade: '10',
+                viewerGrades: ['10'],
+            }),
+            true,
+        );
+        assert.equal(
+            canRestrictedViewerAccessQuiz({
+                role: 'PARENT',
+                isPublished: false,
+                subjectGrade: '10',
+                viewerGrades: ['10'],
+            }),
+            false,
+        );
+        assert.equal(
+            canRestrictedViewerAccessQuiz({
+                role: 'LEARNER',
+                isPublished: true,
+                subjectGrade: '11',
+                viewerGrades: ['10'],
+            }),
+            false,
+        );
+        assert.equal(
+            canRestrictedViewerAccessQuiz({
+                role: 'TEACHER',
+                isPublished: false,
+                subjectGrade: '11',
+                viewerGrades: [],
+            }),
+            true,
+        );
+    });
+
+    it('normalizes quiz viewer grade sets', () => {
+        assert.deepEqual(normalizeQuizViewerGrades(['10', null, '10', undefined, '11']), ['10', '11']);
     });
 });

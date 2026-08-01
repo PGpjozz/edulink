@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson } from '@/lib/api-auth';
+import {
+    canRestrictedViewerAccessQuiz,
+    isRestrictedQuizViewer,
+    stripQuizAnswerKeys,
+} from '@/lib/quiz-access';
+import { getRestrictedQuizViewerGrades } from '@/lib/quiz-viewer-access';
 
 export async function GET(
     req: Request,
@@ -23,29 +29,18 @@ export async function GET(
 
         if (!quiz) return NextResponse.json({ error: 'Quiz not found' }, { status: 404 });
 
-        if (auth.role === 'LEARNER') {
-            if (!quiz.isPublished) {
-                return NextResponse.json({ error: 'Quiz not available' }, { status: 403 });
-            }
-
-            const learnerProfile = await prisma.learnerProfile.findUnique({
-                where: { userId: auth.userId },
-                include: { class: true }
-            });
-
-            if (!learnerProfile?.class) {
-                return NextResponse.json({ error: 'Learner profile not found' }, { status: 404 });
-            }
-
-            if (quiz.subject.grade !== learnerProfile.class.grade) {
+        if (isRestrictedQuizViewer(auth.role)) {
+            const viewerGrades = await getRestrictedQuizViewerGrades(auth);
+            if (!canRestrictedViewerAccessQuiz({
+                role: auth.role,
+                isPublished: quiz.isPublished,
+                subjectGrade: quiz.subject.grade,
+                viewerGrades,
+            })) {
                 return NextResponse.json({ error: 'Quiz not available for your grade' }, { status: 403 });
             }
 
-            quiz.questions.forEach(q => {
-                q.options.forEach(o => {
-                    delete (o as { isCorrect?: boolean }).isCorrect;
-                });
-            });
+            stripQuizAnswerKeys(quiz);
         }
 
         return NextResponse.json(quiz);

@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 import { getStaffContext } from '@/lib/staff-context';
+import { isRestrictedQuizViewer } from '@/lib/quiz-access';
+import { getRestrictedQuizViewerGrades } from '@/lib/quiz-viewer-access';
 
 export async function GET(req: Request) {
     const auth = await requireAuth({ requireSchoolId: true });
@@ -14,7 +16,7 @@ export async function GET(req: Request) {
         const where: {
             subjectId?: string | { in: string[] };
             isPublished?: boolean;
-            subject: { schoolId: string; grade?: string };
+            subject: { schoolId: string; grade?: string | { in: string[] } };
         } = {
             subject: { schoolId: auth.schoolId as string },
         };
@@ -36,15 +38,14 @@ export async function GET(req: Request) {
             where.subjectId = subjectId;
         }
 
-        if (auth.role === 'LEARNER') {
-            where.isPublished = true;
-            const learnerProfile = await prisma.learnerProfile.findUnique({
-                where: { userId: auth.userId },
-                include: { class: true }
-            });
-            if (learnerProfile?.class?.grade) {
-                where.subject.grade = learnerProfile.class.grade;
+        if (isRestrictedQuizViewer(auth.role)) {
+            const viewerGrades = await getRestrictedQuizViewerGrades(auth);
+            if (!viewerGrades.length) {
+                return NextResponse.json([]);
             }
+
+            where.isPublished = true;
+            where.subject.grade = { in: viewerGrades };
         }
 
         const quizzes = await prisma.quiz.findMany({
