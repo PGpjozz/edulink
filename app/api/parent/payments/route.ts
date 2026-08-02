@@ -78,7 +78,7 @@ export async function POST(req: Request) {
         });
 
         return NextResponse.json(payment);
-    } catch (error) {
+    } catch {
         return new NextResponse('Internal Error', { status: 500 });
     }
 }
