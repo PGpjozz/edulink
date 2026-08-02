@@ -1,10 +1,18 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
+import { isPaymentSimulationAllowed } from '@/lib/env';
 
 export async function POST(req: Request) {
     const auth = await requireAuth({ roles: ['PARENT'], requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
+
+    if (!isPaymentSimulationAllowed()) {
+        return NextResponse.json(
+            { error: 'Manual payment marking is disabled. Configure PayFast for production payments.' },
+            { status: 403 },
+        );
+    }
 
     try {
         const body = await readJson<{ invoiceId?: string; amount?: number; method?: string }>(req);

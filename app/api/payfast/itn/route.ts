@@ -10,13 +10,13 @@ import {
 
 async function fulfillCheckout(checkoutId: string, pfPaymentId: string) {
     const checkout = await prisma.payFastCheckout.findUnique({ where: { id: checkoutId } });
-    if (!checkout || checkout.status === 'COMPLETED') return;
+    if (!checkout || checkout.status !== 'PENDING') return;
 
     const fulfilled = await prisma.$transaction(async (tx) => {
         // Conditional update makes fulfillment idempotent: if a concurrent ITN
-        // already completed this checkout, skip payment creation entirely.
+        // already completed or failed this checkout, skip payment creation entirely.
         const claimed = await tx.payFastCheckout.updateMany({
-            where: { id: checkoutId, status: { not: 'COMPLETED' } },
+            where: { id: checkoutId, status: 'PENDING' },
             data: { status: 'COMPLETED', pfPaymentId },
         });
         if (claimed.count === 0) return false;
@@ -112,8 +112,8 @@ export async function POST(req: Request) {
     if (paymentStatus === 'COMPLETE') {
         await fulfillCheckout(checkout.id, pfPaymentId ?? '');
     } else if (paymentStatus === 'FAILED' || paymentStatus === 'CANCELLED') {
-        await prisma.payFastCheckout.update({
-            where: { id: checkout.id },
+        await prisma.payFastCheckout.updateMany({
+            where: { id: checkout.id, status: 'PENDING' },
             data: { status: 'FAILED' },
         });
     }
