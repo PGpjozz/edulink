@@ -19,6 +19,10 @@ type CheckoutBody = {
     invoiceId?: string;
 };
 
+function checkoutLockKey(type: CheckoutBody['type'], targetId: string): string {
+    return `payfast-checkout:${type}:${targetId}`;
+}
+
 export async function POST(req: Request) {
     if (!isPayFastConfigured()) {
         return NextResponse.json(
@@ -103,18 +107,40 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Invalid type' }, { status: 400 });
     }
 
-    await prisma.payFastCheckout.create({
-        data: {
-            mPaymentId,
-            type,
-            schoolId: auth.schoolId!,
-            userId: auth.userId,
-            amount,
-            billingId,
-            invoiceId,
-            status: 'PENDING',
-        },
+    const checkout = await prisma.$transaction(async (tx) => {
+        const targetId = type === 'SCHOOL_SUBSCRIPTION' ? billingId : invoiceId;
+        await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${checkoutLockKey(type, targetId!)}))`;
+
+        const existingPending = await tx.payFastCheckout.findFirst({
+            where:
+                type === 'SCHOOL_SUBSCRIPTION'
+                    ? { billingId, status: 'PENDING' }
+                    : { invoiceId, status: 'PENDING' },
+            select: { id: true },
+        });
+        if (existingPending) {
+            return { alreadyPending: true };
+        }
+
+        await tx.payFastCheckout.create({
+            data: {
+                mPaymentId,
+                type,
+                schoolId: auth.schoolId!,
+                userId: auth.userId,
+                amount,
+                billingId,
+                invoiceId,
+                status: 'PENDING',
+            },
+        });
+
+        return { alreadyPending: false };
     });
+
+    if (checkout.alreadyPending) {
+        return NextResponse.json({ error: 'Payment already in progress' }, { status: 409 });
+    }
 
     const fields: Record<string, string> = {
         merchant_id: process.env.PAYFAST_MERCHANT_ID!,

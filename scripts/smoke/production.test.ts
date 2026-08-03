@@ -10,6 +10,7 @@ import { canManageAdmissions, hasPermission } from '../../lib/permissions';
 import { calculateSchoolBill, getTierDefaultFee, getEffectiveMonthlyFee } from '../../lib/provider-pricing';
 import { getTuitionFee } from '../../lib/subscription';
 import { createImpersonationToken, verifyImpersonationToken } from '../../lib/impersonation-token';
+import { isPayFastConfigured } from '../../lib/payfast';
 
 describe('SA ID validation', () => {
     it('accepts a valid test ID', () => {
@@ -148,6 +149,34 @@ describe('Tuition vs SaaS fees', () => {
     it('uses tuitionFee when set', () => {
         assert.equal(getTuitionFee({ tuitionFee: 2000 }), 2000);
         assert.equal(getTuitionFee({ tuitionFee: 0 }), 1500);
+    });
+});
+
+describe('PayFast configuration', () => {
+    it('requires the passphrase before enabling checkout', () => {
+        const previous = {
+            id: process.env.PAYFAST_MERCHANT_ID,
+            key: process.env.PAYFAST_MERCHANT_KEY,
+            passphrase: process.env.PAYFAST_PASSPHRASE,
+        };
+
+        process.env.PAYFAST_MERCHANT_ID = 'merchant-id';
+        process.env.PAYFAST_MERCHANT_KEY = 'merchant-key';
+        delete process.env.PAYFAST_PASSPHRASE;
+
+        try {
+            assert.equal(isPayFastConfigured(), false);
+
+            process.env.PAYFAST_PASSPHRASE = 'merchant-passphrase';
+            assert.equal(isPayFastConfigured(), true);
+        } finally {
+            if (previous.id === undefined) delete process.env.PAYFAST_MERCHANT_ID;
+            else process.env.PAYFAST_MERCHANT_ID = previous.id;
+            if (previous.key === undefined) delete process.env.PAYFAST_MERCHANT_KEY;
+            else process.env.PAYFAST_MERCHANT_KEY = previous.key;
+            if (previous.passphrase === undefined) delete process.env.PAYFAST_PASSPHRASE;
+            else process.env.PAYFAST_PASSPHRASE = previous.passphrase;
+        }
     });
 });
 

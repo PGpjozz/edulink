@@ -8,11 +8,20 @@ import {
     verifyPayFastSignature,
 } from '@/lib/payfast';
 
+function checkoutLockKey(type: string, targetId: string): string {
+    return `payfast-checkout:${type}:${targetId}`;
+}
+
 async function fulfillCheckout(checkoutId: string, pfPaymentId: string) {
     const checkout = await prisma.payFastCheckout.findUnique({ where: { id: checkoutId } });
     if (!checkout || checkout.status === 'COMPLETED') return;
 
     const fulfilled = await prisma.$transaction(async (tx) => {
+        const targetId = checkout.type === 'SCHOOL_SUBSCRIPTION' ? checkout.billingId : checkout.invoiceId;
+        if (targetId) {
+            await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext(${checkoutLockKey(checkout.type, targetId)}))`;
+        }
+
         // Conditional update makes fulfillment idempotent: if a concurrent ITN
         // already completed this checkout, skip payment creation entirely.
         const claimed = await tx.payFastCheckout.updateMany({
@@ -23,28 +32,31 @@ async function fulfillCheckout(checkoutId: string, pfPaymentId: string) {
 
         if (checkout.type === 'SCHOOL_SUBSCRIPTION' && checkout.billingId) {
             const billing = await tx.billing.findUnique({ where: { id: checkout.billingId } });
-            await tx.billing.update({
-                where: { id: checkout.billingId },
+            if (!billing) return false;
+
+            const billingClaimed = await tx.billing.updateMany({
+                where: { id: checkout.billingId, status: 'PAST_DUE' },
                 data: { status: 'ACTIVE' },
             });
-            if (billing) {
-                await tx.school.update({
-                    where: { id: checkout.schoolId },
-                    data: {
-                        isActive: true,
-                        subscriptionStatus: 'ACTIVE',
-                        currentPeriodEnd: billing.periodEnd,
-                    },
-                });
-            } else {
-                await tx.school.update({
-                    where: { id: checkout.schoolId },
-                    data: { isActive: true, subscriptionStatus: 'ACTIVE' },
-                });
-            }
+            if (billingClaimed.count === 0) return false;
+
+            await tx.school.update({
+                where: { id: checkout.schoolId },
+                data: {
+                    isActive: true,
+                    subscriptionStatus: 'ACTIVE',
+                    currentPeriodEnd: billing.periodEnd,
+                },
+            });
         }
 
         if (checkout.type === 'PARENT_FEE' && checkout.invoiceId) {
+            const invoiceClaimed = await tx.feeInvoice.updateMany({
+                where: { id: checkout.invoiceId, status: { in: ['PENDING', 'OVERDUE'] } },
+                data: { status: 'PAID' },
+            });
+            if (invoiceClaimed.count === 0) return false;
+
             await tx.payment.create({
                 data: {
                     invoiceId: checkout.invoiceId,
@@ -53,10 +65,6 @@ async function fulfillCheckout(checkoutId: string, pfPaymentId: string) {
                     reference: pfPaymentId,
                     status: 'COMPLETED',
                 },
-            });
-            await tx.feeInvoice.update({
-                where: { id: checkout.invoiceId },
-                data: { status: 'PAID' },
             });
         }
 
