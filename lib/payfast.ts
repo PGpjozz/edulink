@@ -11,7 +11,11 @@ export const PAYFAST_VALIDATE_URL = SANDBOX
     : 'https://www.payfast.co.za/eng/query/validate';
 
 export function isPayFastConfigured(): boolean {
-    return Boolean(process.env.PAYFAST_MERCHANT_ID && process.env.PAYFAST_MERCHANT_KEY);
+    return Boolean(
+        process.env.PAYFAST_MERCHANT_ID &&
+            process.env.PAYFAST_MERCHANT_KEY &&
+            process.env.PAYFAST_PASSPHRASE
+    );
 }
 
 function encodePayFastValue(value: string): string {
