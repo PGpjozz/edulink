@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
 import { createNotification } from '@/lib/notifications';
+import { belongsToSchool, canParentBookPtmLearner } from '@/lib/access-control';
 
 export async function GET(req: Request) {
     const session = await getServerSession(authOptions);
@@ -59,7 +60,7 @@ export async function POST(req: Request) {
 
 export async function PATCH(req: Request) {
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== 'PARENT') {
+    if (!session || session.user.role !== 'PARENT' || !session.user.schoolId) {
         return new NextResponse('Unauthorized', { status: 401 });
     }
 
@@ -69,23 +70,39 @@ export async function PATCH(req: Request) {
 
         const ptmSession = await prisma.pTMSession.findUnique({
             where: { id: sessionId },
-            select: { teacherId: true, date: true },
+            select: { schoolId: true, teacherId: true, date: true },
         });
 
-        if (!ptmSession) {
+        if (!ptmSession || !belongsToSchool(ptmSession.schoolId, session.user.schoolId)) {
             return new NextResponse('Session not found', { status: 404 });
         }
 
         const [learner, parent] = await Promise.all([
             prisma.learnerProfile.findUnique({
                 where: { id: learnerId },
-                select: { user: { select: { firstName: true, lastName: true } } },
+                select: {
+                    parentIds: true,
+                    user: { select: { schoolId: true, firstName: true, lastName: true } },
+                },
             }),
             prisma.user.findUnique({
                 where: { id: session.user.id },
                 select: { firstName: true, lastName: true },
             }),
         ]);
+
+        if (
+            !learner ||
+            !canParentBookPtmLearner({
+                parentUserId: session.user.id,
+                schoolId: session.user.schoolId,
+                ptmSessionSchoolId: ptmSession.schoolId,
+                learnerSchoolId: learner.user.schoolId,
+                learnerParentIds: learner.parentIds,
+            })
+        ) {
+            return new NextResponse('Forbidden', { status: 403 });
+        }
 
         const booking = await prisma.pTMBooking.create({
             data: {

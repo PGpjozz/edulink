@@ -10,6 +10,7 @@ import { canManageAdmissions, hasPermission } from '../../lib/permissions';
 import { calculateSchoolBill, getTierDefaultFee, getEffectiveMonthlyFee } from '../../lib/provider-pricing';
 import { getTuitionFee } from '../../lib/subscription';
 import { createImpersonationToken, verifyImpersonationToken } from '../../lib/impersonation-token';
+import { belongsToSchool, canParentBookPtmLearner } from '../../lib/access-control';
 
 describe('SA ID validation', () => {
     it('accepts a valid test ID', () => {
@@ -159,5 +160,29 @@ describe('Impersonation tokens', () => {
         assert.ok(parsed);
         assert.equal(parsed?.providerUserId, 'provider-1');
         assert.equal(parsed?.targetUserId, 'user-2');
+    });
+});
+
+describe('Tenant access controls', () => {
+    it('requires resources to belong to the caller school', () => {
+        assert.equal(belongsToSchool('school-1', 'school-1'), true);
+        assert.equal(belongsToSchool('school-2', 'school-1'), false);
+        assert.equal(belongsToSchool(null, 'school-1'), false);
+        assert.equal(belongsToSchool('school-1', null), false);
+    });
+
+    it('allows PTM booking only for linked learners in the same school', () => {
+        const base = {
+            parentUserId: 'parent-1',
+            schoolId: 'school-1',
+            ptmSessionSchoolId: 'school-1',
+            learnerSchoolId: 'school-1',
+            learnerParentIds: ['parent-1'],
+        };
+
+        assert.equal(canParentBookPtmLearner(base), true);
+        assert.equal(canParentBookPtmLearner({ ...base, ptmSessionSchoolId: 'school-2' }), false);
+        assert.equal(canParentBookPtmLearner({ ...base, learnerSchoolId: 'school-2' }), false);
+        assert.equal(canParentBookPtmLearner({ ...base, learnerParentIds: ['other-parent'] }), false);
     });
 });

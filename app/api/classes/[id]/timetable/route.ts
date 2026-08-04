@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getServerSession } from 'next-auth';
 import { authOptions } from '@/lib/auth';
+import { belongsToSchool } from '@/lib/access-control';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const session = await getServerSession(authOptions);
@@ -15,8 +16,12 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     try {
         const classData = await prisma.class.findUnique({
             where: { id },
-            select: { timetable: true }
+            select: { schoolId: true, timetable: true }
         });
+
+        if (!classData || !belongsToSchool(classData.schoolId, session.user.schoolId)) {
+            return new NextResponse('Not found', { status: 404 });
+        }
 
         return NextResponse.json(classData?.timetable || {});
     } catch (error) {
@@ -37,6 +42,15 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
 
     try {
         const body = await req.json(); // Expecting JSON object like { Monday: [...], Tuesday: [...] }
+
+        const classData = await prisma.class.findUnique({
+            where: { id },
+            select: { schoolId: true }
+        });
+
+        if (!classData || !belongsToSchool(classData.schoolId, session.user.schoolId)) {
+            return new NextResponse('Not found', { status: 404 });
+        }
 
         const updated = await prisma.class.update({
             where: { id },
