@@ -166,10 +166,13 @@ describe('Subject authorization', () => {
     it('does not grant school admins access to subjects outside their school', async () => {
         process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://user:pass@localhost:5432/test?sslmode=disable';
 
-        const [{ canAccessSubject }, { prisma }] = await Promise.all([
+        const [staffContext, prismaModule] = await Promise.all([
             import('../../lib/staff-context'),
             import('../../lib/prisma'),
         ]);
+        const prisma = (prismaModule as typeof import('../../lib/prisma') & { default?: typeof import('../../lib/prisma') }).prisma
+            ?? (prismaModule as { default: typeof import('../../lib/prisma') }).default.prisma;
+        const { canAccessSubject } = staffContext;
         const findSubject = mock.method(prisma.subject, 'findFirst', async () => null);
 
         try {
