@@ -1,4 +1,4 @@
-import { describe, it, mock } from 'node:test';
+import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateSaId, normalizeSaId } from '../../lib/sa-id';
 import { validatePassword, generateTemporaryPassword } from '../../lib/password';
@@ -173,7 +173,15 @@ describe('Subject authorization', () => {
         const prisma = (prismaModule as typeof import('../../lib/prisma') & { default?: typeof import('../../lib/prisma') }).prisma
             ?? (prismaModule as { default: typeof import('../../lib/prisma') }).default.prisma;
         const { canAccessSubject } = staffContext;
-        const findSubject = mock.method(prisma.subject, 'findFirst', async () => null);
+        const subjectDelegate = prisma.subject as typeof prisma.subject & {
+            findFirst: (args: unknown) => Promise<unknown>;
+        };
+        const originalFindFirst = subjectDelegate.findFirst;
+        const calls: unknown[] = [];
+        subjectDelegate.findFirst = async (args: unknown) => {
+            calls.push(args);
+            return null;
+        };
 
         try {
             const allowed = await canAccessSubject({
@@ -183,13 +191,13 @@ describe('Subject authorization', () => {
             } as Parameters<typeof canAccessSubject>[0], 'subject-b');
 
             assert.equal(allowed, false);
-            assert.equal(findSubject.mock.callCount(), 1);
-            assert.deepEqual(findSubject.mock.calls[0]?.arguments[0], {
+            assert.equal(calls.length, 1);
+            assert.deepEqual(calls[0], {
                 where: { id: 'subject-b', schoolId: 'school-a' },
                 select: { id: true },
             });
         } finally {
-            findSubject.mock.restore();
+            subjectDelegate.findFirst = originalFindFirst;
         }
     });
 });
