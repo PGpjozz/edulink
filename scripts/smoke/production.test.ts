@@ -1,4 +1,4 @@
-import { describe, it } from 'node:test';
+import { describe, it, mock } from 'node:test';
 import assert from 'node:assert/strict';
 import { validateSaId, normalizeSaId } from '../../lib/sa-id';
 import { validatePassword, generateTemporaryPassword } from '../../lib/password';
@@ -159,5 +159,34 @@ describe('Impersonation tokens', () => {
         assert.ok(parsed);
         assert.equal(parsed?.providerUserId, 'provider-1');
         assert.equal(parsed?.targetUserId, 'user-2');
+    });
+});
+
+describe('Subject authorization', () => {
+    it('does not grant school admins access to subjects outside their school', async () => {
+        process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://user:pass@localhost:5432/test?sslmode=disable';
+
+        const [{ canAccessSubject }, { prisma }] = await Promise.all([
+            import('../../lib/staff-context'),
+            import('../../lib/prisma'),
+        ]);
+        const findSubject = mock.method(prisma.subject, 'findFirst', async () => null);
+
+        try {
+            const allowed = await canAccessSubject({
+                role: 'PRINCIPAL',
+                schoolId: 'school-a',
+                userId: 'principal-a',
+            } as Parameters<typeof canAccessSubject>[0], 'subject-b');
+
+            assert.equal(allowed, false);
+            assert.equal(findSubject.mock.callCount(), 1);
+            assert.deepEqual(findSubject.mock.calls[0]?.arguments[0], {
+                where: { id: 'subject-b', schoolId: 'school-a' },
+                select: { id: true },
+            });
+        } finally {
+            findSubject.mock.restore();
+        }
     });
 });
