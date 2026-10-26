@@ -72,14 +72,20 @@ const AUDIENCES = [
     {
         title: 'Principals',
         desc: 'See classes, staff, and learners in one overview, and send news without chasing paper registers.',
+        image: '/marketing/principal-office.jpg',
+        alt: 'A principal reading a class list in her office',
     },
     {
         title: 'Teachers',
         desc: 'Open today’s register, set homework, and enter marks for the classes you teach.',
+        image: '/marketing/teacher-register.jpg',
+        alt: 'A teacher marking the register beside a laptop',
     },
     {
         title: 'Parents',
         desc: 'Sign in on a phone, see your child, their marks, homework, and school alerts.',
+        image: '/marketing/parent-phone.jpg',
+        alt: 'A parent checking a school message on a phone',
     },
 ];
 
@@ -186,23 +192,42 @@ export default function Home() {
                 }}
             >
                 <Container maxWidth="lg">
-                    <Typography variant="overline" color="primary.dark" fontWeight={700} letterSpacing={1.2}>
-                        School software for independent schools
-                    </Typography>
-                    <Typography variant="h2" sx={{ mt: 1, mb: 2, maxWidth: 760, fontSize: { xs: '2.4rem', md: '3.4rem' } }}>
-                        {BRAND.tagline}
-                    </Typography>
-                    <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 640, fontWeight: 400, mb: 4 }}>
-                        Attendance, homework, marks, and parent updates in one place. BrightCampus is built for the school day, from the register in the morning to the alert a parent reads that afternoon.
-                    </Typography>
-                    <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-                        <Button component="a" href="#contact" variant="contained" size="large">
-                            Talk to us
-                        </Button>
-                        <Button component="a" href="#services" variant="outlined" size="large">
-                            See the services
-                        </Button>
-                    </Stack>
+                    <Grid container spacing={4} alignItems="center">
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <Typography variant="overline" color="primary.dark" fontWeight={700} letterSpacing={1.2}>
+                                School software for independent schools
+                            </Typography>
+                            <Typography variant="h2" sx={{ mt: 1, mb: 2, maxWidth: 760, fontSize: { xs: '2.4rem', md: '3.4rem' } }}>
+                                {BRAND.tagline}
+                            </Typography>
+                            <Typography variant="h6" color="text.secondary" sx={{ maxWidth: 640, fontWeight: 400, mb: 4 }}>
+                                Attendance, homework, marks, and parent updates in one place. BrightCampus is built for the school day, from the register in the morning to the alert a parent reads that afternoon.
+                            </Typography>
+                            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                                <Button component="a" href="#contact" variant="contained" size="large">
+                                    Talk to us
+                                </Button>
+                                <Button component="a" href="#services" variant="outlined" size="large">
+                                    See the services
+                                </Button>
+                            </Stack>
+                        </Grid>
+                        <Grid size={{ xs: 12, md: 6 }}>
+                            <Box
+                                component="img"
+                                src="/marketing/hero-courtyard.jpg"
+                                alt="A sunlit school courtyard with jacaranda trees and a clock tower"
+                                sx={{
+                                    width: '100%',
+                                    height: { xs: 240, md: 420 },
+                                    objectFit: 'cover',
+                                    borderRadius: 4,
+                                    display: 'block',
+                                    boxShadow: '0 20px 50px rgba(15, 39, 68, 0.18)',
+                                }}
+                            />
+                        </Grid>
+                    </Grid>
                 </Container>
             </Box>
 
@@ -244,9 +269,17 @@ export default function Home() {
                     <Grid container spacing={2.5}>
                         {AUDIENCES.map((item) => (
                             <Grid size={{ xs: 12, md: 4 }} key={item.title}>
-                                <Paper sx={{ p: 3, height: '100%', borderRadius: 3, bgcolor: 'rgba(255,255,255,0.08)', color: 'inherit', border: '1px solid rgba(255,255,255,0.12)' }}>
-                                    <Typography variant="h6" fontWeight={700} gutterBottom>{item.title}</Typography>
-                                    <Typography variant="body2" sx={{ opacity: 0.92 }}>{item.desc}</Typography>
+                                <Paper sx={{ height: '100%', borderRadius: 3, bgcolor: 'rgba(255,255,255,0.08)', color: 'inherit', border: '1px solid rgba(255,255,255,0.12)', overflow: 'hidden' }}>
+                                    <Box
+                                        component="img"
+                                        src={item.image}
+                                        alt={item.alt}
+                                        sx={{ width: '100%', height: 220, objectFit: 'cover', display: 'block' }}
+                                    />
+                                    <Box sx={{ p: 3 }}>
+                                        <Typography variant="h6" fontWeight={700} gutterBottom>{item.title}</Typography>
+                                        <Typography variant="body2" sx={{ opacity: 0.92 }}>{item.desc}</Typography>
+                                    </Box>
                                 </Paper>
                             </Grid>
                         ))}
