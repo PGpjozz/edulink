@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 import bcrypt from 'bcryptjs';
@@ -147,11 +148,27 @@ export async function POST(req: Request) {
             role === 'HOD' ||
             (alsoTeaches && ['PRINCIPAL', 'SCHOOL_ADMIN'].includes(role));
 
+        // Learners sign in with an ID number. A leftover email from the form
+        // (or a blank string) must not be stored, or the unique email index
+        // rejects the create.
+        const trimmedEmail = typeof email === 'string' ? email.trim() : '';
+        const emailValue = role === 'LEARNER' || !trimmedEmail ? null : trimmedEmail;
+
+        if (emailValue) {
+            const existingEmail = await prisma.user.findFirst({
+                where: { email: emailValue },
+                select: { id: true },
+            });
+            if (existingEmail) {
+                return new NextResponse('A user with this email already exists', { status: 409 });
+            }
+        }
+
         const user = await prisma.user.create({
             data: {
                 firstName,
                 lastName,
-                email,
+                email: emailValue,
                 idNumber: role === 'LEARNER' ? normalizeSaId(idNumber) : idNumber,
                 password: hashedPassword,
                 role: role as any,
@@ -207,6 +224,18 @@ export async function POST(req: Request) {
         });
     } catch (error) {
         console.error('Error creating user:', error);
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+            const target = Array.isArray(error.meta?.target)
+                ? error.meta.target.join(',')
+                : String(error.meta?.target || '');
+            if (target.includes('email')) {
+                return new NextResponse('A user with this email already exists', { status: 409 });
+            }
+            if (target.includes('idNumber')) {
+                return new NextResponse('A user with this ID number already exists', { status: 409 });
+            }
+            return new NextResponse('A user with these details already exists', { status: 409 });
+        }
         return new NextResponse('Internal Error', { status: 500 });
     }
 }

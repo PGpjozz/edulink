@@ -38,6 +38,17 @@ export async function checkLearnerCapacity(schoolId: string): Promise<LearnerCap
 
     const tier = school.tier as BillingTier;
     const plan = TIER_PLANS[tier];
+    if (!plan) {
+        return {
+            allowed: false,
+            learnerCount: 0,
+            learnerLimit: 0,
+            atLimit: true,
+            overLimit: true,
+            tier: 'SMALL',
+            message: 'This school has no subscription plan. Contact BrightCampus support.',
+        };
+    }
     const learnerCount = await getLearnerCount(schoolId);
     const limit = plan.learnerLimit;
 

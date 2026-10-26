@@ -107,7 +107,7 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
                 body: JSON.stringify({
                     firstName,
                     lastName,
-                    email: email || undefined,
+                    email: role === 'LEARNER' ? undefined : (email || undefined),
                     role,
                     idNumber: idNumber || undefined,
                     password: finalPassword,
@@ -120,7 +120,14 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
 
             if (!res.ok) {
                 const msg = await res.text();
-                throw new Error(msg || 'Failed to create user');
+                let display = msg;
+                try {
+                    const parsed = JSON.parse(msg);
+                    if (parsed?.error) display = parsed.error;
+                } catch {
+                    /* plain-text error */
+                }
+                throw new Error(display || 'Failed to create user');
             }
 
             const login = role === 'LEARNER' ? `ID: ${idNumber}` : `Email: ${email}`;
@@ -175,7 +182,12 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
 
                         <FormControl fullWidth margin="dense" sx={{ mt: 2 }}>
                             <InputLabel>Role</InputLabel>
-                            <Select value={role} label="Role" onChange={(e) => { setRole(e.target.value); setError(''); }}>
+                            <Select value={role} label="Role" onChange={(e) => {
+                                const next = e.target.value;
+                                setRole(next);
+                                if (next === 'LEARNER') setEmail('');
+                                setError('');
+                            }}>
                                 <MenuItem value="TEACHER">Teacher</MenuItem>
                                 <MenuItem value="HOD">Head of Department (HOD)</MenuItem>
                                 <MenuItem value="LEARNER">Learner</MenuItem>
