@@ -10,9 +10,15 @@ import { resolve } from 'node:path';
 config({ path: resolve(process.cwd(), '.env.local') });
 config({ path: resolve(process.cwd(), '.env') });
 
-const url = process.env.DIRECT_URL ?? process.env.DATABASE_URL;
+const url = process.env.DIRECT_URL?.trim() || process.env.DATABASE_URL?.trim();
+const allowMissing = process.argv.includes('--allow-missing');
 if (!url) {
-    console.error('Set DIRECT_URL or DATABASE_URL before running db sync.');
+    const message = 'Set DIRECT_URL or DATABASE_URL before running db sync.';
+    if (allowMissing) {
+        console.warn(`Skipping prisma db push. ${message}`);
+        process.exit(0);
+    }
+    console.error(message);
     process.exit(1);
 }
 
