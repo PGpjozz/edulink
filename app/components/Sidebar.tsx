@@ -24,7 +24,6 @@ import {
     Grade,
     Logout,
     Message,
-    Payments,
     Event,
     Inventory,
     AppRegistration,
@@ -72,7 +71,6 @@ const ADMIN_NAV = [
     { label: 'Departments', icon: <School />, path: '/dashboard/principal/departments' },
     { label: 'Admissions', icon: <AppRegistration />, path: '/dashboard/principal/admissions' },
     { label: 'Library & Assets', icon: <Inventory />, path: '/dashboard/principal/assets' },
-    { label: 'Finance', icon: <Payments />, path: '/dashboard/principal/finance' },
     { label: 'Subscription', icon: <ReceiptLong />, path: '/dashboard/principal/subscription' },
     { label: 'Audit Logs', icon: <HistoryIcon />, path: '/dashboard/principal/audit-logs' },
     { label: 'Settings', icon: <Settings />, path: '/dashboard/principal/settings' },
@@ -140,7 +138,6 @@ const NAV_ITEMS: Record<string, { label: string; icon: React.ReactNode; path: st
         { label: 'Homework', icon: <Assignment />, path: '/dashboard/parent/homework' },
         { label: 'Announcements', icon: <Notifications />, path: '/dashboard/announcements' },
         { label: 'Meetings', icon: <Event />, path: '/dashboard/parent/meetings' },
-        { label: 'Billing', icon: <Payments />, path: '/dashboard/parent/billing' },
         { label: 'Alerts', icon: <Notifications />, path: '/dashboard/parent/notifications' },
         { label: 'Messages', icon: <Message />, path: '/dashboard/messages' }
     ]

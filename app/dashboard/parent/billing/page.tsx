@@ -1,14 +1,13 @@
 'use client';
 
-import { Container, Box } from '@mui/material';
-import BillingPortal from '@/app/components/BillingPortal';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
-export default function ParentBillingPage() {
-    return (
-        <Container maxWidth="xl" sx={{ mt: 4 }}>
-            <Box mb={4}>
-                <BillingPortal />
-            </Box>
-        </Container>
-    );
+/** Parent fee payments are out of the product. */
+export default function ParentBillingRedirect() {
+    const router = useRouter();
+    useEffect(() => {
+        router.replace('/dashboard/parent');
+    }, [router]);
+    return null;
 }

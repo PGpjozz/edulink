@@ -16,6 +16,7 @@ export interface UserData {
     role: string;
     isActive: boolean;
     teacherProfileId?: string | null;
+    className?: string | null;
 }
 
 export interface SubjectData {

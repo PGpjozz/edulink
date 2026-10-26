@@ -37,21 +37,29 @@ export default function AttendancePage() {
     const { id: classId } = useParams();
     const router = useRouter();
 
-    const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+    const [date, setDate] = useState(() => {
+        const now = new Date();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        return `${now.getFullYear()}-${month}-${day}`;
+    });
     type ClassLearner = { id: string; firstName: string; lastName: string; idNumber?: string };
     const [learners, setLearners] = useState<ClassLearner[]>([]);
     const [attendance, setAttendance] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [success, setSuccess] = useState(false);
+    const [error, setError] = useState('');
     const [recentTap, setRecentTap] = useState<string | null>(null);
 
     const fetchLearnersAndAttendance = useCallback(async () => {
         setLoading(true);
+        setError('');
         try {
             const learnersRes = await fetch(`/api/classes/${classId}/learners`);
-            if (!learnersRes.ok) throw new Error('Failed to fetch learners');
+            if (!learnersRes.ok) throw new Error('Could not load this class. Ask the principal to assign you to it.');
             const classLearners: ClassLearner[] = await learnersRes.json();
+            if (!Array.isArray(classLearners)) throw new Error('Could not load learners');
 
             const attRes = await fetch(`/api/attendance?classId=${classId}&date=${date}`);
             const existingAtt: { learnerId: string; status: string }[] = attRes.ok ? await attRes.json() : [];
@@ -64,8 +72,9 @@ export default function AttendancePage() {
 
             setLearners(classLearners);
             setAttendance(attMap);
-        } catch {
-            // swallow
+        } catch (err) {
+            setLearners([]);
+            setError(err instanceof Error ? err.message : 'Could not load the register');
         } finally {
             setLoading(false);
         }
@@ -84,6 +93,7 @@ export default function AttendancePage() {
     const handleSave = async () => {
         setSaving(true);
         setSuccess(false);
+        setError('');
         try {
             const records = learners.map((l) => ({
                 learnerId: l.id,
@@ -91,16 +101,23 @@ export default function AttendancePage() {
                 reason: '',
             }));
 
-            await fetch('/api/attendance', {
+            const res = await fetch('/api/attendance', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ classId, date, records }),
             });
 
+            if (!res.ok) {
+                setError(res.status === 403
+                    ? 'You are not assigned to this class, so the register was not saved.'
+                    : 'The register was not saved. Try again.');
+                return;
+            }
+
             setSuccess(true);
             setTimeout(() => setSuccess(false), 3000);
         } catch {
-            alert('Failed to save');
+            setError('The register was not saved. Try again.');
         } finally {
             setSaving(false);
         }
@@ -152,6 +169,11 @@ export default function AttendancePage() {
                     }
                 >
                     <AnimatePresence>
+                        {error && (
+                            <Alert severity="error" sx={{ mb: 2 }}>
+                                {error}
+                            </Alert>
+                        )}
                         {success && (
                             <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                                 <Alert severity="success" icon={<CheckCircle />} sx={{ mb: 2 }}>

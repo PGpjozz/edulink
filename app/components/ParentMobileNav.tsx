@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from 'next/navigation';
 import { Paper, BottomNavigation, BottomNavigationAction } from '@mui/material';
-import { Person, Notifications, Message, Payments } from '@mui/icons-material';
+import { Person, Notifications, Message, Assignment } from '@mui/icons-material';
 import { useTheme } from '@mui/material/styles';
 import { useMediaQuery } from '@mui/material';
 
@@ -10,7 +10,7 @@ const NAV_ITEMS = [
     { label: 'Children', icon: <Person />, path: '/dashboard/parent' },
     { label: 'Alerts', icon: <Notifications />, path: '/dashboard/parent/notifications' },
     { label: 'Messages', icon: <Message />, path: '/dashboard/messages' },
-    { label: 'Billing', icon: <Payments />, path: '/dashboard/parent/billing' },
+    { label: 'Homework', icon: <Assignment />, path: '/dashboard/parent/homework' },
 ];
 
 export default function ParentMobileNav() {

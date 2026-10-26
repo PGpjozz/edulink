@@ -2,8 +2,24 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 import { notifyParent } from '@/lib/notifications-delivery';
+import { canAccessClass } from '@/lib/staff-context';
 
 type TxClient = Parameters<Parameters<typeof prisma.$transaction>[0]>[0];
+
+/** Calendar day in the school's local timezone, from a YYYY-MM-DD field. */
+function dayRange(dateStr: string): { start: Date; end: Date } | null {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateStr);
+    if (!match) return null;
+    const year = Number(match[1]);
+    const month = Number(match[2]);
+    const day = Number(match[3]);
+    const start = new Date(year, month - 1, day);
+    if (start.getFullYear() !== year || start.getMonth() !== month - 1 || start.getDate() !== day) {
+        return null;
+    }
+    const end = new Date(year, month - 1, day + 1);
+    return { start, end };
+}
 
 export async function GET(req: Request) {
     const auth = await requireAuth({ requireSchoolId: true });
@@ -27,7 +43,7 @@ export async function GET(req: Request) {
             return new NextResponse('Class not found', { status: 404 });
         }
 
-        if (!['PRINCIPAL', 'SCHOOL_ADMIN', 'TEACHER', 'LEARNER', 'PARENT'].includes(auth.role)) {
+        if (!['PRINCIPAL', 'SCHOOL_ADMIN', 'SCHOOL_OWNER', 'HOD', 'TEACHER', 'LEARNER', 'PARENT'].includes(auth.role)) {
             return new NextResponse('Forbidden', { status: 403 });
         }
 
@@ -65,20 +81,17 @@ export async function GET(req: Request) {
             }
         }
 
-        // Parse date range for the specific day to avoid timezone issues
-        const date = new Date(dateStr);
-        if (Number.isNaN(date.getTime())) {
+        const range = dayRange(dateStr);
+        if (!range) {
             return new NextResponse('Invalid date', { status: 400 });
         }
-        const nextDay = new Date(date);
-        nextDay.setDate(date.getDate() + 1);
 
         const attendance = await prisma.attendance.findMany({
             where: {
                 learner: { classId },
                 date: {
-                    gte: date,
-                    lt: nextDay
+                    gte: range.start,
+                    lt: range.end
                 }
             },
             include: {
@@ -96,7 +109,10 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-    const auth = await requireAuth({ roles: ['TEACHER'], requireSchoolId: true });
+    const auth = await requireAuth({
+        roles: ['TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN', 'SCHOOL_OWNER'],
+        requireSchoolId: true,
+    });
     if (auth instanceof NextResponse) return auth;
 
     try {
@@ -108,37 +124,23 @@ export async function POST(req: Request) {
             return new NextResponse('Missing required fields', { status: 400 });
         }
 
-        const teacherProfile = await prisma.teacherProfile.findUnique({
-            where: { userId: auth.userId },
-            select: { id: true }
-        });
-
-        if (!teacherProfile) {
-            return new NextResponse('Forbidden', { status: 403 });
-        }
-
         const klass = await prisma.class.findFirst({
             where: { id: classId, schoolId: auth.schoolId as string },
-            select: { id: true, teacherProfileId: true }
+            select: { id: true }
         });
 
         if (!klass) {
             return new NextResponse('Class not found', { status: 404 });
         }
 
-        if (klass.teacherProfileId !== teacherProfile.id) {
+        if (!(await canAccessClass(auth, classId))) {
             return new NextResponse('Forbidden', { status: 403 });
         }
 
-        // Validate class ownership (optional but recommended)
-        // ...
-
-        const selectedDate = new Date(date);
-        if (Number.isNaN(selectedDate.getTime())) {
+        const range = dayRange(date);
+        if (!range) {
             return new NextResponse('Invalid date', { status: 400 });
         }
-        const nextDay = new Date(selectedDate);
-        nextDay.setDate(selectedDate.getDate() + 1);
 
         const learnerIds = records.map((r: any) => r.learnerId).filter(Boolean);
         if (learnerIds.length !== records.length) {
@@ -166,8 +168,8 @@ export async function POST(req: Request) {
                 where: {
                     learner: { classId },
                     date: {
-                        gte: selectedDate,
-                        lt: nextDay
+                        gte: range.start,
+                        lt: range.end
                     }
                 }
             });
@@ -175,7 +177,7 @@ export async function POST(req: Request) {
             await tx.attendance.createMany({
                 data: records.map((r: any) => ({
                     learnerId: r.learnerId,
-                    date: selectedDate,
+                    date: range.start,
                     status: r.status,
                     reason: r.reason
                 }))
@@ -195,7 +197,7 @@ export async function POST(req: Request) {
                     if (!learner || !learner.parentIds.length) continue;
 
                     const title = `Attendance Alert: ${learner.user.firstName}`;
-                    const message = `${learner.user.firstName} was marked ${r.status.toLowerCase()} for today (${selectedDate.toLocaleDateString()}). ${r.reason ? `Reason: ${r.reason}` : ''}`;
+                    const message = `${learner.user.firstName} was marked ${r.status.toLowerCase()} for today (${range.start.toLocaleDateString()}). ${r.reason ? `Reason: ${r.reason}` : ''}`;
 
                     // Create notifications for all linked parents
                     await tx.notification.createMany({
@@ -235,7 +237,7 @@ export async function POST(req: Request) {
             action: 'SAVE_ATTENDANCE',
             entity: 'CLASS',
             entityId: classId,
-            details: { date: selectedDate.toISOString(), learnerCount: records.length }
+            details: { date: range.start.toISOString(), learnerCount: records.length }
         });
 
         return NextResponse.json({ success: true });

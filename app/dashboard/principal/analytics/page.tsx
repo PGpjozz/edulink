@@ -20,7 +20,6 @@ import {
     BarChart as BarChartIcon,
     TrendingUp,
     People,
-    AccountBalance,
     Refresh,
     InfoOutlined,
     AutoAwesome,
@@ -209,29 +208,6 @@ export default function PrincipalAnalytics() {
                                         {data?.attendance?.trend?.map((_: any, index: number) => (
                                             <Cell key={`cell-${index}`} fill={muiTheme.palette.secondary.main} fillOpacity={0.8} />
                                         ))}
-                                    </Bar>
-                                </BarChart>
-                            </ResponsiveContainer>
-                        </Box>
-                    </Paper>
-                </Grid>
-
-                {/* Financial Health */}
-                <Grid size={{ xs: 12, md: 6 }}>
-                    <Paper sx={{ p: 3, borderRadius: 4, boxShadow: 4, bgcolor: 'background.paper' }}>
-                        <Typography variant="h6" fontWeight="bold" mb={3}>Financial Health (Collections)</Typography>
-                        <Box height={250}>
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart layout="vertical" data={[
-                                    { name: 'Collected', value: data?.finance?.paid, color: muiTheme.palette.success.main },
-                                    { name: 'Outstanding', value: data?.finance?.pending, color: muiTheme.palette.warning.main }
-                                ]}>
-                                    <XAxis type="number" hide />
-                                    <YAxis type="category" dataKey="name" axisLine={false} tickLine={false} width={100} />
-                                    <RechartsTooltip />
-                                    <Bar dataKey="value" radius={[0, 4, 4, 0]} barSize={40}>
-                                        <Cell fill={muiTheme.palette.success.main} />
-                                        <Cell fill={muiTheme.palette.warning.main} />
                                     </Bar>
                                 </BarChart>
                             </ResponsiveContainer>

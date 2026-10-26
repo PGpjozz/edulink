@@ -24,6 +24,12 @@ export default function PrincipalUsersPage() {
         { field: 'lastName', headerName: 'Last Name', flex: 1 },
         { field: 'email', headerName: 'Email / ID', flex: 1.5, valueGetter: (_v, row) => row?.email || row?.idNumber || '-' },
         { field: 'role', headerName: 'Role', width: 120 },
+        {
+            field: 'className',
+            headerName: 'Class',
+            flex: 1,
+            valueGetter: (_v, row) => (row?.role === 'LEARNER' ? row?.className || 'Not in a class' : '—'),
+        },
         { field: 'isActive', headerName: 'Status', width: 100, type: 'boolean' },
     ];
 

@@ -77,13 +77,10 @@ export default function LearnerHomeworkPage() {
                                 <Box display="flex" gap={1} flexWrap="wrap" alignItems="center">
                                     {h.subject && <Chip size="small" label={h.subject.name} />}
                                     <Chip size="small" label={`Due ${new Date(h.dueDate).toLocaleDateString()}`} />
-                                    {submitted ? (
-                                        <Chip size="small" color="success" label="Submitted" />
-                                    ) : (
-                                        <Button size="small" variant="contained" onClick={() => openSubmit(h)}>
-                                            Submit
-                                        </Button>
-                                    )}
+                                    {submitted && <Chip size="small" color="success" label="Submitted" />}
+                                    <Button size="small" variant={submitted ? 'outlined' : 'contained'} onClick={() => openSubmit(h)}>
+                                        {submitted ? 'Update submission' : 'Submit'}
+                                    </Button>
                                 </Box>
                             </ContentPanel>
                         );

@@ -5,7 +5,7 @@ import {
     Box, Container, Typography, Card, CardActionArea, CardContent, Grid, Avatar,
     Alert, Button, ToggleButton, ToggleButtonGroup, Chip,
 } from '@mui/material';
-import { Person as PersonIcon, Notifications, Assignment, Payments, Message } from '@mui/icons-material';
+import { Person as PersonIcon, Notifications, Assignment, Message } from '@mui/icons-material';
 import Link from 'next/link';
 import LearnerProgressView from '@/app/components/LearnerProgressView';
 import AnnouncementsFeed from '@/app/components/AnnouncementsFeed';
@@ -123,9 +123,6 @@ function ParentDashboardInner() {
             <Grid container spacing={1} sx={{ mb: 3 }}>
                 <Grid size="auto">
                     <Chip component={Link} href={`/dashboard/parent/homework${childQ}`} icon={<Assignment />} label="Homework" clickable variant="outlined" />
-                </Grid>
-                <Grid size="auto">
-                    <Chip component={Link} href={`/dashboard/parent/billing${childQ}`} icon={<Payments />} label="Billing" clickable variant="outlined" />
                 </Grid>
                 <Grid size="auto">
                     <Chip component={Link} href={`/dashboard/parent/notifications${childQ}`} icon={<Notifications />} label="Alerts" clickable variant="outlined" />

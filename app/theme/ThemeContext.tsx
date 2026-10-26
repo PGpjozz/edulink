@@ -29,17 +29,24 @@ export const useThemeContext = () => {
 };
 
 export const ThemeContextProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [mode, setMode] = useState<ThemeMode>(() => {
-        const saved = typeof window !== 'undefined' ? (localStorage.getItem('themeMode') as ThemeMode | null) : null;
-        return saved ?? 'light';
-    });
-    const [primaryColor, setPrimaryColor] = useState(() => {
-        const saved = typeof window !== 'undefined' ? localStorage.getItem('primaryColor') : null;
-        return saved ?? '#f59e0b';
-    });
+    // Defaults must match on the server and the first client render. Saved
+    // preferences are applied after hydration so localStorage cannot mismatch the HTML.
+    const [mode, setMode] = useState<ThemeMode>('light');
+    const [primaryColor, setPrimaryColor] = useState('#f59e0b');
     const [logoUrl, setLogoUrl] = useState('');
     const [schoolName, setSchoolName] = useState('');
     const { data: session } = useSession();
+
+    useEffect(() => {
+        try {
+            const savedMode = localStorage.getItem('themeMode');
+            if (savedMode === 'light' || savedMode === 'dark') setMode(savedMode);
+            const savedColor = localStorage.getItem('primaryColor');
+            if (savedColor) setPrimaryColor(savedColor);
+        } catch {
+            // Storage can be blocked; the default theme still renders.
+        }
+    }, []);
 
     // Fetch school-specific branding when session is available
     useEffect(() => {

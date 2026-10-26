@@ -8,7 +8,9 @@ export const BRAND = {
     vision:
         "To become Africa's leading school management platform, connecting schools, educators, parents, and learners through innovative technology.",
     description:
-        'School management platform for African schools — learners, teachers, parents, billing, and academics in one place.',
+        'School management platform for African schools — learners, teachers, parents, and academics in one place.',
+    /** Public contact address shown on the company website. */
+    contactEmail: 'hello@brightcampus.co.za',
     providerPortalTitle: 'BrightCampus Provider Portal',
     studyAdvisorLabel: 'BrightCampus Study Advisor',
     dataHubLabel: 'BrightCampus Data Hub',

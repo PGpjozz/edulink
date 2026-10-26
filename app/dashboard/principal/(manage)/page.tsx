@@ -3,11 +3,11 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import {
-    Box, Typography, Button, Grid, Card, CardContent, Stack, Alert, Divider, List, ListItem, ListItemText, Chip,
+    Box, Typography, Button, Grid, Card, CardContent, Stack, Alert, Divider, List, ListItem, ListItemText,
 } from '@mui/material';
-import { Add as AddIcon, Refresh as RefreshIcon, People, Class, MenuBook, Inventory, EventNote, Receipt } from '@mui/icons-material';
+import { Add as AddIcon, Refresh as RefreshIcon, People, Class, MenuBook, Inventory, EventNote } from '@mui/icons-material';
 import {
-    ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
+    ResponsiveContainer, PieChart, Pie, Cell, Tooltip as RechartsTooltip,
 } from 'recharts';
 import StatCard from '@/app/components/ui/StatCard';
 import ContentPanel from '@/app/components/ui/ContentPanel';
@@ -15,7 +15,7 @@ import LoadingSkeleton from '@/app/components/ui/LoadingSkeleton';
 import AddClassModal from '../AddClassModal';
 import AddUserModal from '../AddUserModal';
 import type { OverviewResponse } from '../_components/types';
-import { ASSET_CHART_COLORS, formatCurrency, getInvoiceChipColor } from '../_components/utils';
+import { ASSET_CHART_COLORS } from '../_components/utils';
 
 export default function PrincipalOverviewPage() {
     const router = useRouter();
@@ -52,13 +52,6 @@ export default function PrincipalOverviewPage() {
         ]
         : [];
 
-    const invoiceAmountChartData = overview
-        ? [
-            { name: 'Pending', amount: overview.kpis.invoices.pendingAmount },
-            { name: 'Overdue', amount: overview.kpis.invoices.overdueAmount },
-        ]
-        : [];
-
     return (
         <Box>
             <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
@@ -78,7 +71,7 @@ export default function PrincipalOverviewPage() {
 
             {overview && (
                 <Box>
-                    {(overview.kpis.classesUnassigned > 0 || overview.kpis.subjectsUnassigned > 0 || overview.kpis.invoices.overdueCount > 0) && (
+                    {(overview.kpis.classesUnassigned > 0 || overview.kpis.subjectsUnassigned > 0) && (
                         <Stack spacing={1.5} sx={{ mb: 2 }}>
                             {overview.kpis.classesUnassigned > 0 && (
                                 <Alert severity="warning" action={<Button color="inherit" size="small" onClick={() => router.push('/dashboard/principal/classes')}>View classes</Button>}>
@@ -90,11 +83,6 @@ export default function PrincipalOverviewPage() {
                                     {overview.kpis.subjectsUnassigned} subject(s) are unassigned.
                                 </Alert>
                             )}
-                            {overview.kpis.invoices.overdueCount > 0 && (
-                                <Alert severity="error">
-                                    {overview.kpis.invoices.overdueCount} invoice(s) are overdue ({formatCurrency(overview.kpis.invoices.overdueAmount)}).
-                                </Alert>
-                            )}
                         </Stack>
                     )}
 
@@ -102,8 +90,7 @@ export default function PrincipalOverviewPage() {
                         <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} flexWrap="wrap">
                             <Button variant="contained" startIcon={<AddIcon />} onClick={() => setIsClassModalOpen(true)}>Add class</Button>
                             <Button variant="contained" startIcon={<AddIcon />} onClick={() => setIsUserModalOpen(true)}>Add user</Button>
-                            <Button variant="outlined" onClick={() => router.push('/dashboard/principal/assets?add=1')}>Add asset</Button>
-                            <Button variant="outlined" onClick={() => router.push('/dashboard/principal/finance')}>Finance</Button>
+                            <Button variant="outlined" onClick={() => router.push('/dashboard/announcements/new')}>Announcement</Button>
                             <Button variant="outlined" onClick={() => router.push('/dashboard/principal/analytics')}>Analytics</Button>
                             <Button variant="outlined" onClick={() => router.push('/dashboard/principal/behavior')}>Behavior</Button>
                         </Stack>
@@ -139,10 +126,9 @@ export default function PrincipalOverviewPage() {
                             <StatCard label="Bookings pending" value={overview.kpis.bookingsPending} icon={<EventNote />} variant="warning" />
                         </Grid>
                         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <StatCard label="Invoices pending" value={formatCurrency(overview.kpis.invoices.pendingAmount)} icon={<Receipt />} />
-                        </Grid>
-                        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-                            <StatCard label="Invoices overdue" value={formatCurrency(overview.kpis.invoices.overdueAmount)} icon={<Receipt />} variant="error" />
+                            <Box onClick={() => router.push('/dashboard/principal/users')} sx={{ cursor: 'pointer', height: '100%' }}>
+                                <StatCard label="Parents" value={overview.kpis.parents} icon={<People />} />
+                            </Box>
                         </Grid>
                     </Grid>
 
@@ -166,47 +152,9 @@ export default function PrincipalOverviewPage() {
                                 </CardContent>
                             </Card>
                         </Grid>
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <Card variant="outlined" sx={{ height: 360 }}>
-                                <CardContent sx={{ height: '100%' }}>
-                                    <Typography variant="subtitle1" fontWeight="bold" mb={1}>Outstanding invoices</Typography>
-                                    <Box sx={{ width: '100%', height: 300 }}>
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <BarChart data={invoiceAmountChartData}>
-                                                <CartesianGrid strokeDasharray="3 3" />
-                                                <XAxis dataKey="name" />
-                                                <YAxis />
-                                                <RechartsTooltip />
-                                                <Bar dataKey="amount" fill="#f59e0b" radius={[6, 6, 0, 0]} />
-                                            </BarChart>
-                                        </ResponsiveContainer>
-                                    </Box>
-                                </CardContent>
-                            </Card>
-                        </Grid>
                     </Grid>
 
                     <Grid container spacing={2}>
-                        <Grid size={{ xs: 12, md: 6 }}>
-                            <Card variant="outlined">
-                                <CardContent>
-                                    <Typography variant="subtitle1" fontWeight="bold">Recent invoices</Typography>
-                                    <Divider sx={{ my: 1.5 }} />
-                                    {overview.recent.invoices.length === 0 ? (
-                                        <Typography variant="body2" color="text.secondary">Nothing recent.</Typography>
-                                    ) : (
-                                        <List dense>
-                                            {overview.recent.invoices.map((inv) => (
-                                                <ListItem key={inv.id} disableGutters sx={{ py: 0.5, cursor: 'pointer' }} onClick={() => router.push('/dashboard/principal/finance')}>
-                                                    <ListItemText primary={inv.title} secondary={`${inv.learnerName} · ${formatCurrency(inv.amount)}`} />
-                                                    <Chip size="small" label={inv.status} color={getInvoiceChipColor(inv.status) as 'success'} />
-                                                </ListItem>
-                                            ))}
-                                        </List>
-                                    )}
-                                </CardContent>
-                            </Card>
-                        </Grid>
                         <Grid size={{ xs: 12, md: 6 }}>
                             <Card variant="outlined">
                                 <CardContent>

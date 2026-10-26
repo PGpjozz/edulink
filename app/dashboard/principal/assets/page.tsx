@@ -291,7 +291,7 @@ function AssetManagerInner() {
                                         )}
 
                                         {asset.status === 'CHECKED_OUT' && (
-                                            <Tooltip title="Mark Lost (creates replacement invoice)">
+                                            <Tooltip title="Mark lost">
                                                 <IconButton onClick={() => handleUpdateStatus(asset.id, 'LOST')}>
                                                     <ReportProblem color="error" />
                                                 </IconButton>

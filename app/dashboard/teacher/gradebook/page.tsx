@@ -10,12 +10,9 @@ import {
     Button,
     Chip,
     Stack,
-    IconButton,
-    Tooltip,
 } from '@mui/material';
 import {
     MenuBook,
-    FileDownload,
     Assignment,
     ChevronRight,
     Refresh,
@@ -54,11 +51,6 @@ export default function TeacherGradebook() {
     useEffect(() => {
         fetchGradebookData();
     }, []);
-
-    const exportToCSV = (subject: SubjectSummary) => {
-        console.log(`Exporting CSV for ${subject.name}`);
-        alert(`Exporting grades for ${subject.name} to CSV...`);
-    };
 
     return (
         <PageTransition>
@@ -128,7 +120,7 @@ export default function TeacherGradebook() {
                                                 </Box>
                                             </Box>
                                         </Stack>
-                                        <Box mt={3} display="flex" gap={1}>
+                                        <Box mt={3}>
                                             <Button
                                                 variant="contained"
                                                 fullWidth
@@ -138,16 +130,6 @@ export default function TeacherGradebook() {
                                             >
                                                 Open grades
                                             </Button>
-                                            <Tooltip title="Export CSV">
-                                                <IconButton
-                                                    size="small"
-                                                    color="primary"
-                                                    sx={{ border: '1px solid', borderColor: 'divider' }}
-                                                    onClick={() => exportToCSV(subject)}
-                                                >
-                                                    <FileDownload fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
                                         </Box>
                                     </CardContent>
                                 </Card>

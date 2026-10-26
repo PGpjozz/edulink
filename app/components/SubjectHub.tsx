@@ -106,7 +106,7 @@ export default function SubjectHub({ subjectId, role }: SubjectHubProps) {
             const res = await fetch(`/api/assessments/${submittingAssessment.id}/submissions`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fileUrl: submissionFile || 'https://example.com/student-submission.pdf' })
+                body: JSON.stringify({ fileUrl: submissionFile })
             });
             if (res.ok) {
                 setSubmittingAssessment(null);
@@ -189,9 +189,7 @@ export default function SubjectHub({ subjectId, role }: SubjectHubProps) {
                                         >
                                             Submit Work
                                         </Button>
-                                    ) : (
-                                        <Button variant="text" size="small">View Submissions</Button>
-                                    )}
+                                    ) : null}
                                 </ListItem>
                             ))}
                             {assessments.length === 0 && (
@@ -216,15 +214,13 @@ export default function SubjectHub({ subjectId, role }: SubjectHubProps) {
                             onChange={(e) => setNewTitle(e.target.value)}
                         />
                         <TextField
-                            label="File URL (Simulated)"
+                            label="Link to the file"
                             placeholder="https://..."
                             fullWidth
                             value={newFileUrl}
                             onChange={(e) => setNewFileUrl(e.target.value)}
+                            helperText="Paste a Google Drive or OneDrive link. File upload from this device is not available yet."
                         />
-                        <Typography variant="caption" color="text.secondary">
-                            In a real app, this would be a file picker reaching S3/storage.
-                        </Typography>
                     </Box>
                 </DialogContent>
                 <DialogActions>
@@ -245,14 +241,12 @@ export default function SubjectHub({ subjectId, role }: SubjectHubProps) {
                 <DialogContent>
                     <Box mt={2} display="flex" flexDirection="column" gap={2}>
                         <TextField
-                            label="Submission URL (Simulated)"
+                            label="Link to your work"
                             fullWidth
                             value={submissionFile}
                             onChange={(e) => setSubmissionFile(e.target.value)}
+                            helperText="Paste a share link. For written homework, use the Homework page instead."
                         />
-                        <Typography variant="body2" color="text.secondary">
-                            Ensure you provide a valid link to your completed worksheet or document.
-                        </Typography>
                     </Box>
                 </DialogContent>
                 <DialogActions>

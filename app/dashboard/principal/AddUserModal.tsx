@@ -51,9 +51,18 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
     const [successInfo, setSuccessInfo] = useState('');
     const [alsoTeaches, setAlsoTeaches] = useState(false);
     const [learners, setLearners] = useState<LearnerOption[]>([]);
+    const [classes, setClasses] = useState<{ id: string; name: string; grade: string }[]>([]);
+    const [classId, setClassId] = useState('');
 
     useEffect(() => {
-        if (open && role === 'PARENT') {
+        if (!open) return;
+        if (role === 'LEARNER') {
+            fetch('/api/classes')
+                .then((r) => r.json())
+                .then((data) => setClasses(Array.isArray(data) ? data.map((c) => ({ id: c.id, name: c.name, grade: String(c.grade) })) : []))
+                .catch(() => setClasses([]));
+        }
+        if (role === 'PARENT') {
             fetch('/api/learners')
                 .then(r => r.json())
                 .then((data: any[]) => setLearners(
@@ -70,7 +79,7 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
 
     const reset = () => {
         setFirstName(''); setLastName(''); setEmail(''); setIdNumber('');
-        setGrade('8'); setLearnerProfileId(''); setPassword(''); setRole('TEACHER');
+        setGrade('8'); setLearnerProfileId(''); setClassId(''); setPassword(''); setRole('TEACHER');
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -81,6 +90,12 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
         const finalPassword = password.trim();
         if (!finalPassword) {
             setError('Password is required');
+            setLoading(false);
+            return;
+        }
+
+        if (role === 'LEARNER' && !classId) {
+            setError('Choose a class. Create the class first if this grade has none.');
             setLoading(false);
             return;
         }
@@ -97,6 +112,7 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
                     idNumber: idNumber || undefined,
                     password: finalPassword,
                     grade: role === 'LEARNER' ? grade : undefined,
+                    classId: role === 'LEARNER' ? classId : undefined,
                     learnerProfileId: role === 'PARENT' && learnerProfileId ? learnerProfileId : undefined,
                     alsoTeaches: role === 'SCHOOL_ADMIN' ? alsoTeaches : undefined,
                 }),
@@ -208,9 +224,32 @@ export default function AddUserModal({ open, onClose, onSuccess }: AddUserModalP
                                 />
                                 <FormControl fullWidth margin="dense">
                                     <InputLabel>Grade</InputLabel>
-                                    <Select value={grade} label="Grade" onChange={(e) => setGrade(e.target.value)} required>
+                                    <Select
+                                        value={grade}
+                                        label="Grade"
+                                        onChange={(e) => {
+                                            setGrade(e.target.value);
+                                            setClassId('');
+                                        }}
+                                        required
+                                    >
                                         {GRADES.map(g => <MenuItem key={g} value={g}>Grade {g}</MenuItem>)}
                                     </Select>
+                                </FormControl>
+                                <FormControl fullWidth margin="dense" required>
+                                    <InputLabel>Class</InputLabel>
+                                    <Select
+                                        value={classId}
+                                        label="Class"
+                                        onChange={(e) => setClassId(e.target.value)}
+                                    >
+                                        {classes.filter((c) => c.grade === grade).map((c) => (
+                                            <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                                        ))}
+                                    </Select>
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, ml: 1 }}>
+                                        The learner is placed in this class so teachers can mark the register.
+                                    </Typography>
                                 </FormControl>
                             </>
                         )}

@@ -27,7 +27,8 @@ export async function GET(req: Request) {
                 role: true,
                 isActive: true,
                 permissions: true,
-                teacherProfile: { select: { id: true } }
+                teacherProfile: { select: { id: true } },
+                learnerProfile: { select: { class: { select: { name: true, grade: true } } } },
             },
             orderBy: { role: 'asc' }
         });
@@ -35,7 +36,8 @@ export async function GET(req: Request) {
         return NextResponse.json(
             users.map((u) => ({
                 ...u,
-                teacherProfileId: u.teacherProfile?.id || null
+                teacherProfileId: u.teacherProfile?.id || null,
+                className: u.learnerProfile?.class ? `${u.learnerProfile.class.name} (Gr ${u.learnerProfile.class.grade})` : null,
             }))
         );
     } catch (error) {
@@ -52,7 +54,7 @@ export async function POST(req: Request) {
     try {
         const body = await readJson<any>(req);
         if (body instanceof NextResponse) return body;
-        const { firstName, lastName, email, role, idNumber, password: rawPassword, grade, learnerProfileId, departmentId, alsoTeaches } = body;
+        const { firstName, lastName, email, role, idNumber, password: rawPassword, grade, classId, learnerProfileId, departmentId, alsoTeaches } = body;
 
         if (!firstName || !lastName || !role) {
             return new NextResponse('Missing required fields', { status: 400 });
@@ -73,6 +75,21 @@ export async function POST(req: Request) {
 
         if (role === 'LEARNER' && !grade) {
             return new NextResponse('grade is required for learners', { status: 400 });
+        }
+
+        let learnerClassId: string | null = null;
+        if (role === 'LEARNER') {
+            if (!classId) {
+                return new NextResponse('A class is required so the learner appears on the register', { status: 400 });
+            }
+            const klass = await prisma.class.findFirst({
+                where: { id: classId, schoolId: auth.schoolId as string, grade: String(grade) },
+                select: { id: true },
+            });
+            if (!klass) {
+                return new NextResponse('Choose a class in the same grade', { status: 400 });
+            }
+            learnerClassId = klass.id;
         }
 
         if (role === 'LEARNER') {
@@ -142,7 +159,7 @@ export async function POST(req: Request) {
                 isActive: true,
                 mustChangePassword: usesDefaultPassword || role === 'LEARNER',
                 ...(role === 'LEARNER' && {
-                    learnerProfile: { create: { grade: grade as string } }
+                    learnerProfile: { create: { grade: grade as string, classId: learnerClassId } }
                 }),
                 ...(needsTeacherProfile && {
                     teacherProfile: {
