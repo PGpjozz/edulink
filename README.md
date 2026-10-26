@@ -73,6 +73,9 @@ curl "http://localhost:3000/api/setup?secret=brightcampus-setup-2026"
 
 ## School onboarding flow
 
+Before onboarding, sign the agreement pack in [`docs/agreements/`](docs/agreements/README.md)
+(service agreement, POPIA data processing agreement, SLA, order form, parent consent notices).
+
 1. **Provider** creates school via Provider Dashboard (`/dashboard/provider`)
 2. **Principal** signs in and configures classes, subjects, users
 3. **School owner** invites staff via `/dashboard/school-owner/invites`
