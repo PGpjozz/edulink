@@ -130,7 +130,7 @@ export default function MasterGradebook() {
                     ]}
                     actions={
                         <Box display="flex" gap={1}>
-                            <Button startIcon={<Refresh />} onClick={fetchData} disabled={saving}>Refresh</Button>
+                            <Button startIcon={<Refresh />} onClick={() => fetchData()} disabled={saving}>Refresh</Button>
                             <Button variant="outlined" startIcon={<FileDownload />} onClick={exportCSV}>Export CSV</Button>
                             <Button variant="contained" startIcon={<Save />} onClick={saveGrades} disabled={saving}>
                                 {saving ? 'Saving...' : 'Save marks'}
