@@ -30,7 +30,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
     const showParentChrome = isParent && pathname.startsWith('/dashboard/parent');
     const showTeacherMobilePad =
         hasTeacherProfile &&
-        (activeRole === 'TEACHER' || activeRole === 'HOD' || activeRole === 'PRINCIPAL' || activeRole === 'SCHOOL_ADMIN');
+        (activeRole === 'TEACHER' || activeRole === 'HOD' || activeRole === 'PRINCIPAL' || activeRole === 'SCHOOL_ADMIN' || activeRole === 'SCHOOL_OWNER');
 
     useEffect(() => {
         setMobileOpen(false);

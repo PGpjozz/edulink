@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 import { getStaffContext } from '@/lib/staff-context';
+import { canManageSchool } from '@/lib/permissions';
 
 export async function GET(req: Request) {
     const auth = await requireAuth({ requireSchoolId: true });
@@ -19,15 +20,13 @@ export async function GET(req: Request) {
             subject: { schoolId: auth.schoolId as string },
         };
 
-        if (auth.role === 'TEACHER') {
-            // Subject.teacherId references TeacherProfile.id, so scope by the
-            // teacher's assigned subjects (direct assignment + class subjects).
+        if (!canManageSchool(auth.role) && auth.role !== 'LEARNER') {
             const ctx = await getStaffContext(auth);
             where.subjectId = { in: ctx.assignedSubjectIds };
         }
 
         if (subjectId) {
-            if (auth.role === 'TEACHER') {
+            if (!canManageSchool(auth.role) && auth.role !== 'LEARNER') {
                 const ctx = await getStaffContext(auth);
                 if (!ctx.assignedSubjectIds.includes(subjectId)) {
                     return NextResponse.json([], { status: 200 });
@@ -74,7 +73,7 @@ type QuizCreateInput = {
 };
 
 export async function POST(req: Request) {
-    const auth = await requireAuth({ roles: ['TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    const auth = await requireAuth({ roles: ['TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN', 'SCHOOL_OWNER'], requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
 
     try {
@@ -94,7 +93,7 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Subject not found' }, { status: 404 });
         }
 
-        if (auth.role === 'TEACHER') {
+        if (!canManageSchool(auth.role)) {
             const ctx = await getStaffContext(auth);
             if (!ctx.assignedSubjectIds.includes(subjectId)) {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
@@ -146,7 +145,7 @@ export async function POST(req: Request) {
 }
 
 export async function PATCH(req: Request) {
-    const auth = await requireAuth({ roles: ['TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    const auth = await requireAuth({ roles: ['TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN', 'SCHOOL_OWNER'], requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
 
     try {
@@ -164,7 +163,7 @@ export async function PATCH(req: Request) {
             return NextResponse.json({ error: 'Not found' }, { status: 404 });
         }
 
-        if (auth.role === 'TEACHER') {
+        if (!canManageSchool(auth.role)) {
             const ctx = await getStaffContext(auth);
             if (!ctx.assignedSubjectIds.includes(quiz.subjectId)) {
                 return NextResponse.json({ error: 'Forbidden' }, { status: 403 });

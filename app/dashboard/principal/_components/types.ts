@@ -17,13 +17,19 @@ export interface UserData {
     isActive: boolean;
     teacherProfileId?: string | null;
     className?: string | null;
+    classId?: string | null;
+    grade?: string | null;
 }
+
+export type ClassOption = { id: string; name: string; grade: string };
 
 export interface SubjectData {
     id: string;
     name: string;
     code?: string | null;
     grade: string;
+    offering?: 'COMPULSORY' | 'OPTIONAL';
+    classSubjects?: { classId: string; class?: { id: string; name: string; grade: string } }[];
     teacherId?: string | null;
     teacher?: { user: { firstName: string; lastName: string } } | null;
 }

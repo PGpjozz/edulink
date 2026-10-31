@@ -5,7 +5,6 @@ import {
     Container,
     Typography,
     Box,
-    Paper,
     Table,
     TableBody,
     TableCell,
@@ -14,18 +13,17 @@ import {
     TableRow,
     Button,
     CircularProgress,
-    IconButton,
     Tooltip,
-    Alert
+    Alert,
+    TextField,
 } from '@mui/material';
-import { ArrowBack, FileDownload, Refresh } from '@mui/icons-material';
-import { useRouter, useParams } from 'next/navigation';
+import { FileDownload, Refresh, Save } from '@mui/icons-material';
+import { useParams } from 'next/navigation';
 import PageHeader from '@/app/components/ui/PageHeader';
 import PageTransition from '@/app/components/ui/PageTransition';
 import ContentPanel from '@/app/components/ui/ContentPanel';
 
 export default function MasterGradebook() {
-    const router = useRouter();
     const params = useParams();
     const subjectId = params.id as string;
 
@@ -34,14 +32,24 @@ export default function MasterGradebook() {
     type Grade = { learnerId: string; assessmentId: string; score: number };
     type GradebookData = { assessments: Assessment[]; learners: Learner[]; grades: Grade[] };
     const [data, setData] = useState<GradebookData | null>(null);
+    const [scores, setScores] = useState<Record<string, string>>({});
     const [loading, setLoading] = useState(true);
+    const [saving, setSaving] = useState(false);
+    const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-    const fetchData = async () => {
-        setLoading(true);
+    const cellKey = (learnerId: string, assessmentId: string) => `${learnerId}:${assessmentId}`;
+
+    const fetchData = async (quiet = false) => {
+        if (!quiet) setLoading(true);
         try {
             const res = await fetch(`/api/subjects/${subjectId}/grades`);
             const json: GradebookData = await res.json();
             setData(json);
+            const next: Record<string, string> = {};
+            json.grades?.forEach((g) => {
+                next[`${g.learnerId}:${g.assessmentId}`] = String(g.score);
+            });
+            setScores(next);
         } catch (err) {
             console.error('Error fetching master gradebook:', err);
         } finally {
@@ -54,8 +62,38 @@ export default function MasterGradebook() {
     }, [subjectId]);
 
     const getGrade = (learnerId: string, assessmentId: string) => {
-        const grade = data?.grades.find((g) => g.learnerId === learnerId && g.assessmentId === assessmentId);
-        return grade ? grade.score : '-';
+        const value = scores[cellKey(learnerId, assessmentId)];
+        return value === undefined || value === '' ? '-' : value;
+    };
+
+    const saveGrades = async () => {
+        if (!data) return;
+        setSaving(true);
+        setMessage(null);
+        try {
+            for (const assessment of data.assessments) {
+                const grades = data.learners.flatMap((learner) => {
+                    const raw = scores[cellKey(learner.id, assessment.id)];
+                    if (raw === undefined || raw.trim() === '') return [];
+                    const score = Number(raw);
+                    if (!Number.isFinite(score)) return [];
+                    return [{ learnerId: learner.id, score }];
+                });
+                if (grades.length === 0) continue;
+                const res = await fetch('/api/grades', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ assessmentId: assessment.id, grades }),
+                });
+                if (!res.ok) throw new Error(await res.text());
+            }
+            setMessage({ type: 'success', text: 'Marks saved for every assessment that has a score.' });
+            await fetchData(true);
+        } catch {
+            setMessage({ type: 'error', text: 'Marks were not saved. Try again.' });
+        } finally {
+            setSaving(false);
+        }
     };
 
     const exportCSV = () => {
@@ -85,18 +123,23 @@ export default function MasterGradebook() {
             <Container maxWidth="xl">
                 <PageHeader
                     title="Master gradebook"
-                    subtitle="Class performance matrix across all assessments."
+                    subtitle="Enter a mark in any column. Blank cells are not graded yet."
                     breadcrumbs={[
                         { label: 'Gradebook', href: '/dashboard/teacher/gradebook' },
                         { label: 'Subject grades' },
                     ]}
                     actions={
                         <Box display="flex" gap={1}>
-                            <Button startIcon={<Refresh />} onClick={fetchData}>Refresh</Button>
-                            <Button variant="contained" startIcon={<FileDownload />} onClick={exportCSV}>Export CSV</Button>
+                            <Button startIcon={<Refresh />} onClick={fetchData} disabled={saving}>Refresh</Button>
+                            <Button variant="outlined" startIcon={<FileDownload />} onClick={exportCSV}>Export CSV</Button>
+                            <Button variant="contained" startIcon={<Save />} onClick={saveGrades} disabled={saving}>
+                                {saving ? 'Saving...' : 'Save marks'}
+                            </Button>
                         </Box>
                     }
                 />
+
+                {message && <Alert severity={message.type} sx={{ mb: 2 }}>{message.text}</Alert>}
 
                 <ContentPanel noPadding>
             <TableContainer sx={{ overflowX: 'auto' }}>
@@ -122,20 +165,22 @@ export default function MasterGradebook() {
                                 <TableCell sx={{ fontWeight: 'medium' }}>
                                     {learner.user.firstName} {learner.user.lastName}
                                 </TableCell>
-                                {data.assessments.map((a) => {
-                                    const score = getGrade(learner.id, a.id);
-                                    return (
-                                        <TableCell key={a.id} align="center">
-                                            <Typography
-                                                variant="body2"
-                                                fontWeight={score !== '-' ? 'bold' : 'normal'}
-                                                color={score === '-' ? 'text.disabled' : 'inherit'}
-                                            >
-                                                {score}
-                                            </Typography>
-                                        </TableCell>
-                                    );
-                                })}
+                                {data.assessments.map((a) => (
+                                    <TableCell key={a.id} align="center">
+                                        <TextField
+                                            size="small"
+                                            type="number"
+                                            placeholder="—"
+                                            value={scores[cellKey(learner.id, a.id)] ?? ''}
+                                            onChange={(e) => setScores((current) => ({
+                                                ...current,
+                                                [cellKey(learner.id, a.id)]: e.target.value,
+                                            }))}
+                                            inputProps={{ min: 0, max: a.totalMarks, 'aria-label': `${a.title} mark` }}
+                                            sx={{ width: 88 }}
+                                        />
+                                    </TableCell>
+                                ))}
                             </TableRow>
                         ))}
                     </TableBody>

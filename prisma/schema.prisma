@@ -216,6 +216,11 @@ model Class {
   @@map("classes")
 }
 
+enum SubjectOffering {
+  COMPULSORY
+  OPTIONAL
+}
+
 model Subject {
   id             String        @id @default(uuid())
   schoolId       String
@@ -224,6 +229,8 @@ model Subject {
   name           String        // e.g. "Mathematics"
   code           String?       // e.g. "MATH"
   grade          String        // e.g. "10"
+  /// COMPULSORY is taught in every class of this grade. OPTIONAL is chosen per class.
+  offering       SubjectOffering @default(COMPULSORY)
   departmentId   String?
   department     Department?   @relation(fields: [departmentId], references: [id])
   

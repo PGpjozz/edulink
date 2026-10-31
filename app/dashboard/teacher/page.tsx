@@ -19,6 +19,7 @@ import {
     MenuBook,
     Groups,
     School,
+    PersonAdd,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -31,6 +32,8 @@ import EmptyState from '@/app/components/ui/EmptyState';
 import StatCard from '@/app/components/ui/StatCard';
 import ContentPanel from '@/app/components/ui/ContentPanel';
 import { getTimeGreeting } from '@/lib/greeting';
+import { canManageUsers } from '@/lib/permissions';
+import AddLearnerModal from '@/app/dashboard/principal/AddLearnerModal';
 
 type ClassInfo = { id: string; name: string; grade: string; _count?: { learners?: number }; timetable?: unknown };
 type SubjectSummary = { id: string; name: string; grade: string; code?: string; _count?: { assessments?: number } };
@@ -50,8 +53,13 @@ export default function TeacherDashboard() {
     const [loading, setLoading] = useState(true);
     const [timetableOpen, setTimetableOpen] = useState(false);
     const [selectedClass, setSelectedClass] = useState<ClassInfo | null>(null);
+    const [addLearnerClass, setAddLearnerClass] = useState<ClassInfo | null>(null);
     const router = useRouter();
     const { data: session } = useSession();
+    const mayAddLearners = canManageUsers({
+        role: session?.user?.primaryRole ?? session?.user?.role ?? '',
+        permissions: session?.user?.permissions ?? [],
+    });
 
     useEffect(() => {
         const requests: Promise<void>[] = [
@@ -196,7 +204,18 @@ export default function TeacherDashboard() {
                                                 sx={{ mt: 1 }}
                                             />
                                         </CardContent>
-                                        <Box px={2} pb={2} display="flex" gap={1}>
+                                        <Box px={2} pb={2} display="flex" gap={1} flexWrap="wrap">
+                                            {mayAddLearners && (
+                                                <Button
+                                                    variant="outlined"
+                                                    fullWidth
+                                                    size="small"
+                                                    startIcon={<PersonAdd />}
+                                                    onClick={() => setAddLearnerClass(cls)}
+                                                >
+                                                    Add learner
+                                                </Button>
+                                            )}
                                             <Button
                                                 variant="contained"
                                                 fullWidth
@@ -226,6 +245,14 @@ export default function TeacherDashboard() {
                     )}
                 </ContentPanel>
 
+                <AddLearnerModal
+                    open={!!addLearnerClass}
+                    onClose={() => setAddLearnerClass(null)}
+                    classInfo={addLearnerClass ? { id: addLearnerClass.id, name: addLearnerClass.name, grade: addLearnerClass.grade } : null}
+                    onSuccess={() => {
+                        fetch('/api/classes').then((res) => res.json()).then((data) => setClasses(Array.isArray(data) ? data : [])).catch(() => {});
+                    }}
+                />
                 <Dialog open={timetableOpen} onClose={() => setTimetableOpen(false)} maxWidth="lg" fullWidth>
                     <Box p={3}>
                         <Typography variant="h5" fontWeight="bold" gutterBottom>

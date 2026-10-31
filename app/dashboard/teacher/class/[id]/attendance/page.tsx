@@ -19,8 +19,11 @@ import {
     Chip,
     Stack,
 } from '@mui/material';
-import { ArrowBack, CheckCircle } from '@mui/icons-material';
+import { ArrowBack, CheckCircle, PersonAdd } from '@mui/icons-material';
 import { useParams, useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
+import { canManageUsers } from '@/lib/permissions';
+import AddLearnerModal from '@/app/dashboard/principal/AddLearnerModal';
 import { motion, AnimatePresence } from 'framer-motion';
 import PageHeader from '@/app/components/ui/PageHeader';
 import PageTransition from '@/app/components/ui/PageTransition';
@@ -36,6 +39,13 @@ const STATUS_OPTIONS = [
 export default function AttendancePage() {
     const { id: classId } = useParams();
     const router = useRouter();
+    const { data: session } = useSession();
+    const mayAddLearners = canManageUsers({
+        role: session?.user?.primaryRole ?? session?.user?.role ?? '',
+        permissions: session?.user?.permissions ?? [],
+    });
+    const [classInfo, setClassInfo] = useState<{ id: string; name: string; grade: string } | null>(null);
+    const [addLearnerOpen, setAddLearnerOpen] = useState(false);
 
     const [date, setDate] = useState(() => {
         const now = new Date();
@@ -83,6 +93,17 @@ export default function AttendancePage() {
     useEffect(() => {
         fetchLearnersAndAttendance();
     }, [fetchLearnersAndAttendance]);
+
+    useEffect(() => {
+        if (!mayAddLearners || !classId) return;
+        fetch('/api/classes')
+            .then((res) => res.json())
+            .then((data) => {
+                const match = Array.isArray(data) ? data.find((row: { id: string }) => row.id === classId) : null;
+                if (match) setClassInfo({ id: match.id, name: match.name, grade: String(match.grade) });
+            })
+            .catch(() => setClassInfo(null));
+    }, [mayAddLearners, classId]);
 
     const setStatus = (learnerId: string, status: string) => {
         setAttendance({ ...attendance, [learnerId]: status });
@@ -162,6 +183,11 @@ export default function AttendancePage() {
                             >
                                 All present
                             </Button>
+                            {mayAddLearners && classInfo && (
+                                <Button variant="outlined" startIcon={<PersonAdd />} onClick={() => setAddLearnerOpen(true)}>
+                                    Add learner
+                                </Button>
+                            )}
                             <Button variant="contained" onClick={handleSave} disabled={saving} component={motion.button} whileTap={{ scale: 0.97 }}>
                                 {saving ? 'Saving…' : 'Save'}
                             </Button>
@@ -238,6 +264,12 @@ export default function AttendancePage() {
                     )}
                 </ContentPanel>
             </Container>
+            <AddLearnerModal
+                open={addLearnerOpen}
+                onClose={() => setAddLearnerOpen(false)}
+                classInfo={classInfo}
+                onSuccess={() => { fetchLearnersAndAttendance(); }}
+            />
         </PageTransition>
     );
 }

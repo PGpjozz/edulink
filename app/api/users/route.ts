@@ -7,6 +7,7 @@ import { checkLearnerCapacity } from '@/lib/school-subscription';
 import { validateSaId, normalizeSaId } from '@/lib/sa-id';
 import { validatePassword, generateTemporaryPassword } from '@/lib/password';
 import { isProduction } from '@/lib/env';
+import { canManageUsers } from '@/lib/permissions';
 
 // GET: Fetch users (Teachers, Learners, Admins)
 export async function GET(req: Request) {
@@ -29,7 +30,7 @@ export async function GET(req: Request) {
                 isActive: true,
                 permissions: true,
                 teacherProfile: { select: { id: true } },
-                learnerProfile: { select: { class: { select: { name: true, grade: true } } } },
+                learnerProfile: { select: { grade: true, classId: true, class: { select: { name: true, grade: true } } } },
             },
             orderBy: { role: 'asc' }
         });
@@ -38,6 +39,8 @@ export async function GET(req: Request) {
             users.map((u) => ({
                 ...u,
                 teacherProfileId: u.teacherProfile?.id || null,
+                grade: u.learnerProfile?.grade ?? null,
+                classId: u.learnerProfile?.classId ?? null,
                 className: u.learnerProfile?.class ? `${u.learnerProfile.class.name} (Gr ${u.learnerProfile.class.grade})` : null,
             }))
         );
@@ -49,8 +52,11 @@ export async function GET(req: Request) {
 
 // POST: Create a new user (Invite)
 export async function POST(req: Request) {
-    const auth = await requireAuth({ roles: ['PRINCIPAL'], requireSchoolId: true });
+    const auth = await requireAuth({ requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
+    if (!canManageUsers(auth)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     try {
         const body = await readJson<any>(req);
@@ -146,7 +152,7 @@ export async function POST(req: Request) {
         const needsTeacherProfile =
             role === 'TEACHER' ||
             role === 'HOD' ||
-            (alsoTeaches && ['PRINCIPAL', 'SCHOOL_ADMIN'].includes(role));
+            (alsoTeaches && ['PRINCIPAL', 'SCHOOL_ADMIN', 'SCHOOL_OWNER'].includes(role));
 
         // Learners sign in with an ID number. A leftover email from the form
         // (or a blank string) must not be stored, or the unique email index

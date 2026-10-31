@@ -232,7 +232,7 @@ export function classScopeWhere(auth: AuthContext, ctx: StaffContext): Prisma.Cl
 export async function getLearnersForSubject(auth: AuthContext, subjectId: string) {
     const subject = await prisma.subject.findFirst({
         where: { id: subjectId, schoolId: auth.schoolId! },
-        select: { id: true, grade: true, teacherId: true },
+        select: { id: true, grade: true, teacherId: true, offering: true },
     });
     if (!subject) return [];
 
@@ -264,6 +264,9 @@ export async function getLearnersForSubject(auth: AuthContext, subjectId: string
     if (viaClassSubjects.length > 0) {
         return viaClassSubjects;
     }
+
+    // Optional subjects only include learners in classes that take them.
+    if (subject.offering === 'OPTIONAL') return [];
 
     // Fallback when class_subjects rows are missing but subject is assigned to this teacher
     const teachesSubject =

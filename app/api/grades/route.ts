@@ -17,7 +17,7 @@ async function canGradeAssessment(auth: { role: string; schoolId: string | null;
 }
 
 export async function GET(req: Request) {
-    const auth = await requireAuth({ roles: ['TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN', 'LEARNER', 'PARENT'], requireSchoolId: true });
+    const auth = await requireAuth({ roles: ['TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN', 'SCHOOL_OWNER', 'LEARNER', 'PARENT'], requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
 
     const { searchParams } = new URL(req.url);
@@ -81,7 +81,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-    const auth = await requireAuth({ roles: ['TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    const auth = await requireAuth({ roles: ['TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN', 'SCHOOL_OWNER'], requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
 
     try {

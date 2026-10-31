@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
+import { canManageSchool } from '@/lib/permissions';
+import { canAccessSubject } from '@/lib/staff-context';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-    const auth = await requireAuth({ roles: ['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN', 'LEARNER'], requireSchoolId: true });
+    const auth = await requireAuth({ roles: ['TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN', 'SCHOOL_OWNER', 'LEARNER'], requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
 
     try {
@@ -18,14 +20,8 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
             return new NextResponse('Assessment not found', { status: 404 });
         }
 
-        if (auth.role === 'TEACHER') {
-            const teacherProfile = await prisma.teacherProfile.findUnique({
-                where: { userId: auth.userId },
-                select: { id: true }
-            });
-            if (!teacherProfile || assessment.subject.teacherId !== teacherProfile.id) {
-                return new NextResponse('Forbidden', { status: 403 });
-            }
+        if (!canManageSchool(auth.role) && auth.role !== 'LEARNER' && !(await canAccessSubject(auth, assessment.subjectId))) {
+            return new NextResponse('Forbidden', { status: 403 });
         }
 
         // Teachers see all submissions for assessment, Learners see only their own

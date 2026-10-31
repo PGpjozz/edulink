@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
+import { canManageSchool } from '@/lib/permissions';
+import { canAccessSubject } from '@/lib/staff-context';
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
     const auth = await requireAuth({ requireSchoolId: true });
@@ -29,7 +31,7 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
 }
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-    const auth = await requireAuth({ roles: ['TEACHER', 'PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    const auth = await requireAuth({ roles: ['TEACHER', 'HOD', 'PRINCIPAL', 'SCHOOL_ADMIN', 'SCHOOL_OWNER'], requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
 
     try {
@@ -44,15 +46,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
             return new NextResponse('Subject not found', { status: 404 });
         }
 
-        if (auth.role === 'TEACHER') {
-            const teacherProfile = await prisma.teacherProfile.findUnique({
-                where: { userId: auth.userId },
-                select: { id: true }
-            });
-
-            if (!teacherProfile || subject.teacherId !== teacherProfile.id) {
-                return new NextResponse('Forbidden', { status: 403 });
-            }
+        if (!canManageSchool(auth.role) && !(await canAccessSubject(auth, id))) {
+            return new NextResponse('Forbidden', { status: 403 });
         }
 
         const body = await readJson<{ title?: string; fileUrl?: string; fileType?: string; fileSize?: number }>(req);

@@ -39,7 +39,13 @@ export default function DashboardPathGuard() {
 
         if (!required) return;
 
+        const leadershipAlsoTeaches =
+            required === 'TEACHER' &&
+            available.includes('TEACHER') &&
+            ['HOD', 'PRINCIPAL', 'SCHOOL_ADMIN', 'SCHOOL_OWNER'].includes(activeRole);
+
         const activeMatches =
+            leadershipAlsoTeaches ||
             activeRole === required ||
             (required === 'PRINCIPAL' &&
                 (activeRole === 'SCHOOL_ADMIN' || activeRole === 'SCHOOL_OWNER'));

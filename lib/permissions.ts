@@ -19,7 +19,7 @@ export type PermissionKey = (typeof PERMISSION_KEYS)[number];
 
 export const STAFF_ROLES = ['SCHOOL_OWNER', 'PRINCIPAL', 'SCHOOL_ADMIN', 'HOD', 'TEACHER'] as const;
 export const SCHOOL_ADMIN_ROLES = ['SCHOOL_OWNER', 'PRINCIPAL', 'SCHOOL_ADMIN'] as const;
-export const TEACHING_ROLES = ['SCHOOL_OWNER', 'PRINCIPAL', 'HOD', 'TEACHER'] as const;
+export const TEACHING_ROLES = ['SCHOOL_OWNER', 'PRINCIPAL', 'SCHOOL_ADMIN', 'HOD', 'TEACHER'] as const;
 export const GRADING_ROLES = ['SCHOOL_OWNER', 'PRINCIPAL', 'SCHOOL_ADMIN', 'HOD', 'TEACHER'] as const;
 
 const ROLE_DEFAULT_PERMISSIONS: Record<string, PermissionKey[]> = {
@@ -67,6 +67,10 @@ export function canManageDepartments(auth: Pick<AuthContext, 'role' | 'permissio
 
 export function canManageUsers(auth: Pick<AuthContext, 'role' | 'permissions'>): boolean {
     return canManageSchool(auth.role) || hasPermission(auth, 'MANAGE_USERS');
+}
+
+export function canManageClasses(auth: Pick<AuthContext, 'role' | 'permissions'>): boolean {
+    return canManageSchool(auth.role) || hasPermission(auth, 'MANAGE_CLASSES');
 }
 
 export function canViewSchoolAnalytics(auth: Pick<AuthContext, 'role' | 'permissions'>): boolean {

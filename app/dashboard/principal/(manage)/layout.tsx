@@ -35,7 +35,7 @@ function PrincipalManageLayoutInner({ children }: { children: React.ReactNode })
     }, [searchParams, router]);
 
     const activeTab =
-        TABS.find((t) => t.href === pathname)?.href ??
+        TABS.find((t) => pathname === t.href || (t.href !== '/dashboard/principal' && pathname.startsWith(`${t.href}/`)))?.href ??
         (pathname === '/dashboard/principal' ? '/dashboard/principal' : false);
 
     return (

@@ -57,7 +57,8 @@ export async function GET(
                         firstName: true,
                         lastName: true,
                         email: true,
-                        idNumber: true
+                        idNumber: true,
+                        isActive: true,
                     }
                 }
             }
@@ -65,10 +66,12 @@ export async function GET(
 
         const flattened = learners.map(l => ({
             id: l.id,
+            userId: l.userId,
             firstName: l.user.firstName,
             lastName: l.user.lastName,
             email: l.user.email,
-            idNumber: l.user.idNumber
+            idNumber: l.user.idNumber,
+            isActive: l.user.isActive,
         }));
 
         return NextResponse.json(flattened);

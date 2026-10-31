@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { requireAuth, readJson, writeAuditLog } from '@/lib/api-auth';
 import { getStaffContext, classScopeWhere } from '@/lib/staff-context';
+import { canManageClasses } from '@/lib/permissions';
+import { attachCompulsorySubjectsForClass } from '@/lib/class-subjects';
 
 export async function GET() {
     const auth = await requireAuth({ requireSchoolId: true });
@@ -34,21 +36,29 @@ export async function GET() {
 }
 
 export async function PATCH(req: Request) {
-    const auth = await requireAuth({ roles: ['PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    const auth = await requireAuth({ requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
+    if (!canManageClasses(auth)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     try {
-        const body = await readJson<{ classId?: string; teacherProfileId?: string | null }>(req);
+        const body = await readJson<{ classId?: string; name?: string; grade?: string; teacherProfileId?: string | null }>(req);
         if (body instanceof NextResponse) return body;
-        const { classId, teacherProfileId } = body;
+        const { classId, name, grade, teacherProfileId } = body;
 
         if (!classId) return new NextResponse('Missing classId', { status: 400 });
 
         const existingClass = await prisma.class.findFirst({
             where: { id: classId, schoolId: auth.schoolId as string },
-            select: { id: true }
+            select: { id: true, grade: true }
         });
         if (!existingClass) return new NextResponse('Class not found', { status: 404 });
+
+        const nextName = typeof name === 'string' ? name.trim() : undefined;
+        const nextGrade = typeof grade === 'string' ? grade.trim() : undefined;
+        if (nextName !== undefined && !nextName) return new NextResponse('Class name is required', { status: 400 });
+        if (nextGrade !== undefined && !nextGrade) return new NextResponse('Grade is required', { status: 400 });
 
         if (teacherProfileId) {
             const teacher = await prisma.teacherProfile.findFirst({
@@ -60,20 +70,35 @@ export async function PATCH(req: Request) {
 
         const updated = await prisma.class.update({
             where: { id: classId },
-            data: { teacherProfileId: teacherProfileId || null },
+            data: {
+                ...(nextName !== undefined ? { name: nextName } : {}),
+                ...(nextGrade !== undefined ? { grade: nextGrade } : {}),
+                ...(teacherProfileId !== undefined ? { teacherProfileId: teacherProfileId || null } : {}),
+            },
             include: {
                 teacher: { include: { user: { select: { firstName: true, lastName: true } } } },
                 _count: { select: { learners: true } }
             }
         });
 
+        if (nextGrade && nextGrade !== existingClass.grade) {
+            await prisma.learnerProfile.updateMany({
+                where: { classId },
+                data: { grade: nextGrade },
+            });
+            await prisma.classSubject.deleteMany({
+                where: { classId, subject: { grade: { not: nextGrade } } },
+            });
+            await attachCompulsorySubjectsForClass(auth.schoolId as string, classId, nextGrade);
+        }
+
         await writeAuditLog({
             schoolId: auth.schoolId,
             userId: auth.userId,
-            action: teacherProfileId ? 'ASSIGN_CLASS_TEACHER' : 'UNASSIGN_CLASS_TEACHER',
+            action: 'UPDATE_CLASS',
             entity: 'CLASS',
             entityId: classId,
-            details: { teacherProfileId: teacherProfileId || null }
+            details: { name: nextName, grade: nextGrade, teacherProfileId: teacherProfileId ?? undefined }
         });
 
         return NextResponse.json(updated);
@@ -84,8 +109,11 @@ export async function PATCH(req: Request) {
 }
 
 export async function POST(req: Request) {
-    const auth = await requireAuth({ roles: ['PRINCIPAL', 'SCHOOL_ADMIN'], requireSchoolId: true });
+    const auth = await requireAuth({ requireSchoolId: true });
     if (auth instanceof NextResponse) return auth;
+    if (!canManageClasses(auth)) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
 
     try {
         const body = await readJson<{ name?: string; grade?: string }>(req);
@@ -97,6 +125,8 @@ export async function POST(req: Request) {
         const newClass = await prisma.class.create({
             data: { name, grade, schoolId: auth.schoolId as string }
         });
+
+        await attachCompulsorySubjectsForClass(auth.schoolId as string, newClass.id, grade);
 
         await writeAuditLog({
             schoolId: auth.schoolId,

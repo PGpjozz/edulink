@@ -50,6 +50,7 @@ export function getPageTitle(pathname: string): string {
     if (pathname.startsWith('/dashboard/teacher/class/')) return 'Class';
     if (pathname.startsWith('/dashboard/teacher/gradebook/')) return 'Gradebook';
     if (pathname.startsWith('/dashboard/parent/child/')) return 'Child';
+    if (pathname.startsWith('/dashboard/principal/classes/')) return 'Class';
     if (pathname.startsWith('/dashboard/principal')) return 'Principal';
     if (pathname.startsWith('/dashboard/teacher')) return 'Teaching';
     if (pathname.startsWith('/dashboard/parent')) return 'Parent';

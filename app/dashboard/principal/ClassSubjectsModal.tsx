@@ -22,32 +22,31 @@ import {
     TableBody,
     CircularProgress,
     Stack,
+    Chip,
 } from '@mui/material';
-import { Delete as DeleteIcon, Add as AddIcon } from '@mui/icons-material';
+import { Delete as DeleteIcon, Add as AddIcon, ContentCopy } from '@mui/icons-material';
+import Link from 'next/link';
 
 type TeacherOption = { teacherProfileId: string; name: string };
 
 type ClassSubjectRow = {
     id: string;
     subjectId: string;
-    subject: { id: string; name: string; code?: string | null; grade: string };
+    subject: { id: string; name: string; code?: string | null; grade: string; offering?: 'COMPULSORY' | 'OPTIONAL' };
     teacherProfileId?: string | null;
     teacher?: { user?: { firstName: string; lastName: string } } | null;
 };
 
-type SubjectOption = { id: string; name: string; code?: string | null; grade: string };
+type SubjectOption = { id: string; name: string; code?: string | null; grade: string; offering?: 'COMPULSORY' | 'OPTIONAL' };
+type ClassOption = { id: string; name: string; grade: string };
 
-export default function ClassSubjectsModal({
-    open,
-    onClose,
+export function ClassSubjectsEditor({
     classInfo,
     subjects,
     teachers,
     onUpdated,
 }: {
-    open: boolean;
-    onClose: () => void;
-    classInfo: { id: string; name: string; grade: string } | null;
+    classInfo: { id: string; name: string; grade: string };
     subjects: SubjectOption[];
     teachers: TeacherOption[];
     onUpdated?: () => void;
@@ -57,6 +56,8 @@ export default function ClassSubjectsModal({
     const [error, setError] = useState('');
     const [addSubjectId, setAddSubjectId] = useState('');
     const [addTeacherId, setAddTeacherId] = useState('');
+    const [copyFromClassId, setCopyFromClassId] = useState('');
+    const [siblingClasses, setSiblingClasses] = useState<ClassOption[]>([]);
     const [savingId, setSavingId] = useState<string | null>(null);
 
     const fetchRows = useCallback(async () => {
@@ -64,6 +65,11 @@ export default function ClassSubjectsModal({
         setLoading(true);
         setError('');
         try {
+            await fetch('/api/class-subjects', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ classId: classInfo.id, syncCompulsory: true }),
+            });
             const res = await fetch(`/api/class-subjects?classId=${classInfo.id}`);
             if (!res.ok) throw new Error(await res.text());
             const data = await res.json();
@@ -77,17 +83,40 @@ export default function ClassSubjectsModal({
     }, [classInfo]);
 
     useEffect(() => {
-        if (open && classInfo) {
-            setAddSubjectId('');
-            setAddTeacherId('');
-            fetchRows();
-        }
-    }, [open, classInfo, fetchRows]);
+        setAddSubjectId('');
+        setAddTeacherId('');
+        setCopyFromClassId('');
+        fetch('/api/classes')
+            .then((r) => r.json())
+            .then((data) => {
+                const list = Array.isArray(data) ? data : [];
+                setSiblingClasses(list.filter((c: ClassOption) => c.grade === classInfo.grade && c.id !== classInfo.id));
+            })
+            .catch(() => setSiblingClasses([]));
+        fetchRows();
+    }, [classInfo, fetchRows]);
 
     const linkedSubjectIds = new Set(rows.map((r) => r.subjectId));
     const availableSubjects = subjects.filter(
-        (s) => s.grade === classInfo?.grade && !linkedSubjectIds.has(s.id)
+        (s) => s.grade === classInfo?.grade && s.offering === 'OPTIONAL' && !linkedSubjectIds.has(s.id)
     );
+
+    const handleCopy = async () => {
+        if (!classInfo || !copyFromClassId) return;
+        setError('');
+        const res = await fetch('/api/class-subjects', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ classId: classInfo.id, copyFromClassId }),
+        });
+        if (!res.ok) {
+            setError(await res.text());
+            return;
+        }
+        setCopyFromClassId('');
+        await fetchRows();
+        onUpdated?.();
+    };
 
     const handleAdd = async () => {
         if (!classInfo || !addSubjectId) return;
@@ -149,17 +178,11 @@ export default function ClassSubjectsModal({
     };
 
     return (
-        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-            <DialogTitle>
-                Class subjects — {classInfo?.name ?? ''}
-                {classInfo && (
-                    <Typography variant="body2" color="text.secondary">
-                        Grade {classInfo.grade} · Assign which subjects this class takes and who teaches each
-                    </Typography>
-                )}
-            </DialogTitle>
-            <DialogContent>
-                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <Box>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                Grade {classInfo.grade}. Compulsory subjects are on every class in the grade. Optional subjects are only on the classes you add them to, and each class can have its own teacher.
+            </Typography>
+            {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
                 {loading ? (
                     <Box display="flex" justifyContent="center" py={4}>
@@ -189,9 +212,17 @@ export default function ClassSubjectsModal({
                                     <TableRow key={row.id}>
                                         <TableCell>
                                             <Typography fontWeight="medium">{row.subject.name}</Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {row.subject.code || '—'}
-                                            </Typography>
+                                            <Stack direction="row" spacing={1} alignItems="center">
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {row.subject.code || '—'}
+                                                </Typography>
+                                                <Chip
+                                                    size="small"
+                                                    label={row.subject.offering === 'OPTIONAL' ? 'This class' : 'Compulsory'}
+                                                    color={row.subject.offering === 'OPTIONAL' ? 'default' : 'primary'}
+                                                    variant="outlined"
+                                                />
+                                            </Stack>
                                         </TableCell>
                                         <TableCell>
                                             <FormControl size="small" fullWidth disabled={savingId === row.id}>
@@ -212,6 +243,7 @@ export default function ClassSubjectsModal({
                                             </FormControl>
                                         </TableCell>
                                         <TableCell>
+                                            {row.subject.offering === 'OPTIONAL' ? (
                                             <IconButton
                                                 size="small"
                                                 color="error"
@@ -220,15 +252,40 @@ export default function ClassSubjectsModal({
                                             >
                                                 <DeleteIcon fontSize="small" />
                                             </IconButton>
+                                            ) : null}
                                         </TableCell>
                                     </TableRow>
                                 ))}
                             </TableBody>
                         </Table>
 
+                        {siblingClasses.length > 0 && (
+                            <Box sx={{ mt: 3, p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
+                                <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                                    Share subjects from another Grade {classInfo?.grade} class
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1 }}>
+                                    Copies subjects this class does not already take. Remove any that should stay on the other class only.
+                                </Typography>
+                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                                    <FormControl size="small" sx={{ minWidth: 200, flex: 1 }}>
+                                        <InputLabel>Copy from</InputLabel>
+                                        <Select value={copyFromClassId} label="Copy from" onChange={(e) => setCopyFromClassId(e.target.value)}>
+                                            {siblingClasses.map((c) => (
+                                                <MenuItem key={c.id} value={c.id}>{c.name}</MenuItem>
+                                            ))}
+                                        </Select>
+                                    </FormControl>
+                                    <Button variant="outlined" startIcon={<ContentCopy />} onClick={handleCopy} disabled={!copyFromClassId}>
+                                        Copy
+                                    </Button>
+                                </Stack>
+                            </Box>
+                        )}
+
                         <Box sx={{ mt: 3, p: 2, bgcolor: 'action.hover', borderRadius: 2 }}>
                             <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
-                                Add subject to class
+                                Add an optional subject
                             </Typography>
                             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} alignItems="flex-start">
                                 <FormControl size="small" sx={{ minWidth: 200, flex: 1 }}>
@@ -271,13 +328,46 @@ export default function ClassSubjectsModal({
                                     Add
                                 </Button>
                             </Stack>
-                            {availableSubjects.length === 0 && subjects.length > 0 && (
+                            {availableSubjects.length === 0 && (
                                 <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                                    All grade {classInfo?.grade} subjects are already linked, or none exist yet.
+                                    {subjects.length === 0 ? (
+                                        <>
+                                            No subjects yet. Create them on the{' '}
+                                            <Link href="/dashboard/principal/subjects">Subjects</Link> page, then link them here.
+                                        </>
+                                    ) : (
+                                        <>No optional Grade {classInfo?.grade} subjects left to add. Create one on the Subjects page and mark it “Chosen per class”.</>
+                                    )}
                                 </Typography>
                             )}
                         </Box>
                     </>
+                )}
+        </Box>
+    );
+}
+
+export default function ClassSubjectsModal({
+    open,
+    onClose,
+    classInfo,
+    subjects,
+    teachers,
+    onUpdated,
+}: {
+    open: boolean;
+    onClose: () => void;
+    classInfo: { id: string; name: string; grade: string } | null;
+    subjects: SubjectOption[];
+    teachers: TeacherOption[];
+    onUpdated?: () => void;
+}) {
+    return (
+        <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
+            <DialogTitle>Class subjects — {classInfo?.name ?? ''}</DialogTitle>
+            <DialogContent>
+                {classInfo && (
+                    <ClassSubjectsEditor classInfo={classInfo} subjects={subjects} teachers={teachers} onUpdated={onUpdated} />
                 )}
             </DialogContent>
             <DialogActions>
