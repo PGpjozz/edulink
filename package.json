@@ -6,7 +6,7 @@
     "postinstall": "prisma generate",
     "dev": "next dev",
     "db:sync": "node scripts/db-sync.mjs",
-    "build": "prisma generate && node scripts/db-sync.mjs --allow-missing && next build",
+    "build": "prisma generate && node scripts/db-sync.mjs --allow-missing && node scripts/ensure-demo-accounts.mjs && next build",
     "start": "next start",
     "lint": "eslint",
     "test": "tsx --test scripts/smoke/production.test.ts"
