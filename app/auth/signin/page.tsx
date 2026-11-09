@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
@@ -34,7 +34,7 @@ const DEMO_ACCOUNTS = [
   { role: 'Learner', identifier: '0801015001085', password: 'password123' },
 ] as const;
 
-export default function SignInPage() {
+function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { schoolName, logoUrl } = useThemeContext();
@@ -276,5 +276,13 @@ export default function SignInPage() {
         </Box>
       </Box>
     </Box>
+  );
+}
+
+export default function SignInPageSuspense() {
+  return (
+    <Suspense fallback={null}>
+      <SignInPage />
+    </Suspense>
   );
 }
