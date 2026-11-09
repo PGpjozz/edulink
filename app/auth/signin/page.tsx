@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   Box,
@@ -14,6 +14,7 @@ import {
   InputAdornment,
   IconButton,
   Divider,
+  Stack,
 } from '@mui/material';
 import { Visibility, VisibilityOff } from '@mui/icons-material';
 import { useThemeContext } from '@/app/theme/ThemeContext';
@@ -26,8 +27,16 @@ type PublicBranding = {
   primaryColor: string;
 };
 
+const DEMO_ACCOUNTS = [
+  { role: 'Principal', identifier: 'principal@westview.edu.za', password: 'password123' },
+  { role: 'Teacher', identifier: 'jvanzyl@westview.edu.za', password: 'password123' },
+  { role: 'Parent', identifier: 'mnkosi@parent.co.za', password: 'password123' },
+  { role: 'Learner', identifier: '0801015001085', password: 'password123' },
+] as const;
+
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { schoolName, logoUrl } = useThemeContext();
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
@@ -35,6 +44,12 @@ export default function SignInPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [branding, setBranding] = useState<PublicBranding | null>(null);
+
+  useEffect(() => {
+    if (searchParams.get('reason') === 'suspended') {
+      setError('This school is suspended. Contact BrightCampus to restore access.');
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     fetch('/api/school/branding/public')
@@ -62,7 +77,12 @@ export default function SignInPage() {
       });
 
       if (result?.error) {
-        setError('Invalid email or password');
+        const raw = result.error.toLowerCase();
+        setError(
+          raw.includes('suspended') || raw.includes('inactive')
+            ? 'This school is suspended. Contact BrightCampus to restore access.'
+            : 'Invalid email or password',
+        );
       } else {
         router.push('/dashboard');
         router.refresh();
@@ -197,6 +217,54 @@ export default function SignInPage() {
             <Button type="submit" fullWidth variant="contained" size="large" disabled={loading} sx={{ py: 1.5, mb: 2 }}>
               {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign in'}
             </Button>
+          </Box>
+
+          <Box
+            sx={{
+              mt: 1,
+              mb: 2,
+              p: 2,
+              borderRadius: 2,
+              border: 1,
+              borderColor: 'divider',
+              bgcolor: 'action.hover',
+            }}
+          >
+            <Typography variant="subtitle2" fontWeight={700} gutterBottom>
+              Try the demo
+            </Typography>
+            <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
+              Click a role to fill the form. Password for every account is password123.
+            </Typography>
+            <Stack spacing={1}>
+              {DEMO_ACCOUNTS.map((account) => (
+                <Button
+                  key={account.role}
+                  type="button"
+                  variant="outlined"
+                  size="small"
+                  disabled={loading}
+                  onClick={() => {
+                    setError('');
+                    setIdentifier(account.identifier);
+                    setPassword(account.password);
+                  }}
+                  sx={{
+                    justifyContent: 'space-between',
+                    textTransform: 'none',
+                    px: 1.5,
+                    py: 0.75,
+                  }}
+                >
+                  <Typography variant="body2" fontWeight={600} component="span">
+                    {account.role}
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" component="span" sx={{ ml: 1 }}>
+                    {account.identifier}
+                  </Typography>
+                </Button>
+              ))}
+            </Stack>
           </Box>
 
           <Divider sx={{ my: 2 }} />
