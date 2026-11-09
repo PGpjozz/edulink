@@ -161,3 +161,43 @@ describe('Impersonation tokens', () => {
         assert.equal(parsed?.targetUserId, 'user-2');
     });
 });
+
+describe('Subject authorization', () => {
+    it('does not grant school admins access to subjects outside their school', async () => {
+        process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://user:pass@localhost:5432/test?sslmode=disable';
+
+        const [staffContext, prismaModule] = await Promise.all([
+            import('../../lib/staff-context'),
+            import('../../lib/prisma'),
+        ]);
+        const prisma = (prismaModule as typeof import('../../lib/prisma') & { default?: typeof import('../../lib/prisma') }).prisma
+            ?? (prismaModule as { default: typeof import('../../lib/prisma') }).default.prisma;
+        const { canAccessSubject } = staffContext;
+        const subjectDelegate = prisma.subject as typeof prisma.subject & {
+            findFirst: (args: unknown) => Promise<unknown>;
+        };
+        const originalFindFirst = subjectDelegate.findFirst;
+        const calls: unknown[] = [];
+        subjectDelegate.findFirst = async (args: unknown) => {
+            calls.push(args);
+            return null;
+        };
+
+        try {
+            const allowed = await canAccessSubject({
+                role: 'PRINCIPAL',
+                schoolId: 'school-a',
+                userId: 'principal-a',
+            } as Parameters<typeof canAccessSubject>[0], 'subject-b');
+
+            assert.equal(allowed, false);
+            assert.equal(calls.length, 1);
+            assert.deepEqual(calls[0], {
+                where: { id: 'subject-b', schoolId: 'school-a' },
+                select: { id: true },
+            });
+        } finally {
+            subjectDelegate.findFirst = originalFindFirst;
+        }
+    });
+});

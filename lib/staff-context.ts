@@ -128,6 +128,14 @@ export async function getStaffContext(auth: AuthContext): Promise<StaffContext> 
 }
 
 export async function canAccessSubject(auth: AuthContext, subjectId: string): Promise<boolean> {
+    if (!auth.schoolId) return false;
+
+    const subject = await prisma.subject.findFirst({
+        where: { id: subjectId, schoolId: auth.schoolId },
+        select: { id: true },
+    });
+    if (!subject) return false;
+
     if (canManageSchool(auth.role)) return true;
     const ctx = await getStaffContext(auth);
     return ctx.assignedSubjectIds.includes(subjectId);
